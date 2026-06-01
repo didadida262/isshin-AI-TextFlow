@@ -1,4 +1,7 @@
+mod skills;
+
 use serde::{Deserialize, Serialize};
+use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
 use std::fs;
 use std::path::PathBuf;
 
@@ -94,7 +97,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             load_config,
             save_config,
-            read_project_file
+            read_project_file,
+            list_art_skills,
+            list_story_skills,
+            get_art_skill_detail,
+            get_story_skill_detail
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

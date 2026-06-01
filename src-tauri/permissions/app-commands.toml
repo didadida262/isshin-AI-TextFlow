@@ -1,0 +1,34 @@
+[[permission]]
+identifier = "allow-load-config"
+description = "Allows loading app config"
+commands.allow = ["load_config"]
+
+[[permission]]
+identifier = "allow-save-config"
+description = "Allows saving app config"
+commands.allow = ["save_config"]
+
+[[permission]]
+identifier = "allow-read-project-file"
+description = "Allows reading project files"
+commands.allow = ["read_project_file"]
+
+[[permission]]
+identifier = "allow-list-art-skills"
+description = "Allows listing visual manual skills"
+commands.allow = ["list_art_skills"]
+
+[[permission]]
+identifier = "allow-list-story-skills"
+description = "Allows listing director manual skills"
+commands.allow = ["list_story_skills"]
+
+[[permission]]
+identifier = "allow-get-art-skill-detail"
+description = "Allows loading visual manual detail"
+commands.allow = ["get_art_skill_detail"]
+
+[[permission]]
+identifier = "allow-get-story-skill-detail"
+description = "Allows loading director manual detail"
+commands.allow = ["get_story_skill_detail"]

@@ -74,6 +74,54 @@ export type TranslationSchema = {
     title: string;
     newProject: string;
     empty: string;
+    modal: {
+      title: string;
+      projectType: string;
+      projectTypeNovel: string;
+      projectName: string;
+      projectNamePlaceholder: string;
+      novelType: string;
+      novelTypePlaceholder: string;
+      imageModel: string;
+      videoModel: string;
+      selectModel: string;
+      quality: string;
+      mode: string;
+      aspectRatio: string;
+      intro: string;
+      introPlaceholder: string;
+      visualManual: string;
+      directorManual: string;
+      newVisualManual: string;
+      newDirectorManual: string;
+      cancel: string;
+      confirm: string;
+      qualityStandard: string;
+      qualityHigh: string;
+      qualityUltra: string;
+      modeStandard: string;
+      modeFast: string;
+      modeQuality: string;
+      defaultProjectName: string;
+      defaultNovelType: string;
+      defaultIntro: string;
+    };
+    skillDetail: {
+      viewVisualManual: string;
+      viewDirectorManual: string;
+      visualName: string;
+      directorName: string;
+      visualFile: string;
+      directorFile: string;
+      visualCover: string;
+      directorCover: string;
+      visualPromptTabs: string;
+      directorPromptTabs: string;
+      viewDetail: string;
+      loading: string;
+      emptyContent: string;
+      close: string;
+    };
   };
 };
 
@@ -155,5 +203,53 @@ export const zh: TranslationSchema = {
     title: "我的项目",
     newProject: "新建项目",
     empty: "暂无项目，点击右上角创建第一个视频创作",
+    modal: {
+      title: "新建项目",
+      projectType: "项目类型",
+      projectTypeNovel: "基于小说原文",
+      projectName: "项目名称",
+      projectNamePlaceholder: "请输入项目名称",
+      novelType: "小说类型",
+      novelTypePlaceholder: "例如：玄幻、科幻、言情",
+      imageModel: "选择图片模型",
+      videoModel: "选择视频模型",
+      selectModel: "请选择模型",
+      quality: "质量",
+      mode: "模式",
+      aspectRatio: "影片比例",
+      intro: "小说简介",
+      introPlaceholder: "请输入小说简介",
+      visualManual: "视觉手册",
+      directorManual: "导演手册",
+      newVisualManual: "新建视觉手册",
+      newDirectorManual: "新建导演手册",
+      cancel: "取消",
+      confirm: "确定",
+      qualityStandard: "标准",
+      qualityHigh: "高清",
+      qualityUltra: "超清",
+      modeStandard: "标准",
+      modeFast: "快速",
+      modeQuality: "品质",
+      defaultProjectName: "未命名项目",
+      defaultNovelType: "玄幻",
+      defaultIntro: "在一个充满灵气的世界中，少年意外获得神秘传承，踏上修行之路……",
+    },
+    skillDetail: {
+      viewVisualManual: "查看视觉手册",
+      viewDirectorManual: "查看导演手册",
+      visualName: "视觉手册名称",
+      directorName: "导演手册名称",
+      visualFile: "视觉手册文件",
+      directorFile: "导演手册文件",
+      visualCover: "视觉手册封面",
+      directorCover: "导演手册封面",
+      visualPromptTabs: "视觉手册提示词",
+      directorPromptTabs: "导演手册提示词",
+      viewDetail: "查看详情",
+      loading: "加载中…",
+      emptyContent: "暂无内容",
+      close: "关闭",
+    },
   },
 };

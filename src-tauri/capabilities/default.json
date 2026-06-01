@@ -5,6 +5,13 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "allow-load-config",
+    "allow-save-config",
+    "allow-read-project-file",
+    "allow-list-art-skills",
+    "allow-list-story-skills",
+    "allow-get-art-skill-detail",
+    "allow-get-story-skill-detail",
     {
       "identifier": "http:default",
       "allow": [

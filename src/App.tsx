@@ -68,7 +68,7 @@ function AppContent() {
           />
         </div>
       ) : (
-        <CreationView />
+        <CreationView models={config.models} />
       )}
 
       <SettingsDrawer

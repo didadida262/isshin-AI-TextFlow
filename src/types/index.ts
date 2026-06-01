@@ -4,6 +4,22 @@ export type AppNav = "session" | "creation";
 /** 对话模式：普通直连 LLM / 启用本地 Agent 工具链 */
 export type ChatMode = "chat" | "agent";
 
+export interface CreationProject {
+  id: string;
+  name: string;
+  projectType: string;
+  novelType: string;
+  imageModel: string;
+  imageQuality: string;
+  videoModel: string;
+  videoMode: string;
+  aspectRatio: string;
+  intro: string;
+  artStyle: string;
+  directorManual: string;
+  createdAt: number;
+}
+
 export interface AppConfig {
   baseUrl: string;
   apiKey: string;

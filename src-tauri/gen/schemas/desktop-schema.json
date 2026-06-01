@@ -315,6 +315,48 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Allows loading visual manual detail",
+          "type": "string",
+          "const": "allow-get-art-skill-detail",
+          "markdownDescription": "Allows loading visual manual detail"
+        },
+        {
+          "description": "Allows loading director manual detail",
+          "type": "string",
+          "const": "allow-get-story-skill-detail",
+          "markdownDescription": "Allows loading director manual detail"
+        },
+        {
+          "description": "Allows listing visual manual skills",
+          "type": "string",
+          "const": "allow-list-art-skills",
+          "markdownDescription": "Allows listing visual manual skills"
+        },
+        {
+          "description": "Allows listing director manual skills",
+          "type": "string",
+          "const": "allow-list-story-skills",
+          "markdownDescription": "Allows listing director manual skills"
+        },
+        {
+          "description": "Allows loading app config",
+          "type": "string",
+          "const": "allow-load-config",
+          "markdownDescription": "Allows loading app config"
+        },
+        {
+          "description": "Allows reading project files",
+          "type": "string",
+          "const": "allow-read-project-file",
+          "markdownDescription": "Allows reading project files"
+        },
+        {
+          "description": "Allows saving app config",
+          "type": "string",
+          "const": "allow-save-config",
+          "markdownDescription": "Allows saving app config"
+        },
+        {
           "description": "Allow HTTP/HTTPS requests to any host",
           "type": "string",
           "const": "http-all",
