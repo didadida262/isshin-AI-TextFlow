@@ -1,13 +1,15 @@
-# Isshin AI Agent
+# Isshin AI TextFlow
 
-个人桌面端 AI Agent (V1.0) — 基于 **Tauri 2 + React + TypeScript** 的轻量智能体终端。
+个人桌面端文生视频客户端 — 基于 **Tauri 2 + React + TypeScript** 构建，继承自 [Isshin AI Agent](https://github.com/isshin) 终端脚手架，面向「文本描述 → 视频生成 → 本地预览与导出」的完整工作流。
 
 ## 功能
 
-- 全局模型配置（Base URL、API Key、模型白名单）
-- 模型切换与 OpenAI 兼容流式对话
-- Thought → Action → Observation 本地 Agent（读取 `package.json` / `.gitignore`）
-- 配置持久化至本地 `config.json`（由 Rust 写入用户目录）
+- **视频 API 配置**：Base URL、API Key、可用模型白名单，本地持久化
+- **模型切换**：顶部下拉快速切换当前使用的文生视频模型
+- **Prompt 创作区**：多行文本输入，支持参数提示与生成前校验
+- **异步任务追踪**：提交生成任务后轮询状态，实时展示排队 / 生成中 / 完成 / 失败
+- **视频预览与导出**：生成完成后在对话流内嵌预览，通过 Tauri 将视频保存至本地目录
+- **会话历史**：按 Prompt 与生成结果归档，侧边栏管理历史任务
 
 ## 技术栈
 
@@ -16,7 +18,7 @@
 | 前端 | React 19、TypeScript、Vite、Tailwind CSS 4、Framer Motion |
 | 图标 | Font Awesome 6 |
 | 桌面 | Tauri 2、Rust |
-| HTTP | `@tauri-apps/plugin-http`（绕过 CORS，直连 LLM API） |
+| HTTP | `@tauri-apps/plugin-http`（绕过 CORS，直连视频生成 API） |
 
 ## 开发
 
@@ -31,27 +33,39 @@ npm run tauri dev
 npm run tauri build
 ```
 
-## Agent 触发示例
+## 使用流程
 
-在对话中输入包含以下关键词的消息：
-
-- `查看文件` / `读取项目` / `读取文件` / `查看项目`
-
-Agent 将通过 Tauri IPC 读取当前工作目录下的 `package.json` 或 `.gitignore`，并将内容注入 LLM 上下文。
+1. 打开设置面板，填写视频 API 的 **Base URL** 与 **API Key**，并注册可用模型 ID（如 `kling-v1`、`runway-gen3` 等，依服务商而定）
+2. 在主界面选择目标模型，输入视频描述 Prompt
+3. 点击发送，客户端提交生成任务并展示进度
+4. 任务完成后预览视频，可一键导出至本地
 
 ## 项目结构
 
 ```
 src/
-  agent/          # Agent 状态机（对应 Week1 的 graph / nodes / schema）
-  components/     # UI 组件
-  hooks/          # 应用状态
-  services/       # 配置与流式聊天
-src-tauri/        # Rust 命令与持久化
+  components/     # UI 组件（侧边栏、创作区、设置抽屉、视频预览等）
+  hooks/          # 应用状态与会话管理
+  services/       # API 配置、任务提交与状态轮询
+  types/          # 类型定义（任务状态、视频结果等）
+src-tauri/        # Rust 命令（配置持久化、本地文件读写、视频导出）
 ```
+
+## 与 AI 终端模板的继承关系
+
+本项目以 AI 终端为脚手架，复用了以下能力：
+
+| 模块 | 用途 |
+|------|------|
+| Tauri 桌面壳 + HTTP 插件 | 跨域请求与本地文件系统访问 |
+| 设置抽屉 + 配置持久化 | API 密钥与模型白名单管理 |
+| 会话 / 侧边栏布局 | 历史任务归档与切换 |
+| Framer Motion 动效 | 面板展开、状态卡片、进度反馈 |
+
+Agent 对话链路与文件读取逻辑将在后续迭代中替换为文生视频任务流。
 
 ## 配置存储位置
 
-- macOS: `~/Library/Application Support/isshin-ai-agent/config.json`
-- Linux: `~/.config/isshin-ai-agent/config.json`
-- Windows: `%APPDATA%\isshin-ai-agent\config.json`
+- macOS: `~/Library/Application Support/isshin-ai-textflow/config.json`
+- Linux: `~/.config/isshin-ai-textflow/config.json`
+- Windows: `%APPDATA%\isshin-ai-textflow\config.json`
