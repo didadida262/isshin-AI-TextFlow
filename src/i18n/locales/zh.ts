@@ -70,6 +70,11 @@ export type TranslationSchema = {
     idle: string;
     contextPrefix: string;
   };
+  creation: {
+    title: string;
+    newProject: string;
+    empty: string;
+  };
 };
 
 export const zh: TranslationSchema = {
@@ -145,5 +150,10 @@ export const zh: TranslationSchema = {
     idle: "待命",
     contextPrefix:
       "以下是通过本地 Agent 读取的真实文件内容，请基于此回答用户：\n",
+  },
+  creation: {
+    title: "我的项目",
+    newProject: "新建项目",
+    empty: "暂无项目，点击右上角创建第一个视频创作",
   },
 };

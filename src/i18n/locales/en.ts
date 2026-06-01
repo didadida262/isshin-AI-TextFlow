@@ -77,4 +77,9 @@ export const en: TranslationSchema = {
     contextPrefix:
       "The following is real file content read by the local Agent. Answer the user based on it:\n",
   },
+  creation: {
+    title: "My Projects",
+    newProject: "New Project",
+    empty: "No projects yet. Click the button above to create your first one",
+  },
 };

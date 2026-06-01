@@ -4,11 +4,12 @@ import { SessionPanel } from "./components/SessionPanel";
 import { ChatArea } from "./components/ChatArea";
 import { CreationView } from "./components/CreationView";
 import { SettingsDrawer } from "./components/SettingsDrawer";
+import { I18nProvider } from "./contexts/I18nContext";
 import { useAppState } from "./hooks/useAppState";
 import type { AppNav } from "./types";
 
-export default function App() {
-  const [activeNav, setActiveNav] = useState<AppNav>("session");
+function AppContent() {
+  const [activeNav, setActiveNav] = useState<AppNav>("creation");
 
   const {
     config,
@@ -79,5 +80,13 @@ export default function App() {
         onSave={handleSaveConfig}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   );
 }
