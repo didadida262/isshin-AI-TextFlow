@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppConfig, ChatMessage, ChatMode, ChatSession } from "../types";
+import { useI18n } from "../contexts/I18nContext";
 import { loadConfig, saveConfig } from "../services/config";
 import { runAgentLoop } from "../agent/graph";
 import { ISSHIN_AGENT_PERSONA } from "../agent/prompt";
@@ -9,17 +10,20 @@ function uid() {
   return crypto.randomUUID();
 }
 
-function createSession(title = "新对话"): ChatSession {
+function createSession(title: string): ChatSession {
   return { id: uid(), title, messages: [], createdAt: Date.now() };
 }
 
 export function useAppState() {
+  const { t } = useI18n();
   const [config, setConfig] = useState<AppConfig>({
     baseUrl: "https://aiplatform.njsrd.com/llm/v1",
     apiKey: "",
     models: [],
   });
-  const [sessions, setSessions] = useState<ChatSession[]>([createSession()]);
+  const [sessions, setSessions] = useState<ChatSession[]>(() => [
+    createSession(t("session.newSession")),
+  ]);
   const [activeSessionId, setActiveSessionId] = useState(sessions[0].id);
   const [selectedModel, setSelectedModel] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -93,12 +97,12 @@ export function useAppState() {
   const sendMessage = useCallback(
     async (text: string) => {
       if (!config.baseUrl.trim() || !config.apiKey.trim()) {
-        setConfigError("请先在设置中配置 Base URL 与 API Key");
+        setConfigError(t("errors.configRequired"));
         setSettingsOpen(true);
         return;
       }
       if (!selectedModel) {
-        setConfigError("请先在设置中同步模型列表");
+        setConfigError(t("errors.modelsRequired"));
         setSettingsOpen(true);
         return;
       }
@@ -133,18 +137,20 @@ export function useAppState() {
         appendMessage(sessionId, {
           id: agentStatusId,
           role: "agent-status",
-          content: "正在分析意图…",
+          content: t("agent.analyzing"),
           agentPhase: "thought",
         });
 
         try {
           const agentResult = await runAgentLoop(text, (phase, detail) => {
             const labels: Record<string, string> = {
-              thought: detail ?? "意图识别中…",
-              action: `正在读取 ${detail ?? "项目文件"}…`,
-              observation: "整理观察结果…",
-              done: "Agent 执行完成",
-              idle: "待命",
+              thought: detail ?? t("agent.recognizing"),
+              action: t("agent.reading", {
+                file: detail ?? t("agent.projectFile"),
+              }),
+              observation: t("agent.organizing"),
+              done: t("agent.done"),
+              idle: t("agent.idle"),
             };
             patchMessage(sessionId, agentStatusId, {
               agentPhase:
@@ -164,7 +170,7 @@ export function useAppState() {
           if (agentResult.shouldAct || agentObservation) {
             patchMessage(sessionId, agentStatusId, {
               agentPhase: "done",
-              content: agentResult.thought ?? "Agent 执行完成",
+              content: agentResult.thought ?? t("agent.done"),
             });
           } else {
             updateSession(sessionId, (s) => ({
@@ -205,10 +211,7 @@ export function useAppState() {
         systemParts.push(ISSHIN_AGENT_PERSONA);
       }
       if (agentObservation) {
-        systemParts.push(
-          "以下是通过本地 Agent 读取的真实文件内容，请基于此回答用户：\n" +
-            agentObservation,
-        );
+        systemParts.push(t("agent.contextPrefix") + agentObservation);
       }
 
       const messages = [
@@ -269,7 +272,7 @@ export function useAppState() {
         } else {
           const err = e instanceof Error ? e.message : String(e);
           patchMessage(sessionId, assistantId, {
-            content: `请求失败：${err}`,
+            content: t("errors.requestFailed", { error: err }),
             isStreaming: false,
           });
         }
@@ -287,19 +290,22 @@ export function useAppState() {
       appendMessage,
       patchMessage,
       updateSession,
+      t,
     ],
   );
 
   const newSession = useCallback(() => {
-    const s = createSession();
+    const s = createSession(t("session.newSession"));
     setSessions((prev) => [s, ...prev]);
     setActiveSessionId(s.id);
-  }, []);
+  }, [t]);
 
-  const deleteSession = useCallback((sessionId: string) => {
-    setSessions((prev) => {
-      const next = prev.filter((s) => s.id !== sessionId);
-      const sessions = next.length > 0 ? next : [createSession()];
+  const deleteSession = useCallback(
+    (sessionId: string) => {
+      setSessions((prev) => {
+        const next = prev.filter((s) => s.id !== sessionId);
+        const sessions =
+          next.length > 0 ? next : [createSession(t("session.newSession"))];
 
       setActiveSessionId((activeId) => {
         const stillExists = sessions.some((s) => s.id === activeId);
@@ -309,7 +315,9 @@ export function useAppState() {
 
       return sessions;
     });
-  }, []);
+  },
+    [t],
+  );
 
   return {
     config,

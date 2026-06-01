@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    isshin_ai_agent_lib::run();
+    isshin_ai_textflow_lib::run();
 }

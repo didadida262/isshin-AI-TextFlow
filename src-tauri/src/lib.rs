@@ -20,23 +20,41 @@ pub struct FileReadResult {
 
 fn config_path() -> Result<PathBuf, String> {
     let dir = dirs::config_dir().ok_or("无法定位用户配置目录")?;
-    let app_dir = dir.join("isshin-ai-agent");
+    let app_dir = dir.join("isshin-ai-textflow");
     fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
     Ok(app_dir.join("config.json"))
 }
 
-fn project_root() -> PathBuf {
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+fn legacy_config_path() -> Option<PathBuf> {
+    dirs::config_dir().map(|dir| dir.join("isshin-ai-agent").join("config.json"))
+}
+
+fn read_config_file(path: &PathBuf) -> Result<AppConfig, String> {
+    let data = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&data).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn load_config() -> Result<AppConfig, String> {
     let path = config_path()?;
-    if !path.exists() {
-        return Ok(AppConfig::default());
+    if path.exists() {
+        return read_config_file(&path);
     }
-    let data = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&data).map_err(|e| e.to_string())
+
+    if let Some(legacy) = legacy_config_path() {
+        if legacy.exists() {
+            let cfg = read_config_file(&legacy)?;
+            let data = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
+            fs::write(&path, data).map_err(|e| e.to_string())?;
+            return Ok(cfg);
+        }
+    }
+
+    Ok(AppConfig::default())
+}
+
+fn project_root() -> PathBuf {
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
 #[tauri::command]

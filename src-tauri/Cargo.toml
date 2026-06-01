@@ -1,12 +1,12 @@
 [package]
-name = "isshin-ai-agent"
+name = "isshin-ai-textflow"
 version = "1.0.0"
-description = "Isshin AI Agent Desktop"
+description = "Isshin AI TextFlow Desktop"
 authors = ["you"]
 edition = "2021"
 
 [lib]
-name = "isshin_ai_agent_lib"
+name = "isshin_ai_textflow_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

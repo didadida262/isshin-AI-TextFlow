@@ -1,9 +1,15 @@
+import { useState } from "react";
 import { Sidebar } from "./components/Sidebar";
+import { SessionPanel } from "./components/SessionPanel";
 import { ChatArea } from "./components/ChatArea";
+import { CreationView } from "./components/CreationView";
 import { SettingsDrawer } from "./components/SettingsDrawer";
 import { useAppState } from "./hooks/useAppState";
+import type { AppNav } from "./types";
 
 export default function App() {
+  const [activeNav, setActiveNav] = useState<AppNav>("session");
+
   const {
     config,
     sessions,
@@ -14,7 +20,6 @@ export default function App() {
     setSelectedModel,
     settingsOpen,
     setSettingsOpen,
-    agentRunning,
     isLoading,
     configError,
     setConfigError,
@@ -30,30 +35,41 @@ export default function App() {
   return (
     <div className="flex h-screen min-h-0 bg-black">
       <Sidebar
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        agentRunning={agentRunning}
-        onSelectSession={setActiveSessionId}
-        onNewSession={newSession}
-        onDeleteSession={deleteSession}
+        activeNav={activeNav}
+        onNavChange={setActiveNav}
         onOpenSettings={() => {
           setConfigError(null);
           setSettingsOpen(true);
         }}
       />
-      <ChatArea
-        messages={activeSession.messages}
-        activeSessionId={activeSessionId}
-        models={config.models}
-        selectedModel={selectedModel}
-        onSelectModel={setSelectedModel}
-        onSend={sendMessage}
-        isLoading={isLoading}
-        onStop={stopGeneration}
-        configError={configError}
-        chatMode={chatMode}
-        onChatModeChange={setChatMode}
-      />
+
+      {activeNav === "session" ? (
+        <div className="flex min-h-0 flex-1">
+          <SessionPanel
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSelectSession={setActiveSessionId}
+            onNewSession={newSession}
+            onDeleteSession={deleteSession}
+          />
+          <ChatArea
+            messages={activeSession.messages}
+            activeSessionId={activeSessionId}
+            models={config.models}
+            selectedModel={selectedModel}
+            onSelectModel={setSelectedModel}
+            onSend={sendMessage}
+            isLoading={isLoading}
+            onStop={stopGeneration}
+            configError={configError}
+            chatMode={chatMode}
+            onChatModeChange={setChatMode}
+          />
+        </div>
+      ) : (
+        <CreationView />
+      )}
+
       <SettingsDrawer
         open={settingsOpen}
         config={config}

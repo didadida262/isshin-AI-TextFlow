@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { useTranslationMessages } from "../contexts/I18nContext";
 
 interface ModelSelectorProps {
   models: string[];
@@ -16,6 +17,7 @@ export function ModelSelector({
   selected,
   onSelect,
 }: ModelSelectorProps) {
+  const i18n = useTranslationMessages();
   const [open, setOpen] = useState(false);
 
   return (
@@ -25,8 +27,10 @@ export function ModelSelector({
         onClick={() => setOpen((v) => !v)}
         className="flex max-w-[min(220px,40vw)] items-center gap-2 rounded-lg border border-white/10 bg-surface/80 px-3 py-1.5 text-xs backdrop-blur-md transition hover:border-white/20"
       >
-        <span className="shrink-0 text-text-muted">模型</span>
-        <span className="truncate font-medium">{selected || "未选择"}</span>
+        <span className="shrink-0 text-text-muted">{i18n.model.label}</span>
+        <span className="truncate font-medium">
+          {selected || i18n.model.none}
+        </span>
         <FontAwesomeIcon
           icon={faChevronDown}
           className={`text-xs text-text-muted transition ${open ? "rotate-180" : ""}`}
@@ -53,7 +57,7 @@ export function ModelSelector({
             >
               {models.length === 0 ? (
                 <li className="px-4 py-3 text-sm leading-relaxed text-text-dim whitespace-normal">
-                  暂无模型，请打开左侧「设置」填写 API Key 并同步模型列表
+                  {i18n.model.empty}
                 </li>
               ) : (
                 models.map((m) => (

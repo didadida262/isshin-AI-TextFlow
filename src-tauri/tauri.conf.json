@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Isshin AI Agent",
+  "productName": "Isshin AI TextFlow",
   "version": "1.0.0",
-  "identifier": "com.isshin.ai-agent",
+  "identifier": "com.isshin.ai-textflow",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Isshin AI Agent",
+        "title": "Isshin AI TextFlow",
         "width": 1200,
         "height": 800,
         "minWidth": 900,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { useTranslationMessages } from "../contexts/I18nContext";
 import type { ChatMessage, ChatMode } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { SmartInput } from "./SmartInput";
@@ -31,6 +32,7 @@ export function ChatArea({
   chatMode,
   onChatModeChange,
 }: ChatAreaProps) {
+  const i18n = useTranslationMessages();
   const scrollRef = useRef<HTMLDivElement>(null);
   const isPinnedRef = useRef(true);
   const prevSnapshotRef = useRef({ count: 0, lastId: "" });
@@ -79,7 +81,7 @@ export function ChatArea({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          对话
+          {i18n.chat.title}
         </motion.h1>
       </header>
 
@@ -105,11 +107,13 @@ export function ChatArea({
             animate={{ opacity: 1 }}
           >
             <div className="max-w-md rounded-2xl border border-white/10 bg-surface/40 px-8 py-10">
-              <p className="text-lg font-medium text-white">有什么需要帮忙的吗？</p>
+              <p className="text-lg font-medium text-white">
+                {i18n.chat.greeting}
+              </p>
               <p className="mt-3 text-sm leading-relaxed text-text-muted">
                 {chatMode === "agent"
-                  ? "Agent 模式：输入「查看文件」或「读取项目」可读取本地 package.json 等项目文件"
-                  : "对话模式：直接与模型聊天；切换到 Agent 可读取本地项目文件"}
+                  ? i18n.chat.emptyAgent
+                  : i18n.chat.emptyChat}
               </p>
             </div>
           </motion.div>

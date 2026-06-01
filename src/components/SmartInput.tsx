@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faStop } from "@fortawesome/free-solid-svg-icons";
+import { useTranslationMessages } from "../contexts/I18nContext";
 import type { ChatMode } from "../types";
 import { ModeToggle } from "./ModeToggle";
 import { ModelSelector } from "./ModelSelector";
@@ -27,6 +28,7 @@ export function SmartInput({
   onSend,
   onStop,
 }: SmartInputProps) {
+  const i18n = useTranslationMessages();
   const [text, setText] = useState("");
   const [focused, setFocused] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -48,8 +50,8 @@ export function SmartInput({
 
   const placeholder =
     chatMode === "agent"
-      ? "Agent 模式：可输入「读取项目」「查看文件」等…"
-      : "输入消息… Shift+Enter 换行，Enter 发送";
+      ? i18n.input.placeholderAgent
+      : i18n.input.placeholderChat;
 
   return (
     <div className="border-t border-white/5 bg-[#0a0a0a] px-4 py-4">
@@ -96,7 +98,7 @@ export function SmartInput({
           <button
             type="button"
             onClick={onStop}
-            title="停止生成"
+            title={i18n.input.stop}
             className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-black transition hover:bg-white/90"
           >
             <FontAwesomeIcon icon={faStop} className="text-[10px]" />
@@ -106,7 +108,7 @@ export function SmartInput({
             type="button"
             onClick={submit}
             disabled={!text.trim()}
-            title="发送"
+            title={i18n.input.send}
             className="absolute bottom-3 right-3 rounded-lg p-2 text-accent transition hover:bg-accent/10 disabled:opacity-30"
           >
             <FontAwesomeIcon icon={faPaperPlane} />

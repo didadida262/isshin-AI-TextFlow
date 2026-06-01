@@ -1,3 +1,6 @@
+/** 侧边栏主导航 */
+export type AppNav = "session" | "creation";
+
 /** 对话模式：普通直连 LLM / 启用本地 Agent 工具链 */
 export type ChatMode = "chat" | "agent";
 

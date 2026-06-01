@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faComments, faRobot } from "@fortawesome/free-solid-svg-icons";
+import { useTranslationMessages } from "../contexts/I18nContext";
 import type { ChatMode } from "../types";
 
 interface ModeToggleProps {
@@ -12,11 +13,13 @@ interface ModeToggleProps {
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 export function ModeToggle({ mode, onChange, disabled }: ModeToggleProps) {
+  const i18n = useTranslationMessages();
+
   return (
     <div
       className="inline-flex rounded-lg border border-white/10 bg-surface p-0.5"
       role="group"
-      aria-label="对话模式"
+      aria-label={i18n.mode.ariaLabel}
     >
       <button
         type="button"
@@ -34,7 +37,7 @@ export function ModeToggle({ mode, onChange, disabled }: ModeToggleProps) {
           />
         )}
         <FontAwesomeIcon icon={faComments} className="relative z-10 text-[10px]" />
-        <span className="relative z-10">对话</span>
+        <span className="relative z-10">{i18n.mode.chat}</span>
       </button>
       <button
         type="button"
@@ -52,7 +55,7 @@ export function ModeToggle({ mode, onChange, disabled }: ModeToggleProps) {
           />
         )}
         <FontAwesomeIcon icon={faRobot} className="relative z-10 text-[10px]" />
-        <span className="relative z-10">Agent</span>
+        <span className="relative z-10">{i18n.mode.agent}</span>
       </button>
     </div>
   );

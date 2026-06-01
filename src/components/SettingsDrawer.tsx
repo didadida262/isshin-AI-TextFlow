@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,6 +10,8 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import type { AppConfig } from "../types";
+import { useI18n, useTranslationMessages } from "../contexts/I18nContext";
+import { loadConfig, saveConfig } from "../services/config";
 import { testConnection } from "../services/chat";
 import { fetchAvailableModels } from "../services/models";
 
@@ -34,6 +36,8 @@ export function SettingsDrawer({
   onClose,
   onSave,
 }: SettingsDrawerProps) {
+  const { t } = useI18n();
+  const i18n = useTranslationMessages();
   const [draft, setDraft] = useState<AppConfig>(config);
   const [showKey, setShowKey] = useState(false);
   const [testStatus, setTestStatus] = useState<
@@ -44,6 +48,7 @@ export function SettingsDrawer({
     "idle" | "loading" | "ok" | "error"
   >("idle");
   const [modelsError, setModelsError] = useState("");
+  const hydratedRef = useRef(false);
 
   const syncModels = useCallback(async (apiKey: string) => {
     setModelsStatus("loading");
@@ -59,20 +64,43 @@ export function SettingsDrawer({
   }, []);
 
   useEffect(() => {
-    if (open) {
+    if (!open) {
+      hydratedRef.current = false;
+      return;
+    }
+
+    let cancelled = false;
+    void loadConfig().then((cfg) => {
+      if (cancelled) return;
       setDraft({
-        ...config,
-        baseUrl: config.baseUrl.trim() || DEFAULT_BASE_URL,
+        ...cfg,
+        baseUrl: cfg.baseUrl.trim() || DEFAULT_BASE_URL,
       });
       setTestStatus("idle");
       setTestError("");
       setModelsStatus("idle");
       setModelsError("");
-      if (config.apiKey.trim()) {
-        void syncModels(config.apiKey);
+      hydratedRef.current = true;
+      if (cfg.apiKey.trim()) {
+        void syncModels(cfg.apiKey);
       }
-    }
-  }, [open, config, syncModels]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, syncModels]);
+
+  useEffect(() => {
+    if (!open || !hydratedRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      void saveConfig(draft);
+      onSave(draft);
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [draft, open, onSave]);
 
   useEffect(() => {
     setTestStatus("idle");
@@ -80,6 +108,7 @@ export function SettingsDrawer({
   }, [selectedModel]);
 
   const handleClose = () => {
+    void saveConfig(draft);
     onSave(draft);
     onClose();
   };
@@ -130,7 +159,7 @@ export function SettingsDrawer({
             transition={spring}
           >
             <header className="flex items-center justify-between border-b border-white/5 px-6 py-4">
-              <h2 className="text-lg font-semibold">模型配置中心</h2>
+              <h2 className="text-lg font-semibold">{i18n.settings.title}</h2>
               <button
                 type="button"
                 onClick={handleClose}
@@ -147,7 +176,7 @@ export function SettingsDrawer({
               transition={{ delay: 0.05, ...spring }}
             >
               <label className="block space-y-2">
-                <span className="text-sm text-text-muted">API 基础路径</span>
+                <span className="text-sm text-text-muted">{i18n.settings.baseUrl}</span>
                 <input
                   type="url"
                   value={draft.baseUrl}
@@ -160,7 +189,7 @@ export function SettingsDrawer({
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm text-text-muted">API 密钥</span>
+                <span className="text-sm text-text-muted">{i18n.settings.apiKey}</span>
                 <motion.div className="relative">
                   <input
                     type={showKey ? "text" : "password"}
@@ -183,7 +212,7 @@ export function SettingsDrawer({
 
               <motion.div className="space-y-3">
                 <motion.div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-text-muted">可用模型</span>
+                  <span className="text-sm text-text-muted">{i18n.settings.models}</span>
                   <button
                     type="button"
                     onClick={() => void syncModels(draft.apiKey)}
@@ -194,17 +223,19 @@ export function SettingsDrawer({
                       icon={faArrowsRotate}
                       spin={modelsStatus === "loading"}
                     />
-                    {modelsStatus === "loading" ? "拉取中…" : "刷新列表"}
+                    {modelsStatus === "loading"
+                      ? i18n.settings.refreshing
+                      : i18n.settings.refresh}
                   </button>
                 </motion.div>
                 <p className="text-xs text-text-dim">
-                  通过平台接口自动同步：
+                  {i18n.settings.syncHint}
                   aiplatform.njsrd.com/nexus/api/api-keys/models
                 </p>
                 {modelsStatus === "ok" && draft.models.length > 0 && (
                   <p className="flex items-center gap-2 text-xs text-accent">
                     <FontAwesomeIcon icon={faCircleCheck} />
-                    已加载 {draft.models.length} 个模型
+                    {t("settings.modelsLoaded", { count: draft.models.length })}
                   </p>
                 )}
                 {modelsStatus === "error" && (
@@ -217,7 +248,7 @@ export function SettingsDrawer({
                   </p>
                 )}
                 {modelsStatus === "loading" && draft.models.length === 0 && (
-                  <p className="text-xs text-text-muted">正在获取模型列表…</p>
+                  <p className="text-xs text-text-muted">{i18n.settings.fetchingModels}</p>
                 )}
                 {draft.models.length > 0 && (
                   <ul className="h-48 overflow-y-auto rounded-lg border border-white/10 bg-surface/50">
@@ -249,7 +280,7 @@ export function SettingsDrawer({
                             type="button"
                             onClick={() => removeModel(m)}
                             className="shrink-0 px-2 py-2.5 text-text-dim transition hover:text-white"
-                            title="从列表移除"
+                            title={i18n.settings.removeModel}
                           >
                             <FontAwesomeIcon
                               icon={faXmark}
@@ -263,7 +294,7 @@ export function SettingsDrawer({
                 )}
                 {!draft.apiKey.trim() && (
                   <p className="text-xs text-text-dim">
-                    填写 API Key 后将自动拉取可用模型
+                    {i18n.settings.apiKeyHint}
                   </p>
                 )}
               </motion.div>
@@ -275,15 +306,17 @@ export function SettingsDrawer({
                   disabled={testStatus === "loading" || !canTestConnection}
                   className="rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {testStatus === "loading" ? "测试中…" : "连接测试"}
+                  {testStatus === "loading"
+                    ? i18n.settings.testing
+                    : i18n.settings.testConnection}
                 </button>
                 {!selectedModel && draft.models.length > 0 && (
-                  <p className="text-xs text-text-dim">请先选择一个模型</p>
+                  <p className="text-xs text-text-dim">{i18n.settings.selectModelFirst}</p>
                 )}
                 {testStatus === "ok" && (
                   <p className="flex items-center gap-2 text-sm text-accent">
                     <FontAwesomeIcon icon={faCircleCheck} />
-                    连接成功
+                    {i18n.settings.connectionOk}
                   </p>
                 )}
                 {testStatus === "error" && (
