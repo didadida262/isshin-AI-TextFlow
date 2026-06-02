@@ -84,6 +84,7 @@ export function ProjectDetailView({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-5">
             {activeStep === "extractEvents" ? (
               <ExtractEventsStep
+                projectId={project.id}
                 title={activeLabel}
                 config={config}
                 selectedModel={selectedModel}

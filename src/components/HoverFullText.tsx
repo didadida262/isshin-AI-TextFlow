@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface HoverFullTextProps {
@@ -46,6 +46,7 @@ export function HoverFullText({
     if (!trigger) return;
 
     const rect = trigger.getBoundingClientRect();
+    const popoverHeight = popoverRef.current?.offsetHeight ?? PREVIEW_MAX_HEIGHT;
     const previewWidth = Math.min(Math.max(rect.width, 280), 480);
     const margin = 8;
     let left = rect.left;
@@ -58,14 +59,10 @@ export function HoverFullText({
     const spaceBelow = window.innerHeight - rect.bottom - margin;
     const spaceAbove = rect.top - margin;
     const placement =
-      spaceBelow >= PREVIEW_MAX_HEIGHT || spaceBelow >= spaceAbove
-        ? "below"
-        : "above";
+      spaceBelow >= popoverHeight || spaceBelow >= spaceAbove ? "below" : "above";
 
     const top =
-      placement === "below"
-        ? rect.bottom - BRIDGE_PX
-        : rect.top - PREVIEW_MAX_HEIGHT;
+      placement === "below" ? rect.bottom - BRIDGE_PX : rect.top - BRIDGE_PX;
 
     setPosition({ top, left, width: previewWidth, placement });
   }, []);
@@ -74,14 +71,18 @@ export function HoverFullText({
     const normalized = normalizeDisplayText(text);
     if (!normalized) return;
     clearHideTimer();
-    updatePosition();
     setOpen(true);
-  }, [clearHideTimer, text, updatePosition]);
+  }, [clearHideTimer, text]);
 
   const scheduleHide = useCallback(() => {
     clearHideTimer();
     hideTimerRef.current = window.setTimeout(() => setOpen(false), HIDE_DELAY_MS);
   }, [clearHideTimer]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open, text, updatePosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -134,6 +135,8 @@ export function HoverFullText({
               top: position.top,
               left: position.left,
               width: position.width,
+              transform:
+                position.placement === "above" ? "translateY(-100%)" : undefined,
               paddingTop: position.placement === "below" ? BRIDGE_PX : 0,
               paddingBottom: position.placement === "above" ? BRIDGE_PX : 0,
             }}

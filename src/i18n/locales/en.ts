@@ -112,6 +112,7 @@ export const en: TranslationSchema = {
       extractEvents: "Extract Events",
       emptyHint: "Import the novel source text before extracting events.",
       charsUnit: "characters",
+      chapterCount: (count: number) => `${count} chapters parsed`,
       extracting: "Extracting events…",
       extractingProgress: (completed: number, total: number) =>
         `Extracting events ${completed}/${total}…`,

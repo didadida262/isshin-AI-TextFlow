@@ -363,6 +363,12 @@
           "markdownDescription": "Allows user login"
         },
         {
+          "description": "Allows novel import and chapter persistence",
+          "type": "string",
+          "const": "allow-novel",
+          "markdownDescription": "Allows novel import and chapter persistence"
+        },
+        {
           "description": "Allows reading project files",
           "type": "string",
           "const": "allow-read-project-file",

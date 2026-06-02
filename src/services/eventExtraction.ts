@@ -1,43 +1,39 @@
 import type { AppConfig } from "../types";
 import { EVENT_EXTRACTION_PROMPT } from "../prompts/eventExtraction";
 import { chatCompletion } from "./chat";
-import { stripThink } from "../utils/stripThink";
 import {
-  splitNovelChapters,
-  type NovelChapter,
-} from "../utils/splitNovelChapters";
-
-export interface ChapterEventResult {
-  chapter: NovelChapter;
-  event: string;
-  error?: string;
-}
+  EVENT_STATE_ERROR,
+  EVENT_STATE_SUCCESS,
+  type NovelChapterRecord,
+  updateNovelChapterEvent,
+} from "./novel";
+import { stripThink } from "../utils/stripThink";
 
 export interface ExtractEventsProgress {
   completed: number;
   total: number;
-  latest?: ChapterEventResult;
+  latest?: NovelChapterRecord;
 }
 
-function buildUserMessage(chapter: NovelChapter): string {
+function buildUserMessage(chapter: NovelChapterRecord): string {
   return (
     "请根据以下小说章节数：" +
-    chapter.index +
+    chapter.chapterIndex +
     "小说章节卷：" +
     chapter.reel +
     "小说章节名称：" +
-    chapter.title +
+    chapter.chapter +
     "、小说章节内容生成事件摘要：\n" +
-    chapter.content
+    chapter.chapterData
   );
 }
 
 async function extractChapterEvent(
   config: AppConfig,
   model: string,
-  chapter: NovelChapter,
+  chapter: NovelChapterRecord,
   signal?: AbortSignal,
-): Promise<ChapterEventResult> {
+): Promise<NovelChapterRecord> {
   try {
     const raw = await chatCompletion(
       config,
@@ -49,29 +45,48 @@ async function extractChapterEvent(
       signal,
       "event-extraction",
     );
+    const event = stripThink(raw);
+    await updateNovelChapterEvent(
+      chapter.id,
+      event,
+      null,
+      EVENT_STATE_SUCCESS,
+    );
     return {
-      chapter,
-      event: stripThink(raw),
+      ...chapter,
+      event,
+      errorReason: null,
+      eventState: EVENT_STATE_SUCCESS,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { chapter, event: "", error: message };
+    await updateNovelChapterEvent(
+      chapter.id,
+      null,
+      message,
+      EVENT_STATE_ERROR,
+    );
+    return {
+      ...chapter,
+      event: null,
+      errorReason: message,
+      eventState: EVENT_STATE_ERROR,
+    };
   }
 }
 
-/** Extract events for all chapters with bounded concurrency. */
-export async function extractEventsFromNovel(
+/** Extract events for DB chapters with bounded concurrency; results persisted to SQLite. */
+export async function extractEventsForChapters(
   config: AppConfig,
   model: string,
-  novelText: string,
+  chapters: NovelChapterRecord[],
   onProgress?: (progress: ExtractEventsProgress) => void,
   signal?: AbortSignal,
   concurrency = 3,
-): Promise<ChapterEventResult[]> {
-  const chapters = splitNovelChapters(novelText);
+): Promise<NovelChapterRecord[]> {
   if (chapters.length === 0) return [];
 
-  const results: ChapterEventResult[] = new Array(chapters.length);
+  const results: NovelChapterRecord[] = new Array(chapters.length);
   let completed = 0;
   let nextIndex = 0;
 

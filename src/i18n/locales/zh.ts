@@ -105,6 +105,7 @@ export type TranslationSchema = {
       extractEvents: string;
       emptyHint: string;
       charsUnit: string;
+      chapterCount: (count: number) => string;
       extracting: string;
       extractingProgress: (completed: number, total: number) => string;
       resultsEmpty: string;
@@ -292,6 +293,7 @@ export const zh: TranslationSchema = {
       extractEvents: "事件提取",
       emptyHint: "请先导入小说原文，再进行事件提取。",
       charsUnit: "字符",
+      chapterCount: (count: number) => `已解析 ${count} 章`,
       extracting: "正在提取事件…",
       extractingProgress: (completed: number, total: number) =>
         `正在提取事件 ${completed}/${total}…`,

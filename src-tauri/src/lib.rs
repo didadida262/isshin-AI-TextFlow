@@ -1,10 +1,14 @@
 mod db;
 mod llm;
+mod novel;
 mod projects;
 mod skills;
 
 use db::login;
 use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
+use novel::{
+    get_novel_source, import_novel, list_novel_chapters, update_novel_chapter_event,
+};
 use projects::{create_project, list_projects, update_project};
 use serde::Serialize;
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
@@ -66,7 +70,11 @@ pub fn run() {
             get_story_skill_detail,
             llm_chat_completion,
             llm_log_outbound,
-            llm_log_inbound
+            llm_log_inbound,
+            import_novel,
+            get_novel_source,
+            list_novel_chapters,
+            update_novel_chapter_event
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
