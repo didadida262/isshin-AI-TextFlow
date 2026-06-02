@@ -5,6 +5,7 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import type { ProjectAssetRecord } from "../services/assets";
 import { ModalPortal } from "./ModalPortal";
+import { AssetTypeTag } from "./AssetTypeTag";
 
 interface AssetImagePreviewModalProps {
   asset: ProjectAssetRecord | null;
@@ -12,15 +13,6 @@ interface AssetImagePreviewModalProps {
 }
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
-
-function typeLabel(
-  assetType: string,
-  labels: { typeCharacter: string; typeScene: string; typeProp: string },
-): string {
-  if (assetType === "character") return labels.typeCharacter;
-  if (assetType === "prop") return labels.typeProp;
-  return labels.typeScene;
-}
 
 export function AssetImagePreviewModal({
   asset,
@@ -90,8 +82,8 @@ export function AssetImagePreviewModal({
               <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:text-sm">
                 <div>
                   <dt className="text-text-dim">{s.colType}</dt>
-                  <dd className="mt-1 text-white">
-                    {typeLabel(asset.assetType, s)}
+                  <dd className="mt-1">
+                    <AssetTypeTag assetType={asset.assetType} labels={s} />
                   </dd>
                 </div>
                 <div>

@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import type { ProjectAssetRecord } from "../services/assets";
 import { ASSET_STATE_ERROR, ASSET_STATE_SUCCESS } from "../services/assets";
 import { AssetRowActions } from "./AssetRowActions";
+import { AssetTypeTag } from "./AssetTypeTag";
 import { HoverFullText } from "./HoverFullText";
 
 interface AssetListTableLabels {
@@ -32,15 +33,6 @@ interface AssetListTableProps {
   onViewImage?: (asset: ProjectAssetRecord) => void;
   onEdit?: (asset: ProjectAssetRecord) => void;
   onDelete?: (asset: ProjectAssetRecord) => void;
-}
-
-function typeLabel(
-  assetType: string,
-  labels: AssetListTableLabels,
-): string {
-  if (assetType === "character") return labels.typeCharacter;
-  if (assetType === "prop") return labels.typeProp;
-  return labels.typeScene;
 }
 
 function statusLabel(
@@ -126,8 +118,8 @@ export function AssetListTable({
               <td className="max-w-0 px-3 py-2.5 text-white">
                 <HoverFullText text={asset.name} lines={1} />
               </td>
-              <td className="px-3 py-2.5 text-text-muted">
-                {typeLabel(asset.assetType, labels)}
+              <td className="px-3 py-2.5">
+                <AssetTypeTag assetType={asset.assetType} labels={labels} />
               </td>
               <td className="max-w-0 px-3 py-2.5 text-text-muted">
                 <HoverFullText text={asset.prompt} lines={2} />
