@@ -17,7 +17,7 @@ interface SelectProps {
 }
 
 const triggerClass =
-  "box-border flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-surface px-3 text-sm text-white outline-none transition hover:border-white/20 focus:outline-none focus-visible:border-accent/50 disabled:cursor-not-allowed disabled:opacity-50";
+  "box-border flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-white/10 bg-surface px-3 text-sm text-white outline-none transition hover:border-white/20 focus:outline-none focus-visible:border-accent/50 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function Select({
   value,

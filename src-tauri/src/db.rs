@@ -83,6 +83,8 @@ pub fn init_db() -> Result<Connection, String> {
         .map_err(|e| e.to_string())?;
     }
 
+    crate::projects::init_schema(&conn)?;
+
     Ok(conn)
 }
 

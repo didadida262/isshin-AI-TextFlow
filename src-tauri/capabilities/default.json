@@ -6,6 +6,9 @@
   "permissions": [
     "core:default",
     "allow-login",
+    "allow-create-project",
+    "allow-list-projects",
+    "allow-update-project",
     "allow-read-project-file",
     "allow-list-art-skills",
     "allow-list-story-skills",

@@ -315,6 +315,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Allows creating projects",
+          "type": "string",
+          "const": "allow-create-project",
+          "markdownDescription": "Allows creating projects"
+        },
+        {
           "description": "Allows loading visual manual detail",
           "type": "string",
           "const": "allow-get-art-skill-detail",
@@ -333,6 +339,12 @@
           "markdownDescription": "Allows listing visual manual skills"
         },
         {
+          "description": "Allows listing projects",
+          "type": "string",
+          "const": "allow-list-projects",
+          "markdownDescription": "Allows listing projects"
+        },
+        {
           "description": "Allows listing director manual skills",
           "type": "string",
           "const": "allow-list-story-skills",
@@ -349,6 +361,12 @@
           "type": "string",
           "const": "allow-read-project-file",
           "markdownDescription": "Allows reading project files"
+        },
+        {
+          "description": "Allows updating projects",
+          "type": "string",
+          "const": "allow-update-project",
+          "markdownDescription": "Allows updating projects"
         },
         {
           "description": "Allow HTTP/HTTPS requests to any host",

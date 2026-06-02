@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import { loadArtSkills, loadStorySkills, type SkillManualItem } from "../services/skills";
+import { projectToDraft } from "../services/projects";
 import { SkillManualSection } from "./SkillManualSection";
 import { Select } from "./Select";
 import type { CreationProject } from "../types";
@@ -24,9 +25,11 @@ export interface NewProjectDraft {
 
 interface NewProjectModalProps {
   open: boolean;
+  mode?: "create" | "edit";
+  editingProject?: CreationProject | null;
   models: string[];
   onClose: () => void;
-  onConfirm: (draft: NewProjectDraft) => void;
+  onConfirm: (draft: NewProjectDraft) => void | Promise<void>;
 }
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
@@ -67,6 +70,8 @@ const textareaClass =
 
 export function NewProjectModal({
   open,
+  mode = "create",
+  editingProject = null,
   models,
   onClose,
   onConfirm,
@@ -76,6 +81,7 @@ export function NewProjectModal({
   const [artSkills, setArtSkills] = useState<SkillManualItem[]>([]);
   const [storySkills, setStorySkills] = useState<SkillManualItem[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [draft, setDraft] = useState<NewProjectDraft>(() =>
     createDefaultDraft(models, {
       projectName: m.defaultProjectName,
@@ -99,36 +105,35 @@ export function NewProjectModal({
         setArtSkills(art);
         setStorySkills(story);
         setSkillsLoading(false);
-        setDraft(
-          createDefaultDraft(models, {
-            projectName: m.defaultProjectName,
-            novelType: m.defaultNovelType,
-            intro: m.defaultIntro,
-            artStyle: art[0]?.id ?? "",
-            directorManual: story[0]?.id ?? "",
-          }),
-        );
+
+        if (mode === "edit" && editingProject) {
+          setDraft(projectToDraft(editingProject));
+        } else {
+          setDraft(
+            createDefaultDraft(models, {
+              projectName: m.defaultProjectName,
+              novelType: m.defaultNovelType,
+              intro: m.defaultIntro,
+              artStyle: art[0]?.id ?? "",
+              directorManual: story[0]?.id ?? "",
+            }),
+          );
+        }
       },
     );
 
     return () => {
       cancelled = true;
     };
-  }, [open, models, m.defaultProjectName, m.defaultNovelType, m.defaultIntro]);
-
-  const qualityOptions = [
-    { value: "standard", label: m.qualityStandard },
-    { value: "high", label: m.qualityHigh },
-    { value: "ultra", label: m.qualityUltra },
-  ];
-
-  const modeOptions = [
-    { value: "standard", label: m.modeStandard },
-    { value: "fast", label: m.modeFast },
-    { value: "quality", label: m.modeQuality },
-  ];
-
-  const projectTypeOptions = [{ value: "novel", label: m.projectTypeNovel }];
+  }, [
+    open,
+    mode,
+    editingProject,
+    models,
+    m.defaultProjectName,
+    m.defaultNovelType,
+    m.defaultIntro,
+  ]);
 
   const modelOptions = [
     { value: "", label: m.selectModel },
@@ -140,11 +145,22 @@ export function NewProjectModal({
     label: ratio,
   }));
 
-  const handleConfirm = () => {
-    if (!draft.name.trim()) return;
-    onConfirm(draft);
-    onClose();
+  const handleConfirm = async () => {
+    if (!draft.name.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      await onConfirm(draft);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const modalTitle = mode === "edit" ? m.editTitle : m.title;
+  const confirmLabel = submitting
+    ? mode === "edit"
+      ? m.saving
+      : m.creating
+    : m.confirm;
 
   return (
     <AnimatePresence>
@@ -179,7 +195,7 @@ export function NewProjectModal({
                   id="new-project-title"
                   className="text-lg font-semibold text-white"
                 >
-                  {m.title}
+                  {modalTitle}
                 </h2>
                 <button
                   type="button"
@@ -193,19 +209,6 @@ export function NewProjectModal({
               <div className="flex min-h-0 flex-1 overflow-hidden">
                 <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
                   <div className="space-y-4">
-                    <label className="block space-y-2">
-                      <span className="text-sm text-text-muted">
-                        {m.projectType}
-                      </span>
-                      <Select
-                        value={draft.projectType}
-                        options={projectTypeOptions}
-                        onChange={(projectType) =>
-                          setDraft((d) => ({ ...d, projectType }))
-                        }
-                      />
-                    </label>
-
                     <label className="block space-y-2">
                       <span className="text-sm text-text-muted">
                         {m.projectName}
@@ -236,51 +239,33 @@ export function NewProjectModal({
                       />
                     </label>
 
-                    <div className="space-y-2">
+                    <label className="block space-y-2">
                       <span className="text-sm text-text-muted">
                         {m.imageModel}
                       </span>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Select
-                          value={draft.imageModel}
-                          options={modelOptions}
-                          placeholder={m.selectModel}
-                          onChange={(imageModel) =>
-                            setDraft((d) => ({ ...d, imageModel }))
-                          }
-                        />
-                        <Select
-                          value={draft.imageQuality}
-                          options={qualityOptions}
-                          onChange={(imageQuality) =>
-                            setDraft((d) => ({ ...d, imageQuality }))
-                          }
-                        />
-                      </div>
-                    </div>
+                      <Select
+                        value={draft.imageModel}
+                        options={modelOptions}
+                        placeholder={m.selectModel}
+                        onChange={(imageModel) =>
+                          setDraft((d) => ({ ...d, imageModel }))
+                        }
+                      />
+                    </label>
 
-                    <div className="space-y-2">
+                    <label className="block space-y-2">
                       <span className="text-sm text-text-muted">
                         {m.videoModel}
                       </span>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Select
-                          value={draft.videoModel}
-                          options={modelOptions}
-                          placeholder={m.selectModel}
-                          onChange={(videoModel) =>
-                            setDraft((d) => ({ ...d, videoModel }))
-                          }
-                        />
-                        <Select
-                          value={draft.videoMode}
-                          options={modeOptions}
-                          onChange={(videoMode) =>
-                            setDraft((d) => ({ ...d, videoMode }))
-                          }
-                        />
-                      </div>
-                    </div>
+                      <Select
+                        value={draft.videoModel}
+                        options={modelOptions}
+                        placeholder={m.selectModel}
+                        onChange={(videoModel) =>
+                          setDraft((d) => ({ ...d, videoModel }))
+                        }
+                      />
+                    </label>
 
                     <label className="block space-y-2">
                       <span className="text-sm text-text-muted">
@@ -345,10 +330,10 @@ export function NewProjectModal({
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  disabled={!draft.name.trim()}
+                  disabled={!draft.name.trim() || submitting}
                   className="rounded-lg bg-accent px-5 py-2 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {m.confirm}
+                  {confirmLabel}
                 </button>
               </footer>
             </motion.div>
@@ -357,22 +342,4 @@ export function NewProjectModal({
       )}
     </AnimatePresence>
   );
-}
-
-export function draftToProject(draft: NewProjectDraft): CreationProject {
-  return {
-    id: crypto.randomUUID(),
-    name: draft.name.trim(),
-    projectType: draft.projectType,
-    novelType: draft.novelType.trim(),
-    imageModel: draft.imageModel,
-    imageQuality: draft.imageQuality,
-    videoModel: draft.videoModel,
-    videoMode: draft.videoMode,
-    aspectRatio: draft.aspectRatio,
-    intro: draft.intro.trim(),
-    artStyle: draft.artStyle,
-    directorManual: draft.directorManual,
-    createdAt: Date.now(),
-  };
 }

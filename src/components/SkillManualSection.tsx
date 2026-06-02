@@ -101,7 +101,7 @@ export function SkillManualSection({
                         e.stopPropagation();
                         setDetailId(item.id);
                       }}
-                      className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-full bg-black/65 text-[10px] text-white/90 backdrop-blur-sm transition hover:bg-black/85 hover:text-accent"
+                      className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/65 text-[10px] text-white/90 backdrop-blur-sm transition hover:bg-black/85 hover:text-accent"
                     >
                       <FontAwesomeIcon icon={faCircleInfo} />
                     </button>

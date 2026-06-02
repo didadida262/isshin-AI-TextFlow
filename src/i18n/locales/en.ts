@@ -97,6 +97,7 @@ export const en: TranslationSchema = {
     empty: "No projects yet. Click the button above to create your first one",
     modal: {
       title: "New Project",
+      editTitle: "Edit Project",
       projectType: "Project type",
       projectTypeNovel: "Based on novel",
       projectName: "Project name",
@@ -117,6 +118,8 @@ export const en: TranslationSchema = {
       newDirectorManual: "New director manual",
       cancel: "Cancel",
       confirm: "Confirm",
+      creating: "Creating…",
+      saving: "Saving…",
       qualityStandard: "Standard",
       qualityHigh: "High",
       qualityUltra: "Ultra",

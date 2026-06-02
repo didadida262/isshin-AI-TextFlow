@@ -24,6 +24,7 @@ export interface CreationProject {
   artStyle: string;
   directorManual: string;
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface AppConfig {

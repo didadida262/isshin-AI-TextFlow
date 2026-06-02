@@ -4,6 +4,21 @@ description = "Allows user login"
 commands.allow = ["login"]
 
 [[permission]]
+identifier = "allow-create-project"
+description = "Allows creating projects"
+commands.allow = ["create_project"]
+
+[[permission]]
+identifier = "allow-list-projects"
+description = "Allows listing projects"
+commands.allow = ["list_projects"]
+
+[[permission]]
+identifier = "allow-update-project"
+description = "Allows updating projects"
+commands.allow = ["update_project"]
+
+[[permission]]
 identifier = "allow-read-project-file"
 description = "Allows reading project files"
 commands.allow = ["read_project_file"]

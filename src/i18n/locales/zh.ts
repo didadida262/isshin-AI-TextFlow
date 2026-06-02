@@ -90,6 +90,7 @@ export type TranslationSchema = {
     empty: string;
     modal: {
       title: string;
+      editTitle: string;
       projectType: string;
       projectTypeNovel: string;
       projectName: string;
@@ -110,6 +111,8 @@ export type TranslationSchema = {
       newDirectorManual: string;
       cancel: string;
       confirm: string;
+      creating: string;
+      saving: string;
       qualityStandard: string;
       qualityHigh: string;
       qualityUltra: string;
@@ -233,6 +236,7 @@ export const zh: TranslationSchema = {
     empty: "暂无项目，点击右上角创建第一个视频创作",
     modal: {
       title: "新建项目",
+      editTitle: "编辑项目",
       projectType: "项目类型",
       projectTypeNovel: "基于小说原文",
       projectName: "项目名称",
@@ -253,6 +257,8 @@ export const zh: TranslationSchema = {
       newDirectorManual: "新建导演手册",
       cancel: "取消",
       confirm: "确定",
+      creating: "创建中…",
+      saving: "保存中…",
       qualityStandard: "标准",
       qualityHigh: "高清",
       qualityUltra: "超清",

@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClapperboard, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
-  draftToProject,
+  createProject,
+  draftToProjectInput,
+  loadProjects,
+  updateProject,
+} from "../services/projects";
+import {
   NewProjectModal,
   type NewProjectDraft,
 } from "./NewProjectModal";
@@ -13,13 +18,63 @@ interface CreationViewProps {
   models: string[];
 }
 
+function formatProjectDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
 export function CreationView({ models }: CreationViewProps) {
   const i18n = useTranslationMessages();
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [editingProject, setEditingProject] = useState<CreationProject | null>(
+    null,
+  );
   const [projects, setProjects] = useState<CreationProject[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleConfirm = (draft: NewProjectDraft) => {
-    setProjects((prev) => [draftToProject(draft), ...prev]);
+  const refreshProjects = useCallback(async () => {
+    setLoading(true);
+    const items = await loadProjects();
+    setProjects(items);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void refreshProjects();
+  }, [refreshProjects]);
+
+  const openCreateModal = () => {
+    setModalMode("create");
+    setEditingProject(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (project: CreationProject) => {
+    setModalMode("edit");
+    setEditingProject(project);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingProject(null);
+  };
+
+  const handleConfirm = async (draft: NewProjectDraft) => {
+    if (modalMode === "edit" && editingProject) {
+      const updated = await updateProject(editingProject.id, draft);
+      if (!updated) return;
+    } else {
+      const created = await createProject(draftToProjectInput(draft));
+      if (!created) return;
+    }
+
+    await refreshProjects();
+    closeModal();
   };
 
   return (
@@ -32,7 +87,7 @@ export function CreationView({ models }: CreationViewProps) {
 
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={openCreateModal}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-black transition hover:scale-[1.02] hover:bg-accent/90 active:scale-[0.98]"
           >
             <FontAwesomeIcon icon={faPlus} className="text-xs" />
@@ -41,7 +96,11 @@ export function CreationView({ models }: CreationViewProps) {
         </header>
 
         <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-surface/30 p-6">
-          {projects.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-1 items-center justify-center text-sm text-text-dim">
+              …
+            </div>
+          ) : projects.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-surface">
                 <FontAwesomeIcon
@@ -54,18 +113,34 @@ export function CreationView({ models }: CreationViewProps) {
               </p>
             </div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
-                <li
-                  key={project.id}
-                  className="rounded-xl border border-white/10 bg-surface p-4 transition hover:border-white/20"
-                >
-                  <h3 className="truncate font-medium text-white">
-                    {project.name}
-                  </h3>
-                  <p className="mt-1 truncate text-xs text-text-muted">
-                    {project.novelType || project.aspectRatio}
-                  </p>
+                <li key={project.id}>
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(project)}
+                    className="flex h-full w-full flex-col rounded-xl border border-white/10 bg-surface p-4 text-left transition hover:border-accent/40 hover:bg-surface-elevated"
+                  >
+                    <h3 className="truncate font-medium text-white">
+                      {project.name}
+                    </h3>
+                    <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-text-muted">
+                      {project.intro || project.novelType}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-text-dim">
+                      <span className="rounded-md border border-white/10 px-2 py-0.5">
+                        {project.aspectRatio}
+                      </span>
+                      {project.novelType ? (
+                        <span className="rounded-md border border-white/10 px-2 py-0.5">
+                          {project.novelType}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-3 text-[11px] text-text-dim">
+                      {formatProjectDate(project.createdAt)}
+                    </p>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -75,8 +150,10 @@ export function CreationView({ models }: CreationViewProps) {
 
       <NewProjectModal
         open={modalOpen}
+        mode={modalMode}
+        editingProject={editingProject}
         models={models}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         onConfirm={handleConfirm}
       />
     </>

@@ -1,7 +1,9 @@
 mod db;
+mod projects;
 mod skills;
 
 use db::login;
+use projects::{create_project, list_projects, update_project};
 use serde::Serialize;
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
 use std::fs;
@@ -52,6 +54,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             login,
+            create_project,
+            list_projects,
+            update_project,
             read_project_file,
             list_art_skills,
             list_story_skills,
