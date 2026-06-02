@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClapperboard, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
@@ -9,8 +8,6 @@ import {
   type NewProjectDraft,
 } from "./NewProjectModal";
 import type { CreationProject } from "../types";
-
-const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 interface CreationViewProps {
   models: string[];
@@ -29,36 +26,21 @@ export function CreationView({ models }: CreationViewProps) {
     <>
       <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-black p-6">
         <header className="flex shrink-0 items-center justify-between gap-6">
-          <motion.h1
-            className="text-2xl font-semibold tracking-tight text-white"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={spring}
-          >
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
             {i18n.creation.title}
-          </motion.h1>
+          </h1>
 
-          <motion.button
+          <button
             type="button"
             onClick={() => setModalOpen(true)}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...spring, delay: 0.05 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-black transition hover:bg-accent/90"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-black transition hover:scale-[1.02] hover:bg-accent/90 active:scale-[0.98]"
           >
             <FontAwesomeIcon icon={faPlus} className="text-xs" />
             {i18n.creation.newProject}
-          </motion.button>
+          </button>
         </header>
 
-        <motion.div
-          className="mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-dashed border-white/10 bg-surface/30 p-6"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...spring, delay: 0.08 }}
-        >
+        <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-surface/30 p-6">
           {projects.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-surface">
@@ -88,7 +70,7 @@ export function CreationView({ models }: CreationViewProps) {
               ))}
             </ul>
           )}
-        </motion.div>
+        </div>
       </main>
 
       <NewProjectModal

@@ -200,7 +200,7 @@ export const zh: TranslationSchema = {
       "以下是通过本地 Agent 读取的真实文件内容，请基于此回答用户：\n",
   },
   creation: {
-    title: "我的项目",
+    title: "项目列表",
     newProject: "新建项目",
     empty: "暂无项目，点击右上角创建第一个视频创作",
     modal: {

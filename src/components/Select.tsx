@@ -1,5 +1,4 @@
-import { useId, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 
@@ -17,10 +16,8 @@ interface SelectProps {
   className?: string;
 }
 
-const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
-
 const triggerClass =
-  "box-border flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-surface px-3 text-sm text-white outline-none transition hover:border-white/20 focus:border-accent/50 disabled:cursor-not-allowed disabled:opacity-50";
+  "box-border flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-surface px-3 text-sm text-white outline-none transition hover:border-white/20 focus:outline-none focus-visible:border-accent/50 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function Select({
   value,
@@ -31,14 +28,27 @@ export function Select({
   className,
 }: SelectProps) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const id = useId();
 
   const selected = options.find((o) => o.value === value);
   const display = selected?.label ?? placeholder ?? "";
   const showPlaceholder = !selected && Boolean(placeholder);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (containerRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
+
   return (
-    <div className={`relative ${className ?? ""}`}>
+    <div ref={containerRef} className={`relative ${className ?? ""}`}>
       <button
         type="button"
         id={id}
@@ -46,7 +56,7 @@ export function Select({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={triggerClass}
+        className={`${triggerClass} ${open ? "border-accent/50" : ""}`}
       >
         <span
           className={`truncate ${showPlaceholder ? "text-text-dim" : "text-white"}`}
@@ -59,52 +69,37 @@ export function Select({
         />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-[60]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-            />
-            <motion.ul
-              role="listbox"
-              aria-labelledby={id}
-              className="absolute left-0 right-0 top-[calc(100%+4px)] z-[61] max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-[#161616]/95 py-1 shadow-2xl backdrop-blur-xl"
-              initial={{ opacity: 0, y: -4, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.98 }}
-              transition={spring}
-            >
-              {options.map((opt) => (
-                <li key={opt.value || "__empty__"}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={opt.value === value}
-                    onClick={() => {
-                      onChange(opt.value);
-                      setOpen(false);
-                    }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-white/5 ${
-                      opt.value === value ? "text-accent" : "text-white"
-                    }`}
-                  >
-                    {opt.value === value ? (
-                      <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                    ) : (
-                      <span className="inline-block h-1.5 w-1.5 shrink-0" />
-                    )}
-                    <span className="truncate">{opt.label}</span>
-                  </button>
-                </li>
-              ))}
-            </motion.ul>
-          </>
-        )}
-      </AnimatePresence>
+      {open && (
+        <ul
+          role="listbox"
+          aria-labelledby={id}
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-surface py-1 shadow-2xl"
+        >
+          {options.map((opt) => (
+            <li key={opt.value || "__empty__"}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={opt.value === value}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-white/5 ${
+                  opt.value === value ? "text-accent" : "text-white"
+                }`}
+              >
+                {opt.value === value ? (
+                  <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                ) : (
+                  <span className="inline-block h-1.5 w-1.5 shrink-0" />
+                )}
+                <span className="truncate">{opt.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
