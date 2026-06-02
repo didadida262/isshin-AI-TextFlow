@@ -45,3 +45,7 @@ Thumbs.db
 # Rust/Tauri specific
 /src-tauri/target/
 /src-tauri/Cargo.lock
+
+# SQLite database (generated at runtime)
+data/sqlite/*.db
+data/sqlite/*.db-*

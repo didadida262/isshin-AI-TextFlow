@@ -1,17 +1,11 @@
+mod db;
 mod skills;
 
-use serde::{Deserialize, Serialize};
+use db::login;
+use serde::Serialize;
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
 use std::fs;
 use std::path::PathBuf;
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct AppConfig {
-    pub base_url: String,
-    pub api_key: String,
-    pub models: Vec<String>,
-}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,50 +15,8 @@ pub struct FileReadResult {
     pub path: String,
 }
 
-fn config_path() -> Result<PathBuf, String> {
-    let dir = dirs::config_dir().ok_or("无法定位用户配置目录")?;
-    let app_dir = dir.join("isshin-ai-textflow");
-    fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
-    Ok(app_dir.join("config.json"))
-}
-
-fn legacy_config_path() -> Option<PathBuf> {
-    dirs::config_dir().map(|dir| dir.join("isshin-ai-agent").join("config.json"))
-}
-
-fn read_config_file(path: &PathBuf) -> Result<AppConfig, String> {
-    let data = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&data).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn load_config() -> Result<AppConfig, String> {
-    let path = config_path()?;
-    if path.exists() {
-        return read_config_file(&path);
-    }
-
-    if let Some(legacy) = legacy_config_path() {
-        if legacy.exists() {
-            let cfg = read_config_file(&legacy)?;
-            let data = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
-            fs::write(&path, data).map_err(|e| e.to_string())?;
-            return Ok(cfg);
-        }
-    }
-
-    Ok(AppConfig::default())
-}
-
 fn project_root() -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-}
-
-#[tauri::command]
-fn save_config(config: AppConfig) -> Result<(), String> {
-    let path = config_path()?;
-    let data = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
-    fs::write(path, data).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -94,9 +46,12 @@ fn read_project_file(filename: String) -> Result<FileReadResult, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
+        .setup(|_| {
+            db::init_db().expect("failed to init database");
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
-            load_config,
-            save_config,
+            login,
             read_project_file,
             list_art_skills,
             list_story_skills,

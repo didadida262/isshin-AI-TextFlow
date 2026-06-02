@@ -4,11 +4,19 @@ import { SessionPanel } from "./components/SessionPanel";
 import { ChatArea } from "./components/ChatArea";
 import { CreationView } from "./components/CreationView";
 import { SettingsDrawer } from "./components/SettingsDrawer";
+import { LoginView } from "./components/LoginView";
 import { I18nProvider } from "./contexts/I18nContext";
 import { useAppState } from "./hooks/useAppState";
-import type { AppNav } from "./types";
+import { readAuthSession, logout as clearAuthSession } from "./services/auth";
+import type { AppNav, AuthUser } from "./types";
 
-function AppContent() {
+function MainApp({
+  user,
+  onLogout,
+}: {
+  user: AuthUser;
+  onLogout: () => void;
+}) {
   const [activeNav, setActiveNav] = useState<AppNav>("creation");
 
   const {
@@ -36,11 +44,16 @@ function AppContent() {
   return (
     <div className="flex h-screen min-h-0 bg-black">
       <Sidebar
+        user={user}
         activeNav={activeNav}
         onNavChange={setActiveNav}
         onOpenSettings={() => {
           setConfigError(null);
           setSettingsOpen(true);
+        }}
+        onLogout={() => {
+          clearAuthSession();
+          onLogout();
         }}
       />
 
@@ -81,6 +94,16 @@ function AppContent() {
       />
     </div>
   );
+}
+
+function AppContent() {
+  const [user, setUser] = useState<AuthUser | null>(() => readAuthSession());
+
+  if (!user) {
+    return <LoginView onSuccess={setUser} />;
+  }
+
+  return <MainApp user={user} onLogout={() => setUser(null)} />;
 }
 
 export default function App() {

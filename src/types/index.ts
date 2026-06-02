@@ -4,6 +4,12 @@ export type AppNav = "session" | "creation";
 /** 对话模式：普通直连 LLM / 启用本地 Agent 工具链 */
 export type ChatMode = "chat" | "agent";
 
+export interface AuthUser {
+  id: number;
+  username: string;
+  displayName: string;
+}
+
 export interface CreationProject {
   id: string;
   name: string;

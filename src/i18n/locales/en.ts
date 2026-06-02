@@ -3,7 +3,7 @@ import type { TranslationSchema } from "./zh";
 export const en: TranslationSchema = {
   nav: {
     session: "Chat",
-    creation: "Create",
+    creation: "Projects",
     settings: "Settings",
   },
   language: {
@@ -76,6 +76,20 @@ export const en: TranslationSchema = {
     idle: "Idle",
     contextPrefix:
       "The following is real file content read by the local Agent. Answer the user based on it:\n",
+  },
+  auth: {
+    title: "Isshin AI TextFlow",
+    subtitle: "Sign in to continue",
+    username: "Username",
+    usernamePlaceholder: "Enter username",
+    password: "Password",
+    passwordPlaceholder: "Enter password",
+    login: "Sign in",
+    loggingIn: "Signing in…",
+    loginFailed: "Invalid username or password",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    logout: "Sign out",
   },
   creation: {
     title: "Project List",

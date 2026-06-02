@@ -5,8 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "allow-load-config",
-    "allow-save-config",
+    "allow-login",
     "allow-read-project-file",
     "allow-list-art-skills",
     "allow-list-story-skills",

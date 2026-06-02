@@ -70,6 +70,20 @@ export type TranslationSchema = {
     idle: string;
     contextPrefix: string;
   };
+  auth: {
+    title: string;
+    subtitle: string;
+    username: string;
+    usernamePlaceholder: string;
+    password: string;
+    passwordPlaceholder: string;
+    login: string;
+    loggingIn: string;
+    loginFailed: string;
+    showPassword: string;
+    hidePassword: string;
+    logout: string;
+  };
   creation: {
     title: string;
     newProject: string;
@@ -128,7 +142,7 @@ export type TranslationSchema = {
 export const zh: TranslationSchema = {
   nav: {
     session: "会话",
-    creation: "创作",
+    creation: "项目",
     settings: "设置",
   },
   language: {
@@ -198,6 +212,20 @@ export const zh: TranslationSchema = {
     idle: "待命",
     contextPrefix:
       "以下是通过本地 Agent 读取的真实文件内容，请基于此回答用户：\n",
+  },
+  auth: {
+    title: "Isshin AI TextFlow",
+    subtitle: "登录后继续使用",
+    username: "账户名",
+    usernamePlaceholder: "请输入账户名",
+    password: "密码",
+    passwordPlaceholder: "请输入密码",
+    login: "登录",
+    loggingIn: "登录中…",
+    loginFailed: "用户名或密码错误",
+    showPassword: "显示密码",
+    hidePassword: "隐藏密码",
+    logout: "退出登录",
   },
   creation: {
     title: "项目列表",

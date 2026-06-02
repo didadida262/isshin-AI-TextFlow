@@ -1,12 +1,7 @@
 [[permission]]
-identifier = "allow-load-config"
-description = "Allows loading app config"
-commands.allow = ["load_config"]
-
-[[permission]]
-identifier = "allow-save-config"
-description = "Allows saving app config"
-commands.allow = ["save_config"]
+identifier = "allow-login"
+description = "Allows user login"
+commands.allow = ["login"]
 
 [[permission]]
 identifier = "allow-read-project-file"
