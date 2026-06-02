@@ -216,21 +216,26 @@ export function ExtractEventsStep({
                       <td className="px-4 py-3 text-text-muted">{row.chapter.index}</td>
                       <td className="px-4 py-3 text-text-muted">{row.chapter.reel}</td>
                       <td className="px-4 py-3 text-white">{row.chapter.title}</td>
-                      <td className="max-w-0 px-4 py-3 text-text-muted">
+                      <td className="max-w-0 overflow-hidden px-4 py-3 text-text-muted">
                         <HoverFullText
                           text={row.chapter.content}
                           className="text-text-muted"
+                          lines={2}
                         />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="max-w-0 overflow-hidden px-4 py-3">
                         {row.error ? (
-                          <p className="whitespace-pre-wrap break-words leading-relaxed text-red-400">
-                            {row.error}
-                          </p>
+                          <HoverFullText
+                            text={row.error}
+                            className="text-red-400"
+                            lines={2}
+                          />
                         ) : (
-                          <p className="whitespace-pre-wrap break-words leading-relaxed text-white">
-                            {row.event || s.noEvent}
-                          </p>
+                          <HoverFullText
+                            text={row.event || s.noEvent}
+                            className="text-white"
+                            lines={2}
+                          />
                         )}
                       </td>
                     </tr>

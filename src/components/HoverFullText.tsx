@@ -5,13 +5,15 @@ interface HoverFullTextProps {
   text: string;
   className?: string;
   previewClassName?: string;
+  /** 表格内最多展示行数，超出省略 */
+  lines?: 1 | 2;
 }
 
 const HIDE_DELAY_MS = 280;
 const BRIDGE_PX = 10;
 const PREVIEW_MAX_HEIGHT = 240;
 
-function singleLineText(text: string): string {
+function normalizeDisplayText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
@@ -19,8 +21,9 @@ export function HoverFullText({
   text,
   className = "",
   previewClassName = "",
+  lines = 2,
 }: HoverFullTextProps) {
-  const triggerRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
@@ -68,7 +71,8 @@ export function HoverFullText({
   }, []);
 
   const showPreview = useCallback(() => {
-    if (!text.trim()) return;
+    const normalized = normalizeDisplayText(text);
+    if (!normalized) return;
     clearHideTimer();
     updatePosition();
     setOpen(true);
@@ -104,13 +108,14 @@ export function HoverFullText({
 
   useEffect(() => clearHideTimer, [clearHideTimer]);
 
-  const displayText = singleLineText(text);
+  const displayText = normalizeDisplayText(text);
+  const clampClass = lines === 1 ? "truncate" : "text-clamp-2";
 
   return (
     <>
-      <span
+      <div
         ref={triggerRef}
-        className={`block cursor-default truncate ${className}`}
+        className={`min-w-0 w-full cursor-default leading-relaxed ${clampClass} ${className}`}
         onMouseEnter={showPreview}
         onMouseLeave={scheduleHide}
         onFocus={showPreview}
@@ -118,7 +123,7 @@ export function HoverFullText({
         tabIndex={0}
       >
         {displayText || "—"}
-      </span>
+      </div>
 
       {open &&
         createPortal(

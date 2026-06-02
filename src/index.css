@@ -155,3 +155,11 @@ select:disabled {
     background-position: 100% 50%;
   }
 }
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+}
