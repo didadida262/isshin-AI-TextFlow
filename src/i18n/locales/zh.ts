@@ -100,6 +100,7 @@ export type TranslationSchema = {
       confirmImportBody: string;
       confirmClearTableTitle: string;
       confirmClearTableBody: string;
+      confirmClearTableBodyWithAssets: string;
       confirmClearAllTitle: string;
       confirmClearAllBody: string;
       confirm: string;
@@ -413,7 +414,7 @@ export const zh: TranslationSchema = {
       clearTableAction: "清空表",
       clearTableSelect: "请选择表",
       clearAllTitle: "清空数据库",
-      clearAllDesc: "清空所有数据表中的数据，保留表结构",
+      clearAllDesc: "清空所有数据表中的数据，保留表结构，并删除资产生成的图片文件",
       clearAllAction: "清空数据",
       overviewModalTitle: "数据库概览",
       dbPathLabel: "数据库路径",
@@ -433,8 +434,11 @@ export const zh: TranslationSchema = {
       confirmImportBody: "导入将覆盖当前所有业务数据，是否继续？",
       confirmClearTableTitle: "确认清空数据表",
       confirmClearTableBody: "将清空表「{{table}}」中的所有数据，是否继续？",
+      confirmClearTableBodyWithAssets:
+        "将清空表「{{table}}」中的所有数据，关联资产生成的图片文件也会一并删除。是否继续？",
       confirmClearAllTitle: "确认清空数据库",
-      confirmClearAllBody: "将清空所有业务数据表，仅保留表结构。清空 users 表后会自动恢复默认 admin 账号。是否继续？",
+      confirmClearAllBody:
+        "将清空所有业务数据表，仅保留表结构；data/assets 目录下的资产生成图片也会一并删除。清空 users 表后会自动恢复默认 admin 账号。是否继续？",
       confirm: "确认",
       cancel: "取消",
     },

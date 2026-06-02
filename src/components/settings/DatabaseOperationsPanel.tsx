@@ -230,11 +230,18 @@ export function DatabaseOperationsPanel() {
           ? db.confirmClearAllTitle
           : "";
 
+  const clearsAssetImages =
+    selectedTable === "project_assets" || selectedTable === "projects";
+
   const confirmBody =
     confirmKind === "import"
       ? db.confirmImportBody
       : confirmKind === "clearTable"
-        ? t("settings.database.confirmClearTableBody", { table: selectedTable })
+        ? clearsAssetImages
+          ? t("settings.database.confirmClearTableBodyWithAssets", {
+              table: selectedTable,
+            })
+          : t("settings.database.confirmClearTableBody", { table: selectedTable })
         : confirmKind === "clearAll"
           ? db.confirmClearAllBody
           : "";

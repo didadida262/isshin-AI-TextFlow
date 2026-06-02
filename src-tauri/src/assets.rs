@@ -373,6 +373,33 @@ pub fn remove_project_asset_files(project_id: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn remove_all_asset_image_files() -> Result<(), String> {
+    let root = assets_root_dir()?;
+    if root.exists() {
+        fs::remove_dir_all(&root).map_err(|e| e.to_string())?;
+    }
+    fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn remove_asset_image_files_for_projects(project_ids: &[String]) -> Result<(), String> {
+    for project_id in project_ids {
+        let _ = remove_project_asset_files(project_id);
+    }
+    Ok(())
+}
+
+pub fn list_project_ids(conn: &Connection) -> Result<Vec<String>, String> {
+    let mut stmt = conn
+        .prepare("SELECT id FROM projects")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
 pub fn clear_project_assets(conn: &Connection, project_id: &str) -> Result<(), String> {
     conn.execute(
         "DELETE FROM project_assets WHERE project_id = ?1",

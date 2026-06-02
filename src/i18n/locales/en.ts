@@ -86,7 +86,7 @@ export const en: TranslationSchema = {
       clearTableAction: "Clear table",
       clearTableSelect: "Select a table",
       clearAllTitle: "Clear Database",
-      clearAllDesc: "Clear all table data while keeping schema",
+      clearAllDesc: "Clear all table data while keeping schema and remove generated asset images",
       clearAllAction: "Clear data",
       overviewModalTitle: "Database Overview",
       dbPathLabel: "Database path",
@@ -106,8 +106,11 @@ export const en: TranslationSchema = {
       confirmImportBody: "Import will overwrite all current business data. Continue?",
       confirmClearTableTitle: "Confirm Clear Table",
       confirmClearTableBody: 'Clear all rows in table "{{table}}"?',
+      confirmClearTableBodyWithAssets:
+        'Clear all rows in table "{{table}}" and delete related generated asset image files?',
       confirmClearAllTitle: "Confirm Clear Database",
-      confirmClearAllBody: "This clears all business tables but keeps schema. Default admin user will be restored if users is cleared. Continue?",
+      confirmClearAllBody:
+        "This clears all business tables but keeps schema, and deletes generated asset images under data/assets. Default admin user will be restored if users is cleared. Continue?",
       confirm: "Confirm",
       cancel: "Cancel",
     },

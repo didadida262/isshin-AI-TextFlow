@@ -1,3 +1,6 @@
+use crate::assets::{
+    list_project_ids, remove_all_asset_image_files, remove_asset_image_files_for_projects,
+};
 use crate::db::{database_file_path, init_db, seed_default_admin};
 use rusqlite::{Connection, Row, types::ValueRef};
 use serde::Serialize;
@@ -144,6 +147,21 @@ fn export_table(conn: &Connection, table: &str) -> Result<Vec<Value>, String> {
         .map_err(|e| e.to_string())?;
 
     Ok(rows)
+}
+
+fn cleanup_asset_files_before_clear(conn: &Connection, table: &str) -> Result<(), String> {
+    match table {
+        "project_assets" => remove_all_asset_image_files(),
+        "projects" => {
+            let project_ids = list_project_ids(conn)?;
+            remove_asset_image_files_for_projects(&project_ids)
+        }
+        _ => Ok(()),
+    }
+}
+
+fn cleanup_all_asset_files_before_clear() -> Result<(), String> {
+    remove_all_asset_image_files()
 }
 
 fn clear_table(conn: &Connection, table: &str) -> Result<i64, String> {
@@ -319,6 +337,7 @@ pub fn clear_database_table(table_name: String) -> Result<i64, String> {
         .map_err(|e| e.to_string())?;
     tx.execute_batch("PRAGMA foreign_keys = OFF;")
         .map_err(|e| e.to_string())?;
+    cleanup_asset_files_before_clear(&tx, table)?;
     let deleted = clear_table(&tx, table)?;
     if table == "users" {
         seed_default_admin(&tx)?;
@@ -337,6 +356,8 @@ pub fn clear_database() -> Result<i64, String> {
         .map_err(|e| e.to_string())?;
     tx.execute_batch("PRAGMA foreign_keys = OFF;")
         .map_err(|e| e.to_string())?;
+
+    cleanup_all_asset_files_before_clear()?;
 
     let mut deleted = 0_i64;
     for table in CLEAR_TABLE_ORDER {
