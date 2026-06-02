@@ -136,11 +136,6 @@ export function ProjectDetailView({
     [nodeDetail],
   );
 
-  const aiScriptDetail = useMemo(
-    () => (nodeDetail?.kind === "aiScript" ? nodeDetail : null),
-    [nodeDetail],
-  );
-
   return (
     <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-black">
       <header className="shrink-0 overflow-visible px-6 pb-4 pt-5">
@@ -195,11 +190,8 @@ export function ProjectDetailView({
                 initialChapters={extractEventsDetail.chapters}
                 onWorkflowChange={() => void refreshProjectWorkflow()}
               />
-            ) : selectedStep === "aiScript" && aiScriptDetail ? (
-              <AiScriptStep
-                title={activeLabel}
-                chapters={aiScriptDetail.chapters}
-              />
+            ) : selectedStep === "aiScript" ? (
+              <AiScriptStep title={activeLabel} />
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <h2 key={selectedStep} className="step-panel-title">

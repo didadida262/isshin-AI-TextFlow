@@ -74,7 +74,7 @@ function getSegmentVariant(
 function SegmentLine({ variant }: { variant: SegmentVariant }) {
   return (
     <div
-      className="relative mt-4 h-px min-w-[12px] flex-1 self-start"
+      className="relative z-0 mt-4 h-px min-w-[1rem] flex-1 self-start -mx-2"
       aria-hidden
     >
       <div className="absolute inset-0 bg-white/10" />
@@ -125,7 +125,7 @@ export function ProjectStepper({
                   type="button"
                   onClick={() => onStepChange(step.id)}
                   aria-current={isSelected ? "step" : undefined}
-                  className="group flex min-w-0 flex-1 flex-col items-center outline-none"
+                  className="group flex w-[4.75rem] shrink-0 flex-col items-center outline-none sm:w-[5.5rem]"
                 >
                   <StepCircle state={state} index={index} />
                   <span
