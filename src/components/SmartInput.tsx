@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faStop } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
@@ -30,7 +29,6 @@ export function SmartInput({
 }: SmartInputProps) {
   const i18n = useTranslationMessages();
   const [text, setText] = useState("");
-  const [focused, setFocused] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
 
   const submit = useCallback(() => {
@@ -55,11 +53,7 @@ export function SmartInput({
 
   return (
     <div className="border-t border-white/5 bg-[#0a0a0a] px-4 py-4">
-      <motion.div
-        className="mb-3 flex items-center justify-between gap-3"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
+      <div className="mb-3 flex items-center justify-between gap-3">
         <ModeToggle
           mode={chatMode}
           onChange={onChatModeChange}
@@ -70,27 +64,14 @@ export function SmartInput({
           selected={selectedModel}
           onSelect={onSelectModel}
         />
-      </motion.div>
-      <motion.div
-        className="relative rounded-2xl border bg-surface p-1 transition"
-        animate={{
-          borderColor: focused
-            ? "rgba(0, 255, 102, 0.6)"
-            : "rgba(255, 255, 255, 0.08)",
-          boxShadow: focused
-            ? "0 0 20px rgba(0, 255, 102, 0.15)"
-            : "0 0 0px transparent",
-        }}
-        transition={{ duration: 0.2 }}
-      >
+      </div>
+      <div className="relative rounded-2xl border border-white/[0.08] bg-surface p-1 transition-[border-color,box-shadow] duration-200 focus-within:border-accent/60 focus-within:shadow-[0_0_20px_rgba(0,255,102,0.15)]">
         <textarea
           ref={ref}
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
           placeholder={placeholder}
           className="w-full resize-none bg-transparent px-4 py-3 pr-12 text-sm text-white outline-none placeholder:text-text-dim"
         />
@@ -114,7 +95,7 @@ export function SmartInput({
             <FontAwesomeIcon icon={faPaperPlane} />
           </button>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }
