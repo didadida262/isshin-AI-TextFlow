@@ -1,3 +1,5 @@
+mod image;
+mod assets;
 mod db;
 mod llm;
 mod novel;
@@ -6,6 +8,8 @@ mod script;
 mod skills;
 mod workflow;
 
+use image::generate_image;
+use assets::{create_project_asset, delete_project_asset, list_project_assets, update_project_asset};
 use db::login;
 use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
 use novel::{
@@ -88,7 +92,12 @@ pub fn run() {
             list_scripts,
             upsert_script,
             list_project_workflow_nodes,
-            get_project_workflow_node_detail
+            get_project_workflow_node_detail,
+            list_project_assets,
+            create_project_asset,
+            update_project_asset,
+            delete_project_asset,
+            generate_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -51,8 +51,8 @@ const components: Components = {
   ),
   hr: () => <hr className="my-4 border-white/10" />,
   table: ({ children }) => (
-    <div className="mb-3 overflow-x-auto last:mb-0">
-      <table className="w-full border-collapse text-left text-xs">
+    <div className="mb-3 last:mb-0">
+      <table className="w-max min-w-full border-collapse text-left text-xs">
         {children}
       </table>
     </div>
@@ -61,7 +61,9 @@ const components: Components = {
     <thead className="border-b border-white/10 bg-white/5">{children}</thead>
   ),
   th: ({ children }) => (
-    <th className="px-3 py-2 font-medium text-white">{children}</th>
+    <th className="whitespace-nowrap px-3 py-2 font-medium text-white">
+      {children}
+    </th>
   ),
   td: ({ children }) => (
     <td className="border-t border-white/5 px-3 py-2">{children}</td>

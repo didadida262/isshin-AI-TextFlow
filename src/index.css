@@ -51,11 +51,25 @@ select:disabled {
 
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
 }
 
 @keyframes step-glow {
@@ -160,10 +174,127 @@ select:disabled {
   }
 }
 
+@keyframes modal-border-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.modal-generating-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 255, 102, 0.15) 0%,
+    rgba(0, 255, 102, 0.85) 25%,
+    rgba(34, 211, 238, 0.85) 50%,
+    rgba(0, 255, 102, 0.85) 75%,
+    rgba(0, 255, 102, 0.15) 100%
+  );
+  background-size: 220% 100%;
+  animation: modal-border-flow 2.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 25;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.modal-generating-border {
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 102, 0.08),
+    0 0 24px rgba(0, 255, 102, 0.12),
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
 .text-clamp-2 {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
   word-break: break-word;
+}
+
+.paintbrush-loading-canvas {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.paintbrush-draw-path {
+  stroke-dasharray: 240;
+  stroke-dashoffset: 240;
+  animation: paintbrush-draw 2.4s ease-in-out infinite;
+}
+
+.paintbrush-draw-glow {
+  stroke-dasharray: 240;
+  stroke-dashoffset: 240;
+  opacity: 0.45;
+  animation: paintbrush-draw 2.4s ease-in-out infinite;
+}
+
+.paintbrush-draw-brush {
+  offset-path: path(
+    "M12 62 C28 48, 36 28, 58 38 S92 58, 118 32 S142 22, 148 28"
+  );
+  offset-rotate: auto;
+  offset-distance: 0%;
+  animation: paintbrush-travel 2.4s ease-in-out infinite;
+}
+
+@keyframes paintbrush-draw {
+  0% {
+    stroke-dashoffset: 240;
+    opacity: 0.35;
+  }
+  8% {
+    opacity: 1;
+  }
+  72% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  88% {
+    stroke-dashoffset: 0;
+    opacity: 0.85;
+  }
+  100% {
+    stroke-dashoffset: 240;
+    opacity: 0.35;
+  }
+}
+
+@keyframes paintbrush-travel {
+  0% {
+    offset-distance: 0%;
+    opacity: 0.5;
+  }
+  8% {
+    opacity: 1;
+  }
+  72% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  88% {
+    offset-distance: 100%;
+    opacity: 0.85;
+  }
+  100% {
+    offset-distance: 0%;
+    opacity: 0.5;
+  }
 }

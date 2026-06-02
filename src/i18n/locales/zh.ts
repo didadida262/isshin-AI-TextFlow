@@ -154,6 +154,62 @@ export type TranslationSchema = {
       chatRetryFailedComplete: string;
       chatRetryFailedNone: string;
     };
+    generateAssetsStep: {
+      generateAsset: string;
+      emptyHint: string;
+      loading: string;
+      colPreview: string;
+      colName: string;
+      colType: string;
+      colPrompt: string;
+      colModel: string;
+      colSize: string;
+      colStatus: string;
+      colActions: string;
+      edit: string;
+      delete: string;
+      openActionsMenu: string;
+      deleteConfirmTitle: string;
+      deleteConfirm: (name: string) => string;
+      deleteConfirmHint: string;
+      cancel: string;
+      deleting: string;
+      statusSuccess: string;
+      statusError: string;
+      typeCharacter: string;
+      typeScene: string;
+      typeProp: string;
+      noPreview: string;
+      viewImage: string;
+      previewTitle: string;
+      previewClose: string;
+      prevPage: string;
+      nextPage: string;
+      pageInfo: (page: number, totalPages: number, total: number) => string;
+    };
+    generateAssetModal: {
+      title: string;
+      nameLabel: string;
+      namePlaceholder: string;
+      typeLabel: string;
+      typeCharacter: string;
+      typeScene: string;
+      typeProp: string;
+      promptLabel: string;
+      promptPlaceholder: string;
+      modelLabel: string;
+      modelEmpty: string;
+      sizeLabel: string;
+      cancel: string;
+      confirm: string;
+      generating: string;
+    };
+    editAssetModal: {
+      title: string;
+      cancel: string;
+      confirm: string;
+      saving: string;
+    };
     importNovelModal: {
       title: string;
       uploadHint: string;
@@ -384,6 +440,63 @@ export const zh: TranslationSchema = {
         `正在重试失败集 ${completed}/${total}…`,
       chatRetryFailedComplete: "失败集已重新生成，请在右侧查看结果。",
       chatRetryFailedNone: "当前没有失败的集数。",
+    },
+    generateAssetsStep: {
+      generateAsset: "资产生成",
+      emptyHint: "点击右上角「资产生成」，填写提示词后将调用图片服务生成并保存资产。",
+      loading: "加载资产列表…",
+      colPreview: "预览",
+      colName: "名称",
+      colType: "类型",
+      colPrompt: "提示词",
+      colModel: "模型",
+      colSize: "尺寸",
+      colStatus: "状态",
+      colActions: "操作",
+      edit: "编辑",
+      delete: "删除",
+      openActionsMenu: "操作菜单",
+      deleteConfirmTitle: "删除资产",
+      deleteConfirm: (name: string) => `确定删除资产「${name}」吗？`,
+      deleteConfirmHint: "删除后无法恢复，关联图片文件也会一并移除。",
+      cancel: "取消",
+      deleting: "删除中…",
+      statusSuccess: "已完成",
+      statusError: "失败",
+      typeCharacter: "角色",
+      typeScene: "场景",
+      typeProp: "道具",
+      noPreview: "无",
+      viewImage: "查看大图",
+      previewTitle: "生成结果",
+      previewClose: "关闭",
+      prevPage: "上一页",
+      nextPage: "下一页",
+      pageInfo: (page: number, totalPages: number, total: number) =>
+        `第 ${page}/${totalPages} 页，共 ${total} 条`,
+    },
+    generateAssetModal: {
+      title: "资产生成",
+      nameLabel: "资产名称",
+      namePlaceholder: "例如：主角小张",
+      typeLabel: "资产类型",
+      typeCharacter: "角色",
+      typeScene: "场景",
+      typeProp: "道具",
+      promptLabel: "提示词",
+      promptPlaceholder: "描述你想生成的画面，例如：一只可爱的卡通熊猫在吃竹子，3D风格",
+      modelLabel: "模型",
+      modelEmpty: "未配置（请在项目设置中选择图片模型）",
+      sizeLabel: "尺寸",
+      cancel: "取消",
+      confirm: "开始生成",
+      generating: "生成中…",
+    },
+    editAssetModal: {
+      title: "编辑资产",
+      cancel: "取消",
+      confirm: "保存",
+      saving: "保存中…",
     },
     importNovelModal: {
       title: "上传小说原文",

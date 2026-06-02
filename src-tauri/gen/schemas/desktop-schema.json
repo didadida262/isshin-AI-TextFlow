@@ -315,6 +315,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Allows project asset persistence",
+          "type": "string",
+          "const": "allow-assets",
+          "markdownDescription": "Allows project asset persistence"
+        },
+        {
           "description": "Allows creating projects",
           "type": "string",
           "const": "allow-create-project",

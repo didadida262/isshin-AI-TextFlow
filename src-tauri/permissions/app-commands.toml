@@ -67,6 +67,17 @@ description = "Allows LLM requests with Rust-side logging"
 commands.allow = ["llm_chat_completion", "llm_log_outbound", "llm_log_inbound"]
 
 [[permission]]
+identifier = "allow-assets"
+description = "Allows project asset persistence"
+commands.allow = [
+  "list_project_assets",
+  "create_project_asset",
+  "update_project_asset",
+  "delete_project_asset",
+  "generate_image",
+]
+
+[[permission]]
 identifier = "allow-script"
 description = "Allows script work data and episode script persistence"
 commands.allow = [

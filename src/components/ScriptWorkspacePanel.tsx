@@ -83,7 +83,7 @@ export function ScriptWorkspacePanel({
       <div className="min-h-0 flex-1 overflow-hidden p-4">
         {activeTab === "skeleton" ? (
           workData.storySkeleton.trim() ? (
-            <div className="h-full overflow-y-auto text-sm text-text-muted">
+            <div className="h-full min-w-0 overflow-auto text-sm text-text-muted">
               <MarkdownContent content={workData.storySkeleton} />
             </div>
           ) : (
@@ -93,7 +93,7 @@ export function ScriptWorkspacePanel({
 
         {activeTab === "strategy" ? (
           workData.adaptationStrategy.trim() ? (
-            <div className="h-full overflow-y-auto text-sm text-text-muted">
+            <div className="h-full min-w-0 overflow-auto text-sm text-text-muted">
               <MarkdownContent content={workData.adaptationStrategy} />
             </div>
           ) : (

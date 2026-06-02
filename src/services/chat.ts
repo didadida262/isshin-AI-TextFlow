@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import type { AppConfig } from "../types";
 import { resolveApiUrl } from "./api";
+import { parseApiErrorMessage } from "../utils/parseApiError";
 
 export interface ChatCompletionMessage {
   role: "user" | "assistant" | "system";
@@ -118,7 +119,7 @@ export async function* streamChatCompletion(
   if (!res.ok) {
     const responseText = await res.text();
     void logLlmInbound({ data: responseText });
-    throw new Error(responseText || `HTTP ${res.status}`);
+    throw new Error(parseApiErrorMessage(responseText, res.status));
   }
 
   const reader = res.body?.getReader();

@@ -5,6 +5,7 @@ import type {
 } from "../types";
 import type { NovelChapterRecord, NovelSourceRecord } from "./novel";
 import type { ScriptRecord } from "./script";
+import type { ListProjectAssetsResult } from "./assets";
 
 export interface ExtractEventsNodeDetail {
   kind: "extractEvents";
@@ -30,9 +31,16 @@ export interface AiScriptNodeDetail {
   scripts: ScriptRecord[];
 }
 
+export interface GenerateAssetsNodeDetail {
+  kind: "generateAssets";
+  nodeId: ProjectWorkflowStepId;
+  assets: ListProjectAssetsResult;
+}
+
 export type WorkflowNodeDetail =
   | ExtractEventsNodeDetail
   | AiScriptNodeDetail
+  | GenerateAssetsNodeDetail
   | PlaceholderNodeDetail;
 
 const inflightRequests = new Map<string, Promise<unknown>>();

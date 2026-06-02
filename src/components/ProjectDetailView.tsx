@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   getProjectWorkflowNodeDetail,
@@ -16,6 +17,7 @@ import type {
 import { ProjectStepper, type WorkflowStepItem } from "./ProjectStepper";
 import { ExtractEventsStep } from "./ExtractEventsStep";
 import { AiScriptStep } from "./AiScriptStep";
+import { GenerateAssetsStep } from "./GenerateAssetsStep";
 
 interface ProjectDetailViewProps {
   project: CreationProject;
@@ -36,6 +38,39 @@ function mapWorkflowSteps(
   }));
 }
 
+const STEP_ORDER: ProjectWorkflowStepId[] = [
+  "extractEvents",
+  "aiScript",
+  "generateAssets",
+  "storyboard",
+  "generateVideo",
+  "editExport",
+];
+
+const stepTransition = {
+  type: "tween" as const,
+  duration: 0.28,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
+
+const stepPanelVariants = {
+  enter: (direction: number) => ({
+    opacity: 0,
+    x: direction === 0 ? 0 : direction > 0 ? 32 : -32,
+    filter: "blur(6px)",
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+    filter: "blur(0px)",
+  },
+  exit: (direction: number) => ({
+    opacity: 0,
+    x: direction === 0 ? 0 : direction > 0 ? -32 : 32,
+    filter: "blur(6px)",
+  }),
+};
+
 export function ProjectDetailView({
   project,
   config,
@@ -53,6 +88,8 @@ export function ProjectDetailView({
   const [nodeDetail, setNodeDetail] = useState<WorkflowNodeDetail | null>(null);
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [stepDirection, setStepDirection] = useState(0);
+  const [enableStepAnimation, setEnableStepAnimation] = useState(false);
 
   const workflowNodes = useMemo(
     () => mapWorkflowSteps(workflowNodesRaw, w),
@@ -115,10 +152,16 @@ export function ProjectDetailView({
 
   const handleStepChange = useCallback(
     (stepId: ProjectWorkflowStepId) => {
+      if (stepId === selectedStep) return;
+
+      const prevIndex = STEP_ORDER.indexOf(selectedStep);
+      const nextIndex = STEP_ORDER.indexOf(stepId);
+      setStepDirection(nextIndex >= prevIndex ? 1 : -1);
+      setEnableStepAnimation(true);
       setSelectedStep(stepId);
       void loadNodeDetail(stepId);
     },
-    [loadNodeDetail],
+    [loadNodeDetail, selectedStep],
   );
 
   const activeLabel = w[selectedStep];
@@ -133,6 +176,93 @@ export function ProjectDetailView({
     () => (nodeDetail?.kind === "aiScript" ? nodeDetail : null),
     [nodeDetail],
   );
+
+  const generateAssetsDetail = useMemo(
+    () => (nodeDetail?.kind === "generateAssets" ? nodeDetail : null),
+    [nodeDetail],
+  );
+
+  const stepPanel = useMemo(() => {
+    if (loadingDetail) {
+      return (
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm text-text-muted">{w.loading}</p>
+        </div>
+      );
+    }
+
+    if (selectedStep === "extractEvents" && extractEventsDetail) {
+      return (
+        <ExtractEventsStep
+          key={`${project.id}-${extractEventsDetail.chapters.length}-${extractEventsDetail.source?.importedAt ?? 0}`}
+          projectId={project.id}
+          title={activeLabel}
+          config={config}
+          selectedModel={selectedModel}
+          onConfigError={onConfigError}
+          initialSource={extractEventsDetail.source}
+          initialChapters={extractEventsDetail.chapters}
+          onWorkflowChange={() => void refreshProjectWorkflow()}
+        />
+      );
+    }
+
+    if (selectedStep === "aiScript" && aiScriptDetail) {
+      return (
+        <AiScriptStep
+          key={`${project.id}-ai-script-${aiScriptDetail.scripts.length}`}
+          project={project}
+          title={activeLabel}
+          config={config}
+          selectedModel={selectedModel}
+          chapters={aiScriptDetail.chapters}
+          workData={aiScriptDetail.workData}
+          scripts={aiScriptDetail.scripts}
+          onConfigError={onConfigError}
+          onWorkflowChange={() => void refreshProjectWorkflow()}
+          onScriptsUpdated={() => void loadNodeDetail("aiScript")}
+        />
+      );
+    }
+
+    if (selectedStep === "generateAssets" && generateAssetsDetail) {
+      return (
+        <GenerateAssetsStep
+          key={`${project.id}-assets-${generateAssetsDetail.assets.total}-${generateAssetsDetail.assets.items[0]?.id ?? 0}`}
+          project={project}
+          title={activeLabel}
+          initialAssets={generateAssetsDetail.assets}
+          onConfigError={onConfigError}
+        />
+      );
+    }
+
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <h2 className="step-panel-title">{activeLabel}</h2>
+        <div className="mt-6 flex min-h-[280px] flex-1 items-center justify-center">
+          <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
+            {w.placeholder}
+          </p>
+        </div>
+      </div>
+    );
+  }, [
+    activeLabel,
+    aiScriptDetail,
+    config,
+    extractEventsDetail,
+    generateAssetsDetail,
+    loadNodeDetail,
+    loadingDetail,
+    onConfigError,
+    project,
+    refreshProjectWorkflow,
+    selectedModel,
+    selectedStep,
+    w.loading,
+    w.placeholder,
+  ]);
 
   return (
     <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-black">
@@ -171,48 +301,26 @@ export function ProjectDetailView({
 
       <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-1">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/20">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-5">
-            {loadingWorkflow || loadingDetail ? (
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-5">
+            {loadingWorkflow ? (
               <div className="flex flex-1 items-center justify-center">
                 <p className="text-sm text-text-muted">{w.loading}</p>
               </div>
-            ) : selectedStep === "extractEvents" && extractEventsDetail ? (
-              <ExtractEventsStep
-                key={`${project.id}-${extractEventsDetail.chapters.length}-${extractEventsDetail.source?.importedAt ?? 0}`}
-                projectId={project.id}
-                title={activeLabel}
-                config={config}
-                selectedModel={selectedModel}
-                onConfigError={onConfigError}
-                initialSource={extractEventsDetail.source}
-                initialChapters={extractEventsDetail.chapters}
-                onWorkflowChange={() => void refreshProjectWorkflow()}
-              />
-            ) : selectedStep === "aiScript" && aiScriptDetail ? (
-              <AiScriptStep
-                key={`${project.id}-ai-script-${aiScriptDetail.scripts.length}`}
-                project={project}
-                title={activeLabel}
-                config={config}
-                selectedModel={selectedModel}
-                chapters={aiScriptDetail.chapters}
-                workData={aiScriptDetail.workData}
-                scripts={aiScriptDetail.scripts}
-                onConfigError={onConfigError}
-                onWorkflowChange={() => void refreshProjectWorkflow()}
-                onScriptsUpdated={() => void loadNodeDetail("aiScript")}
-              />
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <h2 key={selectedStep} className="step-panel-title">
-                  {activeLabel}
-                </h2>
-                <div className="mt-6 flex min-h-[280px] flex-1 items-center justify-center">
-                  <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
-                    {w.placeholder}
-                  </p>
-                </div>
-              </div>
+              <AnimatePresence mode="wait" custom={stepDirection}>
+                <motion.div
+                  key={selectedStep}
+                  custom={stepDirection}
+                  variants={stepPanelVariants}
+                  initial={enableStepAnimation ? "enter" : false}
+                  animate="center"
+                  exit="exit"
+                  transition={stepTransition}
+                  className="flex min-h-0 flex-1 flex-col will-change-[transform,opacity,filter]"
+                >
+                  {stepPanel}
+                </motion.div>
+              </AnimatePresence>
             )}
           </div>
         </div>

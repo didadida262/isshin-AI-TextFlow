@@ -78,6 +78,30 @@ pub fn llm_log_inbound(log: LlmInboundLog) -> Result<(), String> {
     Ok(())
 }
 
+fn parse_api_error(text: &str, status: reqwest::StatusCode) -> String {
+    if let Ok(json) = serde_json::from_str::<Value>(text) {
+        let message = json
+            .pointer("/error/message")
+            .and_then(|value| value.as_str())
+            .or_else(|| json.get("message").and_then(|value| value.as_str()));
+
+        if let Some(message) = message {
+            let unauthorized = status == reqwest::StatusCode::UNAUTHORIZED
+                || json
+                    .pointer("/error/type")
+                    .and_then(|value| value.as_str())
+                    == Some("unauthorized");
+
+            if unauthorized {
+                return format!("{message}。请打开左下角设置，检查 API Key 是否正确。");
+            }
+            return message.to_string();
+        }
+    }
+
+    text.to_string()
+}
+
 #[tauri::command]
 pub async fn llm_chat_completion(
     payload: LlmRequestPayload,
@@ -106,7 +130,7 @@ pub async fn llm_chat_completion(
     log_recv(&text);
 
     if !status.is_success() {
-        return Err(text);
+        return Err(parse_api_error(&text, status));
     }
 
     let json: Value =

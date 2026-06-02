@@ -1,3 +1,4 @@
+use crate::assets::{self, ListProjectAssetsResult};
 use crate::db::init_db;
 use crate::novel::{self, NovelChapterRecord, NovelSourceRecord};
 use crate::projects::{get_project_current_node, set_project_current_node};
@@ -57,6 +58,13 @@ pub struct AiScriptNodeDetail {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GenerateAssetsNodeDetail {
+    pub node_id: String,
+    pub assets: ListProjectAssetsResult,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlaceholderNodeDetail {
     pub node_id: String,
 }
@@ -66,6 +74,7 @@ pub struct PlaceholderNodeDetail {
 pub enum WorkflowNodeDetail {
     ExtractEvents(NovelChaptersNodeDetail),
     AiScript(AiScriptNodeDetail),
+    GenerateAssets(GenerateAssetsNodeDetail),
     Placeholder(PlaceholderNodeDetail),
 }
 
@@ -221,6 +230,12 @@ pub fn get_project_workflow_node_detail(
                 scripts: script::fetch_scripts(&conn, &input.project_id)?,
             }))
         }
+        NODE_GENERATE_ASSETS => Ok(WorkflowNodeDetail::GenerateAssets(
+            GenerateAssetsNodeDetail {
+                node_id: input.node_id,
+                assets: assets::list_project_assets_internal(&conn, &input.project_id, 1, 10)?,
+            },
+        )),
         _ => Ok(WorkflowNodeDetail::Placeholder(PlaceholderNodeDetail {
             node_id: input.node_id,
         })),
@@ -238,6 +253,7 @@ mod tests {
         crate::projects::init_schema(&conn).unwrap();
         novel::init_schema(&conn).unwrap();
         script::init_schema(&conn).unwrap();
+        assets::init_schema(&conn).unwrap();
         conn.execute(
             "INSERT INTO projects (
                 id, name, project_type, novel_type, image_model, image_quality,

@@ -16,6 +16,7 @@
     "allow-get-story-skill-detail",
     "allow-novel",
     "allow-workflow",
+    "allow-assets",
     "allow-script",
     "allow-llm",
     {
