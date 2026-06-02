@@ -12,6 +12,7 @@ import {
 } from "../services/eventExtraction";
 import type { AppConfig } from "../types";
 import { ImportNovelModal } from "./ImportNovelModal";
+import { HoverFullText } from "./HoverFullText";
 
 interface ExtractEventsStepProps {
   title: string;
@@ -144,26 +145,27 @@ export function ExtractEventsStep({
         </div>
       </div>
 
-      {hasContent ? (
-        <div className="mt-6 shrink-0 rounded-xl border border-white/10 bg-surface/40 p-4">
-          <p className="mb-3 text-xs text-text-muted">
-            {novelText.length} {s.charsUnit}
-          </p>
-          <div className="max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-text-muted">
-            {novelText}
+      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-6">
+        {hasContent ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-surface/40 p-4">
+            <p className="mb-3 shrink-0 text-xs text-text-muted">
+              {novelText.length} {s.charsUnit}
+            </p>
+            <div className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-text-muted">
+              {novelText}
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="mt-6 flex min-h-[160px] shrink-0 items-center justify-center rounded-xl border border-dashed border-white/10 bg-surface/20 px-6">
-          <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
-            {s.emptyHint}
-          </p>
-        </div>
-      )}
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-white/10 bg-surface/20 px-6">
+            <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
+              {s.emptyHint}
+            </p>
+          </div>
+        )}
 
-      <div className="mt-6 flex min-h-[200px] flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-surface/20">
-        {extracting && !hasResults ? (
-          <div className="flex min-h-[200px] flex-1 flex-col items-center justify-center gap-3 px-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-surface/20">
+          {extracting && !hasResults ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6">
             <FontAwesomeIcon
               icon={faSpinner}
               className="text-xl text-accent animate-spin"
@@ -175,64 +177,76 @@ export function ExtractEventsStep({
             </p>
           </div>
         ) : hasResults ? (
-          <div className="min-h-0 flex-1 overflow-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-white/10 text-xs text-text-muted">
-                  <th className="sticky top-0 z-10 bg-[#141414] px-4 py-3 font-medium">
-                    {s.colIndex}
-                  </th>
-                  <th className="sticky top-0 z-10 bg-[#141414] px-4 py-3 font-medium">
-                    {s.colReel}
-                  </th>
-                  <th className="sticky top-0 z-10 bg-[#141414] px-4 py-3 font-medium">
-                    {s.colChapter}
-                  </th>
-                  <th className="sticky top-0 z-10 bg-[#141414] px-4 py-3 font-medium">
-                    {s.colContent}
-                  </th>
-                  <th className="sticky top-0 z-10 bg-[#141414] px-4 py-3 font-medium">
-                    {s.colEvent}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((row) => (
-                  <tr
-                    key={row.chapter.index}
-                    className="border-b border-white/5 align-top last:border-0"
-                  >
-                    <td className="px-4 py-3 text-text-muted">{row.chapter.index}</td>
-                    <td className="px-4 py-3 text-text-muted">{row.chapter.reel}</td>
-                    <td className="px-4 py-3 text-white">{row.chapter.title}</td>
-                    <td className="min-w-[180px] max-w-[280px] px-4 py-3 text-text-muted">
-                      <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words leading-relaxed">
-                        {row.chapter.content}
-                      </div>
-                    </td>
-                    <td className="min-w-[240px] max-w-[420px] px-4 py-3">
-                      {row.error ? (
-                        <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-red-400 leading-relaxed">
-                          {row.error}
-                        </div>
-                      ) : (
-                        <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-white leading-relaxed">
-                          {row.event || s.noEvent}
-                        </div>
-                      )}
-                    </td>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="shrink-0 overflow-x-auto border-b border-white/10">
+              <table className="w-full min-w-[720px] table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-14" />
+                  <col className="w-24" />
+                  <col className="w-28" />
+                  <col className="w-[280px]" />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr className="text-xs text-text-muted">
+                    <th className="px-4 py-3 font-medium">{s.colIndex}</th>
+                    <th className="px-4 py-3 font-medium">{s.colReel}</th>
+                    <th className="px-4 py-3 font-medium">{s.colChapter}</th>
+                    <th className="px-4 py-3 font-medium">{s.colContent}</th>
+                    <th className="px-4 py-3 font-medium">{s.colEvent}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+              </table>
+            </div>
+            <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
+              <table className="w-full min-w-[720px] table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-14" />
+                  <col className="w-24" />
+                  <col className="w-28" />
+                  <col className="w-[280px]" />
+                  <col />
+                </colgroup>
+                <tbody>
+                  {results.map((row) => (
+                    <tr
+                      key={row.chapter.index}
+                      className="border-b border-white/5 align-top last:border-0"
+                    >
+                      <td className="px-4 py-3 text-text-muted">{row.chapter.index}</td>
+                      <td className="px-4 py-3 text-text-muted">{row.chapter.reel}</td>
+                      <td className="px-4 py-3 text-white">{row.chapter.title}</td>
+                      <td className="max-w-0 px-4 py-3 text-text-muted">
+                        <HoverFullText
+                          text={row.chapter.content}
+                          className="text-text-muted"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.error ? (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed text-red-400">
+                            {row.error}
+                          </p>
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed text-white">
+                            {row.event || s.noEvent}
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
-          <div className="flex min-h-[200px] items-center justify-center px-6">
+          <div className="flex flex-1 items-center justify-center px-6">
             <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
               {s.resultsEmpty}
             </p>
           </div>
         )}
+        </div>
       </div>
 
       <ImportNovelModal
