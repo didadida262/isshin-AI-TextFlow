@@ -1,6 +1,7 @@
 mod image;
 mod assets;
 mod db;
+mod db_admin;
 mod llm;
 mod novel;
 mod projects;
@@ -11,6 +12,10 @@ mod workflow;
 use image::generate_image;
 use assets::{create_project_asset, delete_project_asset, list_project_assets, update_project_asset};
 use db::login;
+use db_admin::{
+    clear_database, clear_database_table, export_database, export_database_to_file,
+    get_database_overview, import_database,
+};
 use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
 use novel::{
     get_novel_source, import_novel, list_novel_chapters, update_novel_chapter_event,
@@ -66,6 +71,7 @@ fn read_project_file(filename: String) -> Result<FileReadResult, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|_| {
             db::init_db().expect("failed to init database");
             Ok(())
@@ -98,6 +104,12 @@ pub fn run() {
             update_project_asset,
             delete_project_asset,
             generate_image,
+            get_database_overview,
+            export_database,
+            export_database_to_file,
+            import_database,
+            clear_database_table,
+            clear_database,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

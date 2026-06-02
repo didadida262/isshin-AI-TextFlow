@@ -16,7 +16,6 @@ import { MarkdownContent } from "./MarkdownContent";
 interface ScriptAgentChatPanelProps {
   messages: ScriptChatMessage[];
   isGenerating: boolean;
-  placeholder: string;
   disabled?: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
@@ -84,7 +83,6 @@ function ScriptChatBubble({ message }: { message: ScriptChatMessage }) {
 export function ScriptAgentChatPanel({
   messages,
   isGenerating,
-  placeholder,
   disabled = false,
   onSend,
   onStop,
@@ -166,36 +164,35 @@ export function ScriptAgentChatPanel({
         ))}
       </div>
 
-      <div className="shrink-0 border-t border-white/10 p-3">
-        <div className="relative rounded-lg border border-white/[0.08] bg-surface p-1 focus-within:border-accent/50">
+      <div className="shrink-0 border-t border-white/10 p-2">
+        <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-surface px-1 py-0.5 focus-within:border-accent/50">
           <textarea
             ref={textareaRef}
-            rows={2}
+            rows={1}
             value={text}
             disabled={disabled}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="w-full resize-none bg-transparent px-3 py-2.5 pr-11 text-sm text-white outline-none placeholder:text-text-dim disabled:opacity-50"
+            className="max-h-24 min-h-0 flex-1 resize-none bg-transparent px-2 py-1 text-sm leading-5 text-white outline-none disabled:opacity-50"
           />
           {isGenerating ? (
             <button
               type="button"
               onClick={onStop}
-              className="absolute bottom-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/15 text-red-400 transition hover:bg-red-500/25"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-500/15 text-red-400 transition hover:bg-red-500/25"
               aria-label="Stop"
             >
-              <FontAwesomeIcon icon={faStop} className="text-xs" />
+              <FontAwesomeIcon icon={faStop} className="text-[10px]" />
             </button>
           ) : (
             <button
               type="button"
               onClick={submit}
               disabled={disabled || !text.trim()}
-              className="absolute bottom-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Send"
             >
-              <FontAwesomeIcon icon={faPaperPlane} className="text-xs" />
+              <FontAwesomeIcon icon={faPaperPlane} className="text-[10px]" />
             </button>
           )}
         </div>

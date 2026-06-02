@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppConfig, ChatMessage, ChatMode, ChatSession } from "../types";
 import { useI18n } from "../contexts/I18nContext";
-import { loadConfig, saveConfig } from "../services/config";
-import { runAgentLoop } from "../agent/graph";
-import { ISSHIN_AGENT_PERSONA } from "../agent/prompt";
+import { getDefaultConfig, loadConfig, saveConfig } from "../services/config";
+import { runAgentLoop } from "../agents/assistant/graph";
+import { ISSHIN_AGENT_PERSONA } from "../agents/assistant/prompt";
 import { streamChatCompletion } from "../services/chat";
 
 function uid() {
@@ -16,11 +16,7 @@ function createSession(title: string): ChatSession {
 
 export function useAppState() {
   const { t } = useI18n();
-  const [config, setConfig] = useState<AppConfig>({
-    baseUrl: "https://aiplatform.njsrd.com/llm/v1",
-    apiKey: "",
-    models: [],
-  });
+  const [config, setConfig] = useState<AppConfig>(getDefaultConfig);
   const [sessions, setSessions] = useState<ChatSession[]>(() => [
     createSession(t("session.newSession")),
   ]);

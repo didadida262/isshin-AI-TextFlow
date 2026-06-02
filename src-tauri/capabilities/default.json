@@ -18,7 +18,9 @@
     "allow-workflow",
     "allow-assets",
     "allow-script",
+    "allow-db-admin",
     "allow-llm",
+    "dialog:default",
     {
       "identifier": "http:default",
       "allow": [

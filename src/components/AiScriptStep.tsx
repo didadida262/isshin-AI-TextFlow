@@ -81,7 +81,6 @@ export function AiScriptStep({
       pipelineComplete: s.chatPipelineComplete,
       pipelineStopped: s.chatPipelineStopped,
       chatFallback: s.chatFallback,
-      inputPlaceholder: s.chatInputPlaceholder,
       retryFailed: s.retryFailed,
       retryFailedProgress: s.retryFailedProgress,
       retryFailedComplete: s.chatRetryFailedComplete,
@@ -110,7 +109,6 @@ export function AiScriptStep({
             <ScriptAgentChatPanel
               messages={messages}
               isGenerating={isGenerating}
-              placeholder={s.chatInputPlaceholder}
               onSend={(text) => void sendMessage(text)}
               onStop={stopGeneration}
               onSuggestionClick={(item) => void sendMessage(item.prompt)}

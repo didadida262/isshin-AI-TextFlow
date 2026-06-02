@@ -13,6 +13,8 @@ pub struct GenerateImageInput {
     pub size: Option<String>,
     pub api_url: Option<String>,
     pub api_key: Option<String>,
+    pub model: Option<String>,
+    pub n: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -49,15 +51,22 @@ pub async fn generate_image(input: GenerateImageInput) -> Result<GenerateImageRe
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| DEFAULT_IMAGE_SIZE.to_string());
 
+    let model = input
+        .model
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| IMAGE_MODEL.to_string());
+
+    let n = input.n.unwrap_or(1).max(1);
+
     let body = json!({
-        "model": IMAGE_MODEL,
+        "model": model,
         "prompt": prompt,
-        "n": 1,
+        "n": n,
         "size": size,
         "response_format": "b64_json",
     });
 
-    println!("[Image] 发送 → {url} model={IMAGE_MODEL} size={size}");
+    println!("[Image] 发送 → {url} model={model} size={size} n={n}");
 
     let client = reqwest::Client::new();
     let response = client

@@ -8,7 +8,7 @@ import {
   type ListProjectAssetsResult,
   type ProjectAssetRecord,
 } from "../services/assets";
-import type { CreationProject } from "../types";
+import type { AppConfig, CreationProject } from "../types";
 import { AssetImagePreviewModal } from "./AssetImagePreviewModal";
 import { AssetListTable } from "./AssetListTable";
 import { DeleteAssetConfirmModal } from "./DeleteAssetConfirmModal";
@@ -23,6 +23,7 @@ const PAGE_SIZE = 10;
 interface GenerateAssetsStepProps {
   project: CreationProject;
   title: string;
+  config: AppConfig;
   initialAssets: ListProjectAssetsResult;
   onConfigError: (message: string | null) => void;
 }
@@ -30,6 +31,7 @@ interface GenerateAssetsStepProps {
 export function GenerateAssetsStep({
   project,
   title,
+  config,
   initialAssets,
   onConfigError,
 }: GenerateAssetsStepProps) {
@@ -224,6 +226,7 @@ export function GenerateAssetsStep({
 
       <GenerateAssetModal
         open={generateModalOpen}
+        config={config}
         onClose={() => setGenerateModalOpen(false)}
         onSubmit={handleCreateAsset}
       />

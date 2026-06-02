@@ -49,6 +49,11 @@ export interface AppConfig {
   baseUrl: string;
   apiKey: string;
   models: string[];
+  imageApiUrl: string;
+  imageApiKey: string;
+  imageModel: string;
+  imageDefaultSize: string;
+  imageCount: number;
 }
 
 export type MessageRole = "user" | "assistant" | "agent-status";

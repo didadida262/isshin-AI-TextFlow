@@ -56,6 +56,29 @@ fn db_path() -> Result<PathBuf, String> {
     Ok(sqlite_dir()?.join("app.db"))
 }
 
+pub fn database_file_path() -> Result<String, String> {
+    db_path()?
+        .to_str()
+        .map(str::to_string)
+        .ok_or_else(|| "数据库路径无效".to_string())
+}
+
+pub fn seed_default_admin(conn: &Connection) -> Result<(), String> {
+    let count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
+    if count == 0 {
+        conn.execute(
+            "INSERT INTO users (username, password, display_name) VALUES (?1, ?2, ?3)",
+            params!["admin", "admin", "admin"],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 pub fn init_db() -> Result<Connection, String> {
     let path = db_path()?;
     let conn = Connection::open(&path).map_err(|e| e.to_string())?;
@@ -71,17 +94,7 @@ pub fn init_db() -> Result<Connection, String> {
     )
     .map_err(|e| e.to_string())?;
 
-    let count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))
-        .map_err(|e| e.to_string())?;
-
-    if count == 0 {
-        conn.execute(
-            "INSERT INTO users (username, password, display_name) VALUES (?1, ?2, ?3)",
-            params!["admin", "admin", "admin"],
-        )
-        .map_err(|e| e.to_string())?;
-    }
+    seed_default_admin(&conn)?;
 
     crate::projects::init_schema(&conn)?;
     crate::novel::init_schema(&conn)?;

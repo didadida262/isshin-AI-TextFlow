@@ -231,6 +231,7 @@ export function ProjectDetailView({
           key={`${project.id}-assets-${generateAssetsDetail.assets.total}-${generateAssetsDetail.assets.items[0]?.id ?? 0}`}
           project={project}
           title={activeLabel}
+          config={config}
           initialAssets={generateAssetsDetail.assets}
           onConfigError={onConfigError}
         />

@@ -78,6 +78,18 @@ commands.allow = [
 ]
 
 [[permission]]
+identifier = "allow-db-admin"
+description = "Allows database overview, export, import, and clear operations"
+commands.allow = [
+  "get_database_overview",
+  "export_database",
+  "export_database_to_file",
+  "import_database",
+  "clear_database_table",
+  "clear_database",
+]
+
+[[permission]]
 identifier = "allow-script"
 description = "Allows script work data and episode script persistence"
 commands.allow = [

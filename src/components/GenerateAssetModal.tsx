@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import {
-  DEFAULT_IMAGE_MODEL,
-  DEFAULT_IMAGE_SIZE,
-  generateImageB64,
-} from "../services/imageGeneration";
+import { DEFAULT_IMAGE_SIZE } from "../services/config";
+import { generateImageB64 } from "../services/imageGeneration";
+import type { AppConfig } from "../types";
 import { PaintbrushLoading } from "./PaintbrushLoading";
 import { ModalPortal } from "./ModalPortal";
 import { Select } from "./Select";
@@ -22,6 +20,7 @@ export interface GenerateAssetFormValues {
 
 interface GenerateAssetModalProps {
   open: boolean;
+  config: AppConfig;
   onClose: () => void;
   onSubmit: (values: GenerateAssetFormValues, imageB64: string) => Promise<void>;
 }
@@ -36,25 +35,32 @@ const fieldClass =
 
 export function GenerateAssetModal({
   open,
+  config,
   onClose,
   onSubmit,
 }: GenerateAssetModalProps) {
   const m = useTranslationMessages().creation.generateAssetModal;
+  const errors = useTranslationMessages().errors;
+  const defaultSize = config.imageDefaultSize.trim() || DEFAULT_IMAGE_SIZE;
   const [name, setName] = useState("");
   const [assetType, setAssetType] = useState("scene");
   const [prompt, setPrompt] = useState("");
-  const [size, setSize] = useState(DEFAULT_IMAGE_SIZE);
+  const [size, setSize] = useState(defaultSize);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const abortRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
+    abortRef.current = false;
+    requestIdRef.current += 1;
     setName("");
     setAssetType("scene");
     setPrompt("");
-    setSize(DEFAULT_IMAGE_SIZE);
+    setSize(defaultSize);
     setError("");
-  }, [open]);
+  }, [defaultSize, open]);
 
   const canSubmit = name.trim() && prompt.trim() && !submitting;
 
@@ -67,39 +73,83 @@ export function GenerateAssetModal({
     [m.typeCharacter, m.typeProp, m.typeScene],
   );
 
-  const sizeOptions = useMemo(
-    () => SIZE_OPTIONS.map((option) => ({ value: option, label: option })),
-    [],
+  const sizeOptions = useMemo(() => {
+    const options = new Set([defaultSize, ...SIZE_OPTIONS]);
+    return [...options].map((option) => ({ value: option, label: option }));
+  }, [defaultSize]);
+
+  const imageSettings = useMemo(
+    () => ({
+      imageApiUrl: config.imageApiUrl,
+      imageApiKey: config.imageApiKey,
+      imageModel: config.imageModel,
+      imageDefaultSize: defaultSize,
+      imageCount: config.imageCount,
+    }),
+    [config, defaultSize],
   );
+
+  const handleClose = useCallback(() => {
+    if (submitting) {
+      abortRef.current = true;
+      requestIdRef.current += 1;
+      setSubmitting(false);
+    }
+    onClose();
+  }, [onClose, submitting]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
+    const requestId = ++requestIdRef.current;
+    abortRef.current = false;
     setSubmitting(true);
     setError("");
     try {
       const imageB64 = await generateImageB64({
         prompt,
         size,
+        settings: imageSettings,
       });
+      if (abortRef.current || requestId !== requestIdRef.current) return;
+
       await onSubmit(
         {
           name: name.trim(),
           assetType,
           prompt: prompt.trim(),
-          model: DEFAULT_IMAGE_MODEL,
+          model: config.imageModel,
           size,
         },
         imageB64,
       );
+      if (abortRef.current || requestId !== requestIdRef.current) return;
       onClose();
     } catch (submitError) {
+      if (abortRef.current || requestId !== requestIdRef.current) return;
       const message =
         submitError instanceof Error ? submitError.message : String(submitError);
-      setError(message);
+      setError(
+        message === "IMAGE_CONFIG_REQUIRED"
+          ? errors.imageConfigRequired
+          : message,
+      );
     } finally {
-      setSubmitting(false);
+      if (requestId === requestIdRef.current) {
+        setSubmitting(false);
+      }
     }
-  }, [assetType, canSubmit, name, onClose, onSubmit, prompt, size]);
+  }, [
+    assetType,
+    canSubmit,
+    config.imageModel,
+    errors.imageConfigRequired,
+    imageSettings,
+    name,
+    onClose,
+    onSubmit,
+    prompt,
+    size,
+  ]);
 
   return (
     <ModalPortal>
@@ -117,7 +167,7 @@ export function GenerateAssetModal({
             type="button"
             aria-label={m.cancel}
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={submitting ? undefined : onClose}
+            onClick={submitting ? undefined : handleClose}
           />
 
           <motion.div
@@ -134,22 +184,27 @@ export function GenerateAssetModal({
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={spring}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-3.5">
+            <div className="relative z-30 flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-3.5">
               <h3 id="generate-asset-title" className="text-base font-semibold text-white">
                 {m.title}
               </h3>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={submitting}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white disabled:opacity-40"
-              >
-                <FontAwesomeIcon icon={faXmark} />
-              </button>
+              {!submitting ? (
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  title={m.cancel}
+                  aria-label={m.cancel}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              ) : null}
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
               <div className="space-y-4">
+                {!submitting ? (
+                  <>
                 <label className="block space-y-1.5">
                   <span className="text-xs text-text-muted">{m.nameLabel}</span>
                   <input
@@ -198,17 +253,26 @@ export function GenerateAssetModal({
                     {error}
                   </p>
                 ) : null}
+                  </>
+                ) : (
+                  <div
+                    className="flex min-h-[280px] items-center justify-center rounded-lg border border-white/10 bg-black/30 p-6"
+                    aria-live="polite"
+                    aria-busy="true"
+                  >
+                    <PaintbrushLoading label={m.generating} />
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex shrink-0 justify-end gap-2 border-t border-white/10 px-5 py-3.5">
               <button
                 type="button"
-                onClick={onClose}
-                disabled={submitting}
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:opacity-40"
+                onClick={handleClose}
+                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white"
               >
-                {m.cancel}
+                {submitting ? m.abortGenerating : m.cancel}
               </button>
               <button
                 type="button"
@@ -219,16 +283,6 @@ export function GenerateAssetModal({
                 {submitting ? m.generating : m.confirm}
               </button>
             </div>
-
-            {submitting ? (
-              <div
-                className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-lg bg-black/75 backdrop-blur-[2px]"
-                aria-live="polite"
-                aria-busy="true"
-              >
-                <PaintbrushLoading label={m.generating} />
-              </div>
-            ) : null}
           </motion.div>
         </motion.div>
         ) : null}

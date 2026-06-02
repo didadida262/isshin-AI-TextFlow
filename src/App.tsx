@@ -4,7 +4,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SessionPanel } from "./components/SessionPanel";
 import { ChatArea } from "./components/ChatArea";
 import { CreationView } from "./components/CreationView";
-import { SettingsDrawer } from "./components/SettingsDrawer";
+import { SettingsModal } from "./components/settings/SettingsModal";
 import { LoginView } from "./components/LoginView";
 import { I18nProvider, useTranslationMessages } from "./contexts/I18nContext";
 import { useAppState } from "./hooks/useAppState";
@@ -85,7 +85,8 @@ function MainApp({
     setConfigError(message);
     if (
       message === i18n.errors.configRequired ||
-      message === i18n.errors.modelsRequired
+      message === i18n.errors.modelsRequired ||
+      message === i18n.errors.imageConfigRequired
     ) {
       setSettingsOpen(true);
     }
@@ -153,7 +154,7 @@ function MainApp({
         </AnimatePresence>
       </div>
 
-      <SettingsDrawer
+      <SettingsModal
         open={settingsOpen}
         config={config}
         selectedModel={selectedModel}

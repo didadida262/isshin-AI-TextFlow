@@ -56,7 +56,6 @@ interface UseScriptAgentChatOptions {
     retryFailedProgress: (completed: number, total: number) => string;
     retryFailedComplete: string;
     retryFailedNone: string;
-    inputPlaceholder: string;
     configRequired: string;
     modelsRequired: string;
     eventsRequired: string;

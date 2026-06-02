@@ -54,10 +54,62 @@ export type TranslationSchema = {
     testing: string;
     selectModelFirst: string;
     connectionOk: string;
+    imageSection: string;
+    imageApiUrl: string;
+    imageApiKey: string;
+    imageModel: string;
+    imageDefaultSize: string;
+    imageCount: string;
+    imageTestTitle: string;
+    imageTestPromptLabel: string;
+    tabModelService: string;
+    tabDatabase: string;
+    database: {
+      title: string;
+      overviewTitle: string;
+      overviewDesc: string;
+      overviewAction: string;
+      exportTitle: string;
+      exportDesc: string;
+      exportAction: string;
+      importTitle: string;
+      importDesc: string;
+      importAction: string;
+      clearTableTitle: string;
+      clearTableDesc: string;
+      clearTableAction: string;
+      clearTableSelect: string;
+      clearAllTitle: string;
+      clearAllDesc: string;
+      clearAllAction: string;
+      overviewModalTitle: string;
+      dbPathLabel: string;
+      tableName: string;
+      rowCount: string;
+      close: string;
+      exporting: string;
+      importing: string;
+      clearing: string;
+      exportSuccess: string;
+      exportSuccessTo: string;
+      exportDialogTitle: string;
+      importSuccess: string;
+      clearTableSuccess: string;
+      clearAllSuccess: string;
+      confirmImportTitle: string;
+      confirmImportBody: string;
+      confirmClearTableTitle: string;
+      confirmClearTableBody: string;
+      confirmClearAllTitle: string;
+      confirmClearAllBody: string;
+      confirm: string;
+      cancel: string;
+    };
   };
   errors: {
     configRequired: string;
     modelsRequired: string;
+    imageConfigRequired: string;
     requestFailed: string;
   };
   agent: {
@@ -148,7 +200,6 @@ export type TranslationSchema = {
       chatPipelineComplete: string;
       chatPipelineStopped: string;
       chatFallback: string;
-      chatInputPlaceholder: string;
       retryFailed: string;
       retryFailedProgress: (completed: number, total: number) => string;
       chatRetryFailedComplete: string;
@@ -203,6 +254,7 @@ export type TranslationSchema = {
       cancel: string;
       confirm: string;
       generating: string;
+      abortGenerating: string;
     };
     editAssetModal: {
       title: string;
@@ -335,10 +387,62 @@ export const zh: TranslationSchema = {
     testing: "测试中…",
     selectModelFirst: "请先选择一个模型",
     connectionOk: "连接成功",
+    imageSection: "图片生成 API",
+    imageApiUrl: "图片 API 地址",
+    imageApiKey: "图片 API 密钥",
+    imageModel: "图片模型",
+    imageDefaultSize: "默认尺寸",
+    imageCount: "生成数量 (n)",
+    imageTestTitle: "图片连接测试",
+    imageTestPromptLabel: "测试提示词",
+    tabModelService: "模型服务",
+    tabDatabase: "数据库操作",
+    database: {
+      title: "数据库操作",
+      overviewTitle: "数据库概览",
+      overviewDesc: "查看所有数据表名称和记录数",
+      overviewAction: "查看信息",
+      exportTitle: "导出数据库",
+      exportDesc: "将所有数据表导出为 JSON 备份文件",
+      exportAction: "导出数据",
+      importTitle: "导入数据库",
+      importDesc: "从 JSON 备份文件恢复数据（将覆盖当前数据）",
+      importAction: "导入数据",
+      clearTableTitle: "清空指定表",
+      clearTableDesc: "选择一个数据表并清空其中的数据",
+      clearTableAction: "清空表",
+      clearTableSelect: "请选择表",
+      clearAllTitle: "清空数据库",
+      clearAllDesc: "清空所有数据表中的数据，保留表结构",
+      clearAllAction: "清空数据",
+      overviewModalTitle: "数据库概览",
+      dbPathLabel: "数据库路径",
+      tableName: "表名",
+      rowCount: "记录数",
+      close: "关闭",
+      exporting: "导出中…",
+      importing: "导入中…",
+      clearing: "清空中…",
+      exportSuccess: "数据库已导出",
+      exportSuccessTo: "已导出至 {{path}}",
+      exportDialogTitle: "导出数据库备份",
+      importSuccess: "已导入 {{count}} 条记录",
+      clearTableSuccess: "已清空表 {{table}}（{{count}} 条）",
+      clearAllSuccess: "已清空全部数据（{{count}} 条）",
+      confirmImportTitle: "确认导入数据库",
+      confirmImportBody: "导入将覆盖当前所有业务数据，是否继续？",
+      confirmClearTableTitle: "确认清空数据表",
+      confirmClearTableBody: "将清空表「{{table}}」中的所有数据，是否继续？",
+      confirmClearAllTitle: "确认清空数据库",
+      confirmClearAllBody: "将清空所有业务数据表，仅保留表结构。清空 users 表后会自动恢复默认 admin 账号。是否继续？",
+      confirm: "确认",
+      cancel: "取消",
+    },
   },
   errors: {
     configRequired: "请先在设置中配置 Base URL 与 API Key",
     modelsRequired: "请先在设置中同步模型列表",
+    imageConfigRequired: "请先在设置中配置图片生成 API",
     requestFailed: "请求失败：{{error}}",
   },
   agent: {
@@ -434,7 +538,6 @@ export const zh: TranslationSchema = {
       chatPipelineStopped: "已停止生成。",
       chatFallback:
         "如需生成剧本，请点击「开始生成剧本」，或输入类似「开始生成剧本」的指令。",
-      chatInputPlaceholder: "输入指令，Enter 发送，Shift+Enter 换行",
       retryFailed: "重试失败集",
       retryFailedProgress: (completed: number, total: number) =>
         `正在重试失败集 ${completed}/${total}…`,
@@ -491,6 +594,7 @@ export const zh: TranslationSchema = {
       cancel: "取消",
       confirm: "开始生成",
       generating: "生成中…",
+      abortGenerating: "中断生成",
     },
     editAssetModal: {
       title: "编辑资产",
