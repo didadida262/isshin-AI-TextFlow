@@ -3,6 +3,7 @@ mod llm;
 mod novel;
 mod projects;
 mod skills;
+mod workflow;
 
 use db::login;
 use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
@@ -12,6 +13,9 @@ use novel::{
 use projects::{create_project, list_projects, update_project};
 use serde::Serialize;
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
+use workflow::{
+    get_project_workflow_node_detail, list_project_workflow_nodes,
+};
 use std::fs;
 use std::path::PathBuf;
 
@@ -74,7 +78,9 @@ pub fn run() {
             import_novel,
             get_novel_source,
             list_novel_chapters,
-            update_novel_chapter_event
+            update_novel_chapter_event,
+            list_project_workflow_nodes,
+            get_project_workflow_node_detail
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

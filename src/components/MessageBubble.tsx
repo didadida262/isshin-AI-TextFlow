@@ -2,10 +2,10 @@ import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBrain,
-  faRobot,
   faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 import type { ChatMessage } from "../types";
+import ChatGptLogo from "../assets/ChatGptLogo";
 import { MarkdownContent } from "./MarkdownContent";
 
 interface MessageBubbleProps {
@@ -67,8 +67,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       transition={bubbleSpring}
     >
       {!isUser && (
-        <div className="mr-2 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-surface">
-          <FontAwesomeIcon icon={faRobot} className="text-text-muted text-sm" />
+        <div className="mr-2 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10A37F] text-white">
+          <ChatGptLogo className="h-5 w-5" />
         </div>
       )}
       <motion.div

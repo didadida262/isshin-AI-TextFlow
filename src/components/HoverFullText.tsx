@@ -9,6 +9,7 @@ interface HoverFullTextProps {
   lines?: 1 | 2;
 }
 
+const SHOW_DELAY_MS = 1000;
 const HIDE_DELAY_MS = 280;
 const BRIDGE_PX = 10;
 const PREVIEW_MAX_HEIGHT = 240;
@@ -26,6 +27,7 @@ export function HoverFullText({
   const triggerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
+  const showTimerRef = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({
     top: 0,
@@ -33,6 +35,13 @@ export function HoverFullText({
     width: 0,
     placement: "below" as "above" | "below",
   });
+
+  const clearShowTimer = useCallback(() => {
+    if (showTimerRef.current != null) {
+      window.clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
+    }
+  }, []);
 
   const clearHideTimer = useCallback(() => {
     if (hideTimerRef.current != null) {
@@ -71,13 +80,26 @@ export function HoverFullText({
     const normalized = normalizeDisplayText(text);
     if (!normalized) return;
     clearHideTimer();
+    clearShowTimer();
     setOpen(true);
-  }, [clearHideTimer, text]);
+  }, [clearHideTimer, clearShowTimer, text]);
+
+  const scheduleShow = useCallback(() => {
+    const normalized = normalizeDisplayText(text);
+    if (!normalized) return;
+    clearHideTimer();
+    clearShowTimer();
+    showTimerRef.current = window.setTimeout(() => {
+      showTimerRef.current = null;
+      setOpen(true);
+    }, SHOW_DELAY_MS);
+  }, [clearHideTimer, clearShowTimer, text]);
 
   const scheduleHide = useCallback(() => {
+    clearShowTimer();
     clearHideTimer();
     hideTimerRef.current = window.setTimeout(() => setOpen(false), HIDE_DELAY_MS);
-  }, [clearHideTimer]);
+  }, [clearHideTimer, clearShowTimer]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -107,7 +129,13 @@ export function HoverFullText({
     };
   }, [open, updatePosition]);
 
-  useEffect(() => clearHideTimer, [clearHideTimer]);
+  useEffect(
+    () => () => {
+      clearHideTimer();
+      clearShowTimer();
+    },
+    [clearHideTimer, clearShowTimer],
+  );
 
   const displayText = normalizeDisplayText(text);
   const clampClass = lines === 1 ? "truncate" : "text-clamp-2";
@@ -117,7 +145,7 @@ export function HoverFullText({
       <div
         ref={triggerRef}
         className={`min-w-0 w-full cursor-default leading-relaxed ${clampClass} ${className}`}
-        onMouseEnter={showPreview}
+        onMouseEnter={scheduleShow}
         onMouseLeave={scheduleHide}
         onFocus={showPreview}
         onBlur={scheduleHide}

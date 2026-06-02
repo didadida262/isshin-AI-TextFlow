@@ -1,10 +1,21 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import type { AppConfig, CreationProject, ProjectWorkflowStepId } from "../types";
+import {
+  getProjectWorkflowNodeDetail,
+  listProjectWorkflowNodes,
+  type WorkflowNodeDetail,
+} from "../services/workflow";
+import type {
+  AppConfig,
+  CreationProject,
+  ProjectWorkflowNode,
+  ProjectWorkflowStepId,
+} from "../types";
 import { ProjectStepper, type WorkflowStepItem } from "./ProjectStepper";
 import { ExtractEventsStep } from "./ExtractEventsStep";
+import { AiScriptStep } from "./AiScriptStep";
 
 interface ProjectDetailViewProps {
   project: CreationProject;
@@ -14,14 +25,16 @@ interface ProjectDetailViewProps {
   onBack: () => void;
 }
 
-const STEP_ORDER: ProjectWorkflowStepId[] = [
-  "extractEvents",
-  "aiScript",
-  "generateAssets",
-  "storyboard",
-  "generateVideo",
-  "editExport",
-];
+function mapWorkflowSteps(
+  nodes: ProjectWorkflowNode[],
+  labels: Record<ProjectWorkflowStepId, string>,
+): WorkflowStepItem[] {
+  return nodes.map((node) => ({
+    id: node.id,
+    label: labels[node.id],
+    status: node.status,
+  }));
+}
 
 export function ProjectDetailView({
   project,
@@ -32,19 +45,101 @@ export function ProjectDetailView({
 }: ProjectDetailViewProps) {
   const i18n = useTranslationMessages();
   const w = i18n.creation.workflow;
-  const [activeStep, setActiveStep] =
+  const [selectedStep, setSelectedStep] =
     useState<ProjectWorkflowStepId>("extractEvents");
+  const [workflowNodesRaw, setWorkflowNodesRaw] = useState<ProjectWorkflowNode[]>(
+    [],
+  );
+  const [nodeDetail, setNodeDetail] = useState<WorkflowNodeDetail | null>(null);
+  const [loadingWorkflow, setLoadingWorkflow] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const steps = useMemo<WorkflowStepItem[]>(
-    () =>
-      STEP_ORDER.map((id) => ({
-        id,
-        label: w[id],
-      })),
-    [w],
+  const workflowNodes = useMemo(
+    () => mapWorkflowSteps(workflowNodesRaw, w),
+    [workflowNodesRaw, w],
   );
 
-  const activeLabel = w[activeStep];
+  const loadNodeDetail = useCallback(
+    async (nodeId: ProjectWorkflowStepId) => {
+      setLoadingDetail(true);
+      try {
+        const detail = await getProjectWorkflowNodeDetail(project.id, nodeId);
+        setNodeDetail(detail);
+      } finally {
+        setLoadingDetail(false);
+      }
+    },
+    [project.id],
+  );
+
+  const refreshProjectWorkflow = useCallback(async () => {
+    const nodes = await listProjectWorkflowNodes(project.id);
+    setWorkflowNodesRaw(nodes);
+
+    const currentNode =
+      nodes.find((node) => node.status === "current") ?? nodes[0];
+    const nextStep = currentNode?.id ?? "extractEvents";
+    setSelectedStep(nextStep);
+
+    const detail = await getProjectWorkflowNodeDetail(project.id, nextStep);
+    setNodeDetail(detail);
+  }, [project.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      setLoadingWorkflow(true);
+      try {
+        const nodes = await listProjectWorkflowNodes(project.id);
+        if (cancelled) return;
+
+        setWorkflowNodesRaw(nodes);
+
+        const currentNode =
+          nodes.find((node) => node.status === "current") ?? nodes[0];
+        const initialStep = currentNode?.id ?? "extractEvents";
+        setSelectedStep(initialStep);
+
+        const detail = await getProjectWorkflowNodeDetail(
+          project.id,
+          initialStep,
+        );
+        if (!cancelled) {
+          setNodeDetail(detail);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingWorkflow(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project.id]);
+
+  const handleStepChange = useCallback(
+    (stepId: ProjectWorkflowStepId) => {
+      setSelectedStep(stepId);
+      void loadNodeDetail(stepId);
+    },
+    [loadNodeDetail],
+  );
+
+  const activeLabel = w[selectedStep];
+
+  const extractEventsDetail = useMemo(
+    () =>
+      nodeDetail?.kind === "extractEvents" ? nodeDetail : null,
+    [nodeDetail],
+  );
+
+  const aiScriptDetail = useMemo(
+    () => (nodeDetail?.kind === "aiScript" ? nodeDetail : null),
+    [nodeDetail],
+  );
 
   return (
     <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-black">
@@ -72,27 +167,42 @@ export function ProjectDetailView({
           </p>
         </div>
 
-        <ProjectStepper
-          steps={steps}
-          activeStep={activeStep}
-          onStepChange={setActiveStep}
-        />
+        {!loadingWorkflow && workflowNodes.length > 0 ? (
+          <ProjectStepper
+            steps={workflowNodes}
+            selectedStep={selectedStep}
+            onStepChange={handleStepChange}
+          />
+        ) : null}
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-1">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/20">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-5">
-            {activeStep === "extractEvents" ? (
+            {loadingWorkflow || loadingDetail ? (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-sm text-text-muted">{w.loading}</p>
+              </div>
+            ) : selectedStep === "extractEvents" && extractEventsDetail ? (
               <ExtractEventsStep
+                key={`${project.id}-${extractEventsDetail.chapters.length}-${extractEventsDetail.source?.importedAt ?? 0}`}
                 projectId={project.id}
                 title={activeLabel}
                 config={config}
                 selectedModel={selectedModel}
                 onConfigError={onConfigError}
+                initialSource={extractEventsDetail.source}
+                initialChapters={extractEventsDetail.chapters}
+                onWorkflowChange={() => void refreshProjectWorkflow()}
+              />
+            ) : selectedStep === "aiScript" && aiScriptDetail ? (
+              <AiScriptStep
+                title={activeLabel}
+                chapters={aiScriptDetail.chapters}
               />
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto">
-                <h2 key={activeStep} className="step-panel-title">
+                <h2 key={selectedStep} className="step-panel-title">
                   {activeLabel}
                 </h2>
                 <div className="mt-6 flex min-h-[280px] flex-1 items-center justify-center">

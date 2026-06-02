@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFileImport,
@@ -8,21 +8,24 @@ import {
 import { useTranslationMessages } from "../contexts/I18nContext";
 import { extractEventsForChapters } from "../services/eventExtraction";
 import {
-  getNovelSource,
   importNovel,
   listNovelChapters,
   type NovelChapterRecord,
+  type NovelSourceRecord,
 } from "../services/novel";
 import type { AppConfig } from "../types";
 import { ImportNovelModal } from "./ImportNovelModal";
-import { HoverFullText } from "./HoverFullText";
+import { EventChaptersTable } from "./EventChaptersTable";
 
 interface ExtractEventsStepProps {
   projectId: string;
   title: string;
   config: AppConfig;
   selectedModel: string;
+  initialSource: NovelSourceRecord | null;
+  initialChapters: NovelChapterRecord[];
   onConfigError: (message: string | null) => void;
+  onWorkflowChange?: () => void;
 }
 
 export function ExtractEventsStep({
@@ -30,14 +33,17 @@ export function ExtractEventsStep({
   title,
   config,
   selectedModel,
+  initialSource,
+  initialChapters,
   onConfigError,
+  onWorkflowChange,
 }: ExtractEventsStepProps) {
   const i18n = useTranslationMessages();
   const s = i18n.creation.extractEventsStep;
   const [importOpen, setImportOpen] = useState(false);
-  const [novelText, setNovelText] = useState("");
-  const [charCount, setCharCount] = useState(0);
-  const [chapters, setChapters] = useState<NovelChapterRecord[]>([]);
+  const [novelText] = useState(initialSource?.sourceText ?? "");
+  const [charCount] = useState(initialSource?.charCount ?? 0);
+  const [chapters, setChapters] = useState(initialChapters);
   const [extracting, setExtracting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(
@@ -50,20 +56,6 @@ export function ExtractEventsStep({
     (chapter) => chapter.event || chapter.errorReason,
   );
 
-  const reloadNovel = useCallback(async () => {
-    const [source, rows] = await Promise.all([
-      getNovelSource(projectId),
-      listNovelChapters(projectId),
-    ]);
-    setNovelText(source?.sourceText ?? "");
-    setCharCount(source?.charCount ?? 0);
-    setChapters(rows);
-  }, [projectId]);
-
-  useEffect(() => {
-    void reloadNovel();
-  }, [reloadNovel]);
-
   const handleImportConfirm = useCallback(
     async (content: string) => {
       abortRef.current?.abort();
@@ -71,8 +63,8 @@ export function ExtractEventsStep({
       onConfigError(null);
       try {
         await importNovel(projectId, content);
-        await reloadNovel();
         setImportOpen(false);
+        onWorkflowChange?.();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         onConfigError(message);
@@ -80,7 +72,7 @@ export function ExtractEventsStep({
         setImporting(false);
       }
     },
-    [onConfigError, projectId, reloadNovel],
+    [onConfigError, onWorkflowChange, projectId],
   );
 
   const handleExtract = useCallback(async () => {
@@ -120,6 +112,7 @@ export function ExtractEventsStep({
         controller.signal,
       );
       setChapters(extracted);
+      onWorkflowChange?.();
     } catch (error) {
       if (!controller.signal.aborted) {
         const message = error instanceof Error ? error.message : String(error);
@@ -131,7 +124,6 @@ export function ExtractEventsStep({
       }
       setExtracting(false);
       setProgress(null);
-      void reloadNovel();
     }
   }, [
     config,
@@ -140,15 +132,15 @@ export function ExtractEventsStep({
     i18n.errors.configRequired,
     i18n.errors.modelsRequired,
     onConfigError,
+    onWorkflowChange,
     projectId,
-    reloadNovel,
     selectedModel,
   ]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-4">
-        <h2 className="step-panel-title min-w-0 shrink">{title}</h2>
+        <h2 className="step-panel-title w-fit min-w-0 shrink self-start">{title}</h2>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
           <button
             type="button"
@@ -211,75 +203,7 @@ export function ExtractEventsStep({
               </p>
             </div>
           ) : hasContent ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="shrink-0 overflow-x-auto border-b border-white/10">
-                <table className="w-full min-w-[720px] table-fixed text-left text-sm">
-                  <colgroup>
-                    <col className="w-14" />
-                    <col className="w-24" />
-                    <col className="w-28" />
-                    <col className="w-[280px]" />
-                    <col />
-                  </colgroup>
-                  <thead>
-                    <tr className="text-xs text-text-muted">
-                      <th className="px-4 py-3 font-medium">{s.colIndex}</th>
-                      <th className="px-4 py-3 font-medium">{s.colReel}</th>
-                      <th className="px-4 py-3 font-medium">{s.colChapter}</th>
-                      <th className="px-4 py-3 font-medium">{s.colContent}</th>
-                      <th className="px-4 py-3 font-medium">{s.colEvent}</th>
-                    </tr>
-                  </thead>
-                </table>
-              </div>
-              <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
-                <table className="w-full min-w-[720px] table-fixed text-left text-sm">
-                  <colgroup>
-                    <col className="w-14" />
-                    <col className="w-24" />
-                    <col className="w-28" />
-                    <col className="w-[280px]" />
-                    <col />
-                  </colgroup>
-                  <tbody>
-                    {chapters.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="border-b border-white/5 align-top last:border-0"
-                      >
-                        <td className="px-4 py-3 text-text-muted">
-                          {row.chapterIndex}
-                        </td>
-                        <td className="px-4 py-3 text-text-muted">{row.reel}</td>
-                        <td className="px-4 py-3 text-white">{row.chapter}</td>
-                        <td className="max-w-0 overflow-hidden px-4 py-3 text-text-muted">
-                          <HoverFullText
-                            text={row.chapterData}
-                            className="text-text-muted"
-                            lines={2}
-                          />
-                        </td>
-                        <td className="max-w-0 overflow-hidden px-4 py-3">
-                          {row.errorReason ? (
-                            <HoverFullText
-                              text={row.errorReason}
-                              className="text-red-400"
-                              lines={2}
-                            />
-                          ) : (
-                            <HoverFullText
-                              text={row.event || s.noEvent}
-                              className="text-white"
-                              lines={2}
-                            />
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <EventChaptersTable chapters={chapters} />
           ) : (
             <div className="flex flex-1 items-center justify-center px-6">
               <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">

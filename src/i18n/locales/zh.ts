@@ -99,6 +99,7 @@ export type TranslationSchema = {
       generateVideo: string;
       editExport: string;
       placeholder: string;
+      loading: string;
     };
     extractEventsStep: {
       importSource: string;
@@ -287,6 +288,7 @@ export const zh: TranslationSchema = {
       generateVideo: "生成视频",
       editExport: "剪辑导出",
       placeholder: "此步骤内容即将上线，敬请期待。",
+      loading: "加载流程中…",
     },
     extractEventsStep: {
       importSource: "导入原文",

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faClapperboard,
-  faPenToSquare,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
@@ -16,6 +15,7 @@ import {
   NewProjectModal,
   type NewProjectDraft,
 } from "./NewProjectModal";
+import { ProjectCard } from "./ProjectCard";
 import { ProjectDetailView } from "./ProjectDetailView";
 import type { AppConfig, CreationProject } from "../types";
 
@@ -148,44 +148,16 @@ export function CreationView({
               </p>
             </div>
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
-                <li key={project.id} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => openProject(project)}
-                    className="flex h-full w-full flex-col rounded-xl border border-white/10 bg-surface p-4 pr-10 text-left transition hover:border-accent/40 hover:bg-surface-elevated"
-                  >
-                    <h3 className="truncate font-medium text-white">
-                      {project.name}
-                    </h3>
-                    <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-text-muted">
-                      {project.intro || project.novelType}
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-text-dim">
-                      <span className="rounded-md border border-white/10 px-2 py-0.5">
-                        {project.aspectRatio}
-                      </span>
-                      {project.novelType ? (
-                        <span className="rounded-md border border-white/10 px-2 py-0.5">
-                          {project.novelType}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-3 text-[11px] text-text-dim">
-                      {formatProjectDate(project.createdAt)}
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openEditModal(project)}
-                    title={i18n.creation.editProject}
-                    aria-label={i18n.creation.editProject}
-                    className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-md text-text-muted transition hover:bg-white/5 hover:text-accent"
-                  >
-                    <FontAwesomeIcon icon={faPenToSquare} className="text-[10px]" />
-                  </button>
-                </li>
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  editLabel={i18n.creation.editProject}
+                  formatDate={formatProjectDate}
+                  onOpen={() => openProject(project)}
+                  onEdit={() => openEditModal(project)}
+                />
               ))}
             </ul>
           )}

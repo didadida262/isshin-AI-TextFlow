@@ -381,6 +381,12 @@
           "markdownDescription": "Allows updating projects"
         },
         {
+          "description": "Allows project workflow node queries",
+          "type": "string",
+          "const": "allow-workflow",
+          "markdownDescription": "Allows project workflow node queries"
+        },
+        {
           "description": "Allow HTTP/HTTPS requests to any host",
           "type": "string",
           "const": "http-all",

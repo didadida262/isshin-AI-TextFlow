@@ -15,6 +15,7 @@
     "allow-get-art-skill-detail",
     "allow-get-story-skill-detail",
     "allow-novel",
+    "allow-workflow",
     "allow-llm",
     {
       "identifier": "http:default",

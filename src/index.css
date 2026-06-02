@@ -116,6 +116,9 @@ select:disabled {
 
 .step-panel-title {
   display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  align-self: flex-start;
   position: relative;
   padding-bottom: 0.25rem;
   font-size: 1.125rem;
@@ -132,6 +135,7 @@ select:disabled {
   bottom: 0;
   height: 2px;
   width: 100%;
+  max-width: 100%;
   border-radius: 9999px;
   background: linear-gradient(
     90deg,

@@ -76,12 +76,38 @@ pub fn init_schema(conn: &Connection) -> Result<(), String> {
             art_style TEXT NOT NULL,
             director_manual TEXT NOT NULL,
             created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
+            updated_at INTEGER NOT NULL,
+            current_workflow_node TEXT NOT NULL DEFAULT 'extractEvents'
         )",
         [],
     )
     .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+
+    migrate_projects_schema(conn)?;
+
+    Ok(())
+}
+
+fn migrate_projects_schema(conn: &Connection) -> Result<(), String> {
+    let mut stmt = conn
+        .prepare("PRAGMA table_info(projects)")
+        .map_err(|e| e.to_string())?;
+    let columns = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    if !columns.iter().any(|name| name == "current_workflow_node") {
+        conn.execute(
+            "ALTER TABLE projects ADD COLUMN current_workflow_node TEXT NOT NULL DEFAULT 'extractEvents'",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
 }
 
 fn insert_project(conn: &Connection, input: &ProjectInput, updated_at: i64) -> Result<Project, String> {
@@ -111,6 +137,42 @@ fn insert_project(conn: &Connection, input: &ProjectInput, updated_at: i64) -> R
     .map_err(|e| e.to_string())?;
 
     get_project_by_id(conn, &input.id)
+}
+
+pub(crate) fn set_project_current_node(
+    conn: &Connection,
+    project_id: &str,
+    node_id: &str,
+) -> Result<(), String> {
+    let updated_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_millis() as i64;
+
+    let affected = conn
+        .execute(
+            "UPDATE projects SET current_workflow_node = ?2, updated_at = ?3 WHERE id = ?1",
+            params![project_id, node_id, updated_at],
+        )
+        .map_err(|e| e.to_string())?;
+
+    if affected == 0 {
+        return Err(format!("项目不存在: {project_id}"));
+    }
+
+    Ok(())
+}
+
+pub(crate) fn get_project_current_node(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<String, String> {
+    conn.query_row(
+        "SELECT current_workflow_node FROM projects WHERE id = ?1",
+        params![project_id],
+        |row| row.get(0),
+    )
+    .map_err(|e| e.to_string())
 }
 
 fn get_project_by_id(conn: &Connection, id: &str) -> Result<Project, String> {

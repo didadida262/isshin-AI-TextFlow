@@ -106,6 +106,7 @@ export const en: TranslationSchema = {
       generateVideo: "Generate Video",
       editExport: "Edit & Export",
       placeholder: "Content for this step is coming soon.",
+      loading: "Loading workflow…",
     },
     extractEventsStep: {
       importSource: "Import Source",

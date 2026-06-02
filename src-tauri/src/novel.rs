@@ -200,6 +200,54 @@ fn row_to_chapter(row: &Row<'_>) -> rusqlite::Result<NovelChapterRecord> {
 
 const CHAPTER_SELECT: &str = "SELECT id, project_id, chapter_index, reel, chapter, chapter_data, event_state, event, error_reason";
 
+pub(crate) fn fetch_novel_source(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<Option<NovelSourceRecord>, String> {
+    let result = conn.query_row(
+        "SELECT project_id, source_text, char_count, imported_at
+         FROM novel_source WHERE project_id = ?1",
+        params![project_id],
+        |row| {
+            Ok(NovelSourceRecord {
+                project_id: row.get(0)?,
+                source_text: row.get(1)?,
+                char_count: row.get(2)?,
+                imported_at: row.get(3)?,
+            })
+        },
+    );
+
+    match result {
+        Ok(record) => Ok(Some(record)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+pub(crate) fn fetch_novel_chapters(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<Vec<NovelChapterRecord>, String> {
+    let mut stmt = conn
+        .prepare(&format!(
+            "{CHAPTER_SELECT} FROM novel_chapters
+             WHERE project_id = ?1 ORDER BY chapter_index ASC"
+        ))
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![project_id], row_to_chapter)
+        .map_err(|e| e.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
+pub(crate) fn is_extract_events_completed(chapters: &[NovelChapterRecord]) -> bool {
+    !chapters.is_empty() && chapters.iter().all(|chapter| chapter.event_state == 1)
+}
+
 fn ensure_project_exists(conn: &Connection, project_id: &str) -> Result<(), String> {
     let count: i64 = conn
         .query_row(
@@ -274,6 +322,8 @@ pub fn import_novel(project_id: String, source_text: String) -> Result<ImportNov
 
     tx.commit().map_err(|e| e.to_string())?;
 
+    crate::workflow::reset_to_extract_events(&conn, &project_id)?;
+
     Ok(ImportNovelResult {
         chapter_count: chapters.len() as i32,
         char_count,
@@ -283,43 +333,13 @@ pub fn import_novel(project_id: String, source_text: String) -> Result<ImportNov
 #[tauri::command]
 pub fn get_novel_source(project_id: String) -> Result<Option<NovelSourceRecord>, String> {
     let conn = init_db()?;
-    let result = conn.query_row(
-        "SELECT project_id, source_text, char_count, imported_at
-         FROM novel_source WHERE project_id = ?1",
-        params![project_id],
-        |row| {
-            Ok(NovelSourceRecord {
-                project_id: row.get(0)?,
-                source_text: row.get(1)?,
-                char_count: row.get(2)?,
-                imported_at: row.get(3)?,
-            })
-        },
-    );
-
-    match result {
-        Ok(record) => Ok(Some(record)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(e.to_string()),
-    }
+    fetch_novel_source(&conn, &project_id)
 }
 
 #[tauri::command]
 pub fn list_novel_chapters(project_id: String) -> Result<Vec<NovelChapterRecord>, String> {
     let conn = init_db()?;
-    let mut stmt = conn
-        .prepare(&format!(
-            "{CHAPTER_SELECT} FROM novel_chapters
-             WHERE project_id = ?1 ORDER BY chapter_index ASC"
-        ))
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map(params![project_id], row_to_chapter)
-        .map_err(|e| e.to_string())?;
-
-    rows.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
+    fetch_novel_chapters(&conn, &project_id)
 }
 
 #[tauri::command]
@@ -344,6 +364,17 @@ pub fn update_novel_chapter_event(input: UpdateChapterEventInput) -> Result<(), 
     if affected == 0 {
         return Err(format!("章节不存在: {}", input.id));
     }
+
+    let project_id: String = conn
+        .query_row(
+            "SELECT project_id FROM novel_chapters WHERE id = ?1",
+            params![input.id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    crate::workflow::maybe_advance_after_extract(&conn, &project_id)?;
+
     Ok(())
 }
 

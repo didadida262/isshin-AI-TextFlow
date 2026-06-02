@@ -29,6 +29,15 @@ export const EVENT_STATE_PENDING = 0;
 export const EVENT_STATE_SUCCESS = 1;
 export const EVENT_STATE_ERROR = 2;
 
+export function isEventExtractionComplete(
+  chapters: NovelChapterRecord[],
+): boolean {
+  return (
+    chapters.length > 0 &&
+    chapters.every((chapter) => chapter.eventState === EVENT_STATE_SUCCESS)
+  );
+}
+
 export async function importNovel(
   projectId: string,
   sourceText: string,

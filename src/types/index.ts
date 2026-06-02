@@ -36,6 +36,15 @@ export type ProjectWorkflowStepId =
   | "generateVideo"
   | "editExport";
 
+/** 流程节点状态（由后端计算） */
+export type WorkflowNodeStatus = "completed" | "current" | "notStarted";
+
+export interface ProjectWorkflowNode {
+  id: ProjectWorkflowStepId;
+  order: number;
+  status: WorkflowNodeStatus;
+}
+
 export interface AppConfig {
   baseUrl: string;
   apiKey: string;
