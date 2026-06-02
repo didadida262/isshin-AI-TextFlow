@@ -75,15 +75,8 @@ export function ProjectDetailView({
   const refreshProjectWorkflow = useCallback(async () => {
     const nodes = await listProjectWorkflowNodes(project.id);
     setWorkflowNodesRaw(nodes);
-
-    const currentNode =
-      nodes.find((node) => node.status === "current") ?? nodes[0];
-    const nextStep = currentNode?.id ?? "extractEvents";
-    setSelectedStep(nextStep);
-
-    const detail = await getProjectWorkflowNodeDetail(project.id, nextStep);
-    setNodeDetail(detail);
-  }, [project.id]);
+    await loadNodeDetail(selectedStep);
+  }, [project.id, selectedStep, loadNodeDetail]);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,6 +126,11 @@ export function ProjectDetailView({
   const extractEventsDetail = useMemo(
     () =>
       nodeDetail?.kind === "extractEvents" ? nodeDetail : null,
+    [nodeDetail],
+  );
+
+  const aiScriptDetail = useMemo(
+    () => (nodeDetail?.kind === "aiScript" ? nodeDetail : null),
     [nodeDetail],
   );
 
@@ -190,8 +188,20 @@ export function ProjectDetailView({
                 initialChapters={extractEventsDetail.chapters}
                 onWorkflowChange={() => void refreshProjectWorkflow()}
               />
-            ) : selectedStep === "aiScript" ? (
-              <AiScriptStep title={activeLabel} />
+            ) : selectedStep === "aiScript" && aiScriptDetail ? (
+              <AiScriptStep
+                key={`${project.id}-ai-script-${aiScriptDetail.scripts.length}`}
+                project={project}
+                title={activeLabel}
+                config={config}
+                selectedModel={selectedModel}
+                chapters={aiScriptDetail.chapters}
+                workData={aiScriptDetail.workData}
+                scripts={aiScriptDetail.scripts}
+                onConfigError={onConfigError}
+                onWorkflowChange={() => void refreshProjectWorkflow()}
+                onScriptsUpdated={() => void loadNodeDetail("aiScript")}
+              />
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <h2 key={selectedStep} className="step-panel-title">

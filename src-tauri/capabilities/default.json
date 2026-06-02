@@ -16,6 +16,7 @@
     "allow-get-story-skill-detail",
     "allow-novel",
     "allow-workflow",
+    "allow-script",
     "allow-llm",
     {
       "identifier": "http:default",

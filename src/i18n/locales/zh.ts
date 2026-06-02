@@ -117,6 +117,43 @@ export type TranslationSchema = {
       colEvent: string;
       noEvent: string;
     };
+    aiScriptStep: {
+      generateScript: string;
+      generating: string;
+      prerequisiteHint: string;
+      emptyHint: string;
+      stageSkeleton: string;
+      stageAdaptation: string;
+      stageScripts: string;
+      stageScriptsProgress: (completed: number, total: number) => string;
+      storySkeletonTitle: string;
+      adaptationStrategyTitle: string;
+      tabScripts: string;
+      tabSkeletonEmpty: string;
+      tabStrategyEmpty: string;
+      colEpisode: string;
+      colName: string;
+      colStatus: string;
+      colContent: string;
+      statusSuccess: string;
+      statusError: string;
+      statusPending: string;
+      noContent: string;
+      chatWelcome: string;
+      chatWelcomeHint: string;
+      chatSuggestGenerate: string;
+      chatSuggestGeneratePrompt: string;
+      chatAgentCoordinator: string;
+      chatAgentWriter: string;
+      chatPipelineComplete: string;
+      chatPipelineStopped: string;
+      chatFallback: string;
+      chatInputPlaceholder: string;
+      retryFailed: string;
+      retryFailedProgress: (completed: number, total: number) => string;
+      chatRetryFailedComplete: string;
+      chatRetryFailedNone: string;
+    };
     importNovelModal: {
       title: string;
       uploadHint: string;
@@ -306,6 +343,47 @@ export const zh: TranslationSchema = {
       colContent: "章节内容",
       colEvent: "事件",
       noEvent: "—",
+    },
+    aiScriptStep: {
+      generateScript: "生成剧本",
+      generating: "正在生成剧本…",
+      prerequisiteHint: "请先完成「提取事件」步骤，再生成剧本。",
+      emptyHint: "点击「生成剧本」，AI 将依次构建故事骨架、改编策略，并逐集生成剧本。",
+      stageSkeleton: "正在构建故事骨架…",
+      stageAdaptation: "正在制定改编策略…",
+      stageScripts: "正在生成剧本…",
+      stageScriptsProgress: (completed: number, total: number) =>
+        `正在生成剧本 ${completed}/${total}…`,
+      storySkeletonTitle: "故事骨架",
+      adaptationStrategyTitle: "改编策略",
+      tabScripts: "逐集剧本",
+      tabSkeletonEmpty: "生成剧本后，故事骨架将显示在此。",
+      tabStrategyEmpty: "生成剧本后，改编策略将显示在此。",
+      colEpisode: "集数",
+      colName: "剧本名称",
+      colStatus: "状态",
+      colContent: "内容",
+      statusSuccess: "已完成",
+      statusError: "失败",
+      statusPending: "待生成",
+      noContent: "—",
+      chatWelcome: "你好，我是剧本统筹 Agent。",
+      chatWelcomeHint:
+        "我可以帮你依次完成故事骨架、改编策略和逐集剧本。点击下方快捷指令，或直接输入「开始生成剧本」。",
+      chatSuggestGenerate: "开始生成剧本",
+      chatSuggestGeneratePrompt: "开始生成剧本",
+      chatAgentCoordinator: "统筹",
+      chatAgentWriter: "编剧",
+      chatPipelineComplete: "剧本生成完成，请在右侧工作台查看故事骨架、改编策略与各集剧本。",
+      chatPipelineStopped: "已停止生成。",
+      chatFallback:
+        "如需生成剧本，请点击「开始生成剧本」，或输入类似「开始生成剧本」的指令。",
+      chatInputPlaceholder: "输入指令，Enter 发送，Shift+Enter 换行",
+      retryFailed: "重试失败集",
+      retryFailedProgress: (completed: number, total: number) =>
+        `正在重试失败集 ${completed}/${total}…`,
+      chatRetryFailedComplete: "失败集已重新生成，请在右侧查看结果。",
+      chatRetryFailedNone: "当前没有失败的集数。",
     },
     importNovelModal: {
       title: "上传小说原文",

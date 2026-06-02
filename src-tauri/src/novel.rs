@@ -291,6 +291,8 @@ pub fn import_novel(project_id: String, source_text: String) -> Result<ImportNov
     )
     .map_err(|e| e.to_string())?;
 
+    crate::script::clear_project_script_data(&tx, &project_id)?;
+
     tx.execute(
         "INSERT INTO novel_source (project_id, source_text, char_count, imported_at)
          VALUES (?1, ?2, ?3, ?4)

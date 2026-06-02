@@ -2,6 +2,7 @@ mod db;
 mod llm;
 mod novel;
 mod projects;
+mod script;
 mod skills;
 mod workflow;
 
@@ -13,6 +14,9 @@ use novel::{
 use projects::{create_project, list_projects, update_project};
 use serde::Serialize;
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
+use script::{
+    get_script_work_data, list_scripts, set_script_work_data, upsert_script,
+};
 use workflow::{
     get_project_workflow_node_detail, list_project_workflow_nodes,
 };
@@ -79,6 +83,10 @@ pub fn run() {
             get_novel_source,
             list_novel_chapters,
             update_novel_chapter_event,
+            get_script_work_data,
+            set_script_work_data,
+            list_scripts,
+            upsert_script,
             list_project_workflow_nodes,
             get_project_workflow_node_detail
         ])

@@ -65,3 +65,13 @@ commands.allow = [
 identifier = "allow-llm"
 description = "Allows LLM requests with Rust-side logging"
 commands.allow = ["llm_chat_completion", "llm_log_outbound", "llm_log_inbound"]
+
+[[permission]]
+identifier = "allow-script"
+description = "Allows script work data and episode script persistence"
+commands.allow = [
+  "get_script_work_data",
+  "set_script_work_data",
+  "list_scripts",
+  "upsert_script",
+]

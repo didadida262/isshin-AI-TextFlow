@@ -47,12 +47,17 @@ export async function testConnection(
   });
 }
 
+export interface ChatCompletionOptions {
+  maxTokens?: number;
+}
+
 export async function chatCompletion(
   config: AppConfig,
   model: string,
   messages: ChatCompletionMessage[],
   signal?: AbortSignal,
   label = "chat-completion",
+  options?: ChatCompletionOptions,
 ): Promise<string> {
   if (signal?.aborted) {
     throw new Error("Request cancelled");
@@ -68,6 +73,7 @@ export async function chatCompletion(
         model,
         messages,
         stream: false,
+        ...(options?.maxTokens != null ? { max_tokens: options.maxTokens } : {}),
       },
     } satisfies LlmRequestPayload,
   });

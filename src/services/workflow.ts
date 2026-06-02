@@ -4,6 +4,7 @@ import type {
   ProjectWorkflowStepId,
 } from "../types";
 import type { NovelChapterRecord, NovelSourceRecord } from "./novel";
+import type { ScriptRecord } from "./script";
 
 export interface ExtractEventsNodeDetail {
   kind: "extractEvents";
@@ -22,6 +23,11 @@ export interface AiScriptNodeDetail {
   nodeId: ProjectWorkflowStepId;
   source: NovelSourceRecord | null;
   chapters: NovelChapterRecord[];
+  workData: {
+    storySkeleton: string;
+    adaptationStrategy: string;
+  };
+  scripts: ScriptRecord[];
 }
 
 export type WorkflowNodeDetail =

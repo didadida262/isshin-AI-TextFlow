@@ -5,7 +5,7 @@ import { ChatArea } from "./components/ChatArea";
 import { CreationView } from "./components/CreationView";
 import { SettingsDrawer } from "./components/SettingsDrawer";
 import { LoginView } from "./components/LoginView";
-import { I18nProvider } from "./contexts/I18nContext";
+import { I18nProvider, useTranslationMessages } from "./contexts/I18nContext";
 import { useAppState } from "./hooks/useAppState";
 import { readAuthSession, logout as clearAuthSession } from "./services/auth";
 import type { AppNav, AuthUser } from "./types";
@@ -40,6 +40,17 @@ function MainApp({
     chatMode,
     setChatMode,
   } = useAppState();
+  const i18n = useTranslationMessages();
+
+  const handleCreationConfigError = (message: string | null) => {
+    setConfigError(message);
+    if (
+      message === i18n.errors.configRequired ||
+      message === i18n.errors.modelsRequired
+    ) {
+      setSettingsOpen(true);
+    }
+  };
 
   return (
     <div className="flex h-screen min-h-0 bg-black">
@@ -84,10 +95,7 @@ function MainApp({
         <CreationView
           config={config}
           selectedModel={selectedModel}
-          onConfigError={(message) => {
-            setConfigError(message);
-            if (message) setSettingsOpen(true);
-          }}
+          onConfigError={handleCreationConfigError}
         />
       )}
 

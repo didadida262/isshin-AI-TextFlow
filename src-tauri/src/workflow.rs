@@ -1,6 +1,7 @@
 use crate::db::init_db;
 use crate::novel::{self, NovelChapterRecord, NovelSourceRecord};
 use crate::projects::{get_project_current_node, set_project_current_node};
+use crate::script::{self, ScriptRecord, ScriptWorkData};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
@@ -46,6 +47,16 @@ pub struct NovelChaptersNodeDetail {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AiScriptNodeDetail {
+    pub node_id: String,
+    pub source: Option<NovelSourceRecord>,
+    pub chapters: Vec<NovelChapterRecord>,
+    pub work_data: ScriptWorkData,
+    pub scripts: Vec<ScriptRecord>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlaceholderNodeDetail {
     pub node_id: String,
 }
@@ -54,7 +65,7 @@ pub struct PlaceholderNodeDetail {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum WorkflowNodeDetail {
     ExtractEvents(NovelChaptersNodeDetail),
-    AiScript(NovelChaptersNodeDetail),
+    AiScript(AiScriptNodeDetail),
     Placeholder(PlaceholderNodeDetail),
 }
 
@@ -78,6 +89,10 @@ fn is_node_completed(conn: &Connection, project_id: &str, node_id: &str) -> Resu
             let chapters = novel::fetch_novel_chapters(conn, project_id)?;
             Ok(novel::is_extract_events_completed(&chapters))
         }
+        NODE_AI_SCRIPT => {
+            let chapters = novel::fetch_novel_chapters(conn, project_id)?;
+            script::is_ai_script_completed(conn, project_id, chapters.len() as i32)
+        }
         _ => Ok(false),
     }
 }
@@ -93,12 +108,23 @@ pub(crate) fn maybe_advance_after_extract(conn: &Connection, project_id: &str) -
     Ok(())
 }
 
+pub(crate) fn maybe_advance_after_script(conn: &Connection, project_id: &str) -> Result<(), String> {
+    if is_node_completed(conn, project_id, NODE_AI_SCRIPT)? {
+        set_project_current_node(conn, project_id, NODE_GENERATE_ASSETS)?;
+    }
+    Ok(())
+}
+
 fn sync_current_node(conn: &Connection, project_id: &str) -> Result<(), String> {
     let current = get_project_current_node(conn, project_id)?;
     if current == NODE_EXTRACT_EVENTS
         && is_node_completed(conn, project_id, NODE_EXTRACT_EVENTS)?
     {
         set_project_current_node(conn, project_id, NODE_AI_SCRIPT)?;
+    } else if current == NODE_AI_SCRIPT
+        && is_node_completed(conn, project_id, NODE_AI_SCRIPT)?
+    {
+        set_project_current_node(conn, project_id, NODE_GENERATE_ASSETS)?;
     }
     Ok(())
 }
@@ -186,8 +212,14 @@ pub fn get_project_workflow_node_detail(
             Ok(WorkflowNodeDetail::ExtractEvents(detail))
         }
         NODE_AI_SCRIPT => {
-            let detail = fetch_chapters_node_detail(&conn, &input.project_id, &input.node_id)?;
-            Ok(WorkflowNodeDetail::AiScript(detail))
+            let chapters = novel::fetch_novel_chapters(&conn, &input.project_id)?;
+            Ok(WorkflowNodeDetail::AiScript(AiScriptNodeDetail {
+                node_id: input.node_id,
+                source: novel::fetch_novel_source(&conn, &input.project_id)?,
+                chapters,
+                work_data: script::fetch_script_work_data(&conn, &input.project_id),
+                scripts: script::fetch_scripts(&conn, &input.project_id)?,
+            }))
         }
         _ => Ok(WorkflowNodeDetail::Placeholder(PlaceholderNodeDetail {
             node_id: input.node_id,
@@ -205,6 +237,7 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         crate::projects::init_schema(&conn).unwrap();
         novel::init_schema(&conn).unwrap();
+        script::init_schema(&conn).unwrap();
         conn.execute(
             "INSERT INTO projects (
                 id, name, project_type, novel_type, image_model, image_quality,

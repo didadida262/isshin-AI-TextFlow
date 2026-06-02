@@ -375,6 +375,12 @@
           "markdownDescription": "Allows reading project files"
         },
         {
+          "description": "Allows script work data and episode script persistence",
+          "type": "string",
+          "const": "allow-script",
+          "markdownDescription": "Allows script work data and episode script persistence"
+        },
+        {
           "description": "Allows updating projects",
           "type": "string",
           "const": "allow-update-project",

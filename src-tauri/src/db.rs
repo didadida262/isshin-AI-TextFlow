@@ -85,6 +85,7 @@ pub fn init_db() -> Result<Connection, String> {
 
     crate::projects::init_schema(&conn)?;
     crate::novel::init_schema(&conn)?;
+    crate::script::init_schema(&conn)?;
 
     Ok(conn)
 }
