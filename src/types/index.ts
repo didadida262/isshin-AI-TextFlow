@@ -27,6 +27,15 @@ export interface CreationProject {
   updatedAt: number;
 }
 
+/** 项目创作流程步骤 */
+export type ProjectWorkflowStepId =
+  | "extractEvents"
+  | "aiScript"
+  | "generateAssets"
+  | "storyboard"
+  | "generateVideo"
+  | "editExport";
+
 export interface AppConfig {
   baseUrl: string;
   apiKey: string;

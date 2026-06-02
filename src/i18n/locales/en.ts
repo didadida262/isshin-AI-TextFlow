@@ -95,6 +95,18 @@ export const en: TranslationSchema = {
     title: "Project List",
     newProject: "New Project",
     empty: "No projects yet. Click the button above to create your first one",
+    editProject: "Edit project",
+    backToList: "Back to project list",
+    backShort: "Back",
+    workflow: {
+      extractEvents: "Extract Events",
+      aiScript: "AI Scriptwriting",
+      generateAssets: "Generate Assets",
+      storyboard: "Storyboard",
+      generateVideo: "Generate Video",
+      editExport: "Edit & Export",
+      placeholder: "Content for this step is coming soon.",
+    },
     modal: {
       title: "New Project",
       editTitle: "Edit Project",

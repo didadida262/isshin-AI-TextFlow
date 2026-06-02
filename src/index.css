@@ -57,3 +57,59 @@ select:disabled {
   background: #333;
   border-radius: 3px;
 }
+
+@keyframes step-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.7);
+  }
+}
+
+@keyframes step-line-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes step-line-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.step-segment-transition {
+  overflow: hidden;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 255, 102, 0.92) 0%,
+    rgba(0, 255, 102, 0.55) 35%,
+    rgba(34, 211, 238, 0.5) 65%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  background-size: 220% 100%;
+  animation: step-line-flow 2.8s ease-in-out infinite alternate;
+}
+
+.step-segment-transition::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 100%
+  );
+  animation: step-line-shimmer 2.2s ease-in-out infinite;
+}

@@ -88,6 +88,18 @@ export type TranslationSchema = {
     title: string;
     newProject: string;
     empty: string;
+    editProject: string;
+    backToList: string;
+    backShort: string;
+    workflow: {
+      extractEvents: string;
+      aiScript: string;
+      generateAssets: string;
+      storyboard: string;
+      generateVideo: string;
+      editExport: string;
+      placeholder: string;
+    };
     modal: {
       title: string;
       editTitle: string;
@@ -234,6 +246,18 @@ export const zh: TranslationSchema = {
     title: "项目列表",
     newProject: "新建项目",
     empty: "暂无项目，点击右上角创建第一个视频创作",
+    editProject: "编辑项目",
+    backToList: "返回项目列表",
+    backShort: "返回",
+    workflow: {
+      extractEvents: "提取事件",
+      aiScript: "AI 写剧本",
+      generateAssets: "生成资产",
+      storyboard: "制作分镜",
+      generateVideo: "生成视频",
+      editExport: "剪辑导出",
+      placeholder: "此步骤内容即将上线，敬请期待。",
+    },
     modal: {
       title: "新建项目",
       editTitle: "编辑项目",

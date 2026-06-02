@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClapperboard, faPlus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faClapperboard,
+  faPenToSquare,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   createProject,
@@ -12,6 +16,7 @@ import {
   NewProjectModal,
   type NewProjectDraft,
 } from "./NewProjectModal";
+import { ProjectDetailView } from "./ProjectDetailView";
 import type { CreationProject } from "../types";
 
 interface CreationViewProps {
@@ -35,6 +40,7 @@ export function CreationView({ models }: CreationViewProps) {
   );
   const [projects, setProjects] = useState<CreationProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
   const refreshProjects = useCallback(async () => {
     setLoading(true);
@@ -46,6 +52,9 @@ export function CreationView({ models }: CreationViewProps) {
   useEffect(() => {
     void refreshProjects();
   }, [refreshProjects]);
+
+  const activeProject =
+    projects.find((project) => project.id === activeProjectId) ?? null;
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -76,6 +85,20 @@ export function CreationView({ models }: CreationViewProps) {
     await refreshProjects();
     closeModal();
   };
+
+  const openProject = (project: CreationProject) => {
+    setActiveProjectId(project.id);
+  };
+
+  const backToList = () => {
+    setActiveProjectId(null);
+  };
+
+  if (activeProject) {
+    return (
+      <ProjectDetailView project={activeProject} onBack={backToList} />
+    );
+  }
 
   return (
     <>
@@ -115,11 +138,11 @@ export function CreationView({ models }: CreationViewProps) {
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
-                <li key={project.id}>
+                <li key={project.id} className="relative">
                   <button
                     type="button"
-                    onClick={() => openEditModal(project)}
-                    className="flex h-full w-full flex-col rounded-xl border border-white/10 bg-surface p-4 text-left transition hover:border-accent/40 hover:bg-surface-elevated"
+                    onClick={() => openProject(project)}
+                    className="flex h-full w-full flex-col rounded-xl border border-white/10 bg-surface p-4 pr-10 text-left transition hover:border-accent/40 hover:bg-surface-elevated"
                   >
                     <h3 className="truncate font-medium text-white">
                       {project.name}
@@ -140,6 +163,15 @@ export function CreationView({ models }: CreationViewProps) {
                     <p className="mt-3 text-[11px] text-text-dim">
                       {formatProjectDate(project.createdAt)}
                     </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(project)}
+                    title={i18n.creation.editProject}
+                    aria-label={i18n.creation.editProject}
+                    className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-md text-text-muted transition hover:bg-white/5 hover:text-accent"
+                  >
+                    <FontAwesomeIcon icon={faPenToSquare} className="text-[10px]" />
                   </button>
                 </li>
               ))}
