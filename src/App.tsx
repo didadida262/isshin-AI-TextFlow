@@ -81,7 +81,14 @@ function MainApp({
           />
         </div>
       ) : (
-        <CreationView models={config.models} />
+        <CreationView
+          config={config}
+          selectedModel={selectedModel}
+          onConfigError={(message) => {
+            setConfigError(message);
+            if (message) setSettingsOpen(true);
+          }}
+        />
       )}
 
       <SettingsDrawer

@@ -17,10 +17,12 @@ import {
   type NewProjectDraft,
 } from "./NewProjectModal";
 import { ProjectDetailView } from "./ProjectDetailView";
-import type { CreationProject } from "../types";
+import type { AppConfig, CreationProject } from "../types";
 
 interface CreationViewProps {
-  models: string[];
+  config: AppConfig;
+  selectedModel: string;
+  onConfigError: (message: string | null) => void;
 }
 
 function formatProjectDate(timestamp: number): string {
@@ -31,7 +33,11 @@ function formatProjectDate(timestamp: number): string {
   });
 }
 
-export function CreationView({ models }: CreationViewProps) {
+export function CreationView({
+  config,
+  selectedModel,
+  onConfigError,
+}: CreationViewProps) {
   const i18n = useTranslationMessages();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
@@ -96,7 +102,13 @@ export function CreationView({ models }: CreationViewProps) {
 
   if (activeProject) {
     return (
-      <ProjectDetailView project={activeProject} onBack={backToList} />
+      <ProjectDetailView
+        project={activeProject}
+        config={config}
+        selectedModel={selectedModel}
+        onConfigError={onConfigError}
+        onBack={backToList}
+      />
     );
   }
 
@@ -184,7 +196,7 @@ export function CreationView({ models }: CreationViewProps) {
         open={modalOpen}
         mode={modalMode}
         editingProject={editingProject}
-        models={models}
+        models={config.models}
         onClose={closeModal}
         onConfirm={handleConfirm}
       />

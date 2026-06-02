@@ -100,6 +100,35 @@ export type TranslationSchema = {
       editExport: string;
       placeholder: string;
     };
+    extractEventsStep: {
+      importSource: string;
+      extractEvents: string;
+      emptyHint: string;
+      charsUnit: string;
+      extracting: string;
+      extractingProgress: (completed: number, total: number) => string;
+      resultsEmpty: string;
+      colIndex: string;
+      colReel: string;
+      colChapter: string;
+      colContent: string;
+      colEvent: string;
+      noEvent: string;
+    };
+    importNovelModal: {
+      title: string;
+      uploadHint: string;
+      uploadFormats: string;
+      or: string;
+      pasteLabel: string;
+      pastePlaceholder: string;
+      charsUnit: string;
+      save: string;
+      unsupportedFormat: string;
+      fileTooLarge: string;
+      docxComingSoon: string;
+      readFailed: string;
+    };
     modal: {
       title: string;
       editTitle: string;
@@ -257,6 +286,36 @@ export const zh: TranslationSchema = {
       generateVideo: "生成视频",
       editExport: "剪辑导出",
       placeholder: "此步骤内容即将上线，敬请期待。",
+    },
+    extractEventsStep: {
+      importSource: "导入原文",
+      extractEvents: "事件提取",
+      emptyHint: "请先导入小说原文，再进行事件提取。",
+      charsUnit: "字符",
+      extracting: "正在提取事件…",
+      extractingProgress: (completed: number, total: number) =>
+        `正在提取事件 ${completed}/${total}…`,
+      resultsEmpty: "点击「事件提取」，AI 将分析各章节并在此展示结构化事件。",
+      colIndex: "序号",
+      colReel: "卷",
+      colChapter: "章节名称",
+      colContent: "章节内容",
+      colEvent: "事件",
+      noEvent: "—",
+    },
+    importNovelModal: {
+      title: "上传小说原文",
+      uploadHint: "拖拽小说原文文件到此处或点击上传",
+      uploadFormats: "支持 .txt, .docx 格式，建议文件大小不超过 10MB",
+      or: "或",
+      pasteLabel: "直接粘贴小说原文内容",
+      pastePlaceholder: "请输入小说原文内容",
+      charsUnit: "字符",
+      save: "保存",
+      unsupportedFormat: "仅支持 .txt、.docx 格式文件",
+      fileTooLarge: "文件大小不能超过 10MB",
+      docxComingSoon: ".docx 解析即将上线，请暂时使用 .txt 或粘贴文本",
+      readFailed: "文件读取失败，请重试",
     },
     modal: {
       title: "新建项目",

@@ -1,8 +1,10 @@
 mod db;
+mod llm;
 mod projects;
 mod skills;
 
 use db::login;
+use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
 use projects::{create_project, list_projects, update_project};
 use serde::Serialize;
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
@@ -61,7 +63,10 @@ pub fn run() {
             list_art_skills,
             list_story_skills,
             get_art_skill_detail,
-            get_story_skill_detail
+            get_story_skill_detail,
+            llm_chat_completion,
+            llm_log_outbound,
+            llm_log_inbound
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

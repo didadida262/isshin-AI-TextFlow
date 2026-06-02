@@ -14,6 +14,7 @@
     "allow-list-story-skills",
     "allow-get-art-skill-detail",
     "allow-get-story-skill-detail",
+    "allow-llm",
     {
       "identifier": "http:default",
       "allow": [

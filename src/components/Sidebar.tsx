@@ -72,7 +72,9 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="border-t border-white/5 px-3 py-3">
+      <div className="px-3 pb-3 pt-3">
+        <div className="-mx-3 mb-3 h-px bg-white/10" aria-hidden />
+
         <div className="mb-3 flex overflow-hidden rounded-xl border border-white/10 bg-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
           <LanguageToggle className="border-r border-white/5" />
           <button

@@ -67,13 +67,9 @@ function getSegmentVariant(
 }
 
 function SegmentLine({ variant }: { variant: SegmentVariant }) {
-  const isTransition = variant === "transition";
-
   return (
     <div
-      className={`relative mt-4 min-w-[12px] flex-1 self-start ${
-        isTransition ? "h-[2px]" : "h-px"
-      }`}
+      className="relative mt-4 h-px min-w-[12px] flex-1 self-start"
       aria-hidden
     >
       <div className="absolute inset-0 bg-white/10" />

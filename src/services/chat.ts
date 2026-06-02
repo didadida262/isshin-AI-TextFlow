@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import type { AppConfig } from "../types";
 import { resolveApiUrl } from "./api";
@@ -7,28 +8,75 @@ export interface ChatCompletionMessage {
   content: string;
 }
 
+interface LlmRequestPayload {
+  url: string;
+  apiKey: string;
+  body: Record<string, unknown>;
+  label?: string;
+}
+
+interface LlmInboundLog {
+  data: string;
+}
+
+async function logLlmOutbound(payload: LlmRequestPayload): Promise<void> {
+  await invoke("llm_log_outbound", { payload });
+}
+
+async function logLlmInbound(log: LlmInboundLog): Promise<void> {
+  await invoke("llm_log_inbound", { log });
+}
+
 export async function testConnection(
   config: AppConfig,
   model: string,
 ): Promise<void> {
   const url = resolveApiUrl(config.baseUrl, "/chat/completions");
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: "ping" }],
-      max_tokens: 1,
-      stream: false,
-    }),
+  await invoke<{ content: string }>("llm_chat_completion", {
+    payload: {
+      url,
+      apiKey: config.apiKey,
+      label: "test-connection",
+      body: {
+        model,
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 1,
+        stream: false,
+      },
+    } satisfies LlmRequestPayload,
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+}
+
+export async function chatCompletion(
+  config: AppConfig,
+  model: string,
+  messages: ChatCompletionMessage[],
+  signal?: AbortSignal,
+  label = "chat-completion",
+): Promise<string> {
+  if (signal?.aborted) {
+    throw new Error("Request cancelled");
   }
+
+  const url = resolveApiUrl(config.baseUrl, "/chat/completions");
+  const result = await invoke<{ content: string }>("llm_chat_completion", {
+    payload: {
+      url,
+      apiKey: config.apiKey,
+      label,
+      body: {
+        model,
+        messages,
+        stream: false,
+      },
+    } satisfies LlmRequestPayload,
+  });
+
+  if (signal?.aborted) {
+    throw new Error("Request cancelled");
+  }
+
+  return result.content;
 }
 
 export async function* streamChatCompletion(
@@ -38,23 +86,33 @@ export async function* streamChatCompletion(
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
   const url = resolveApiUrl(config.baseUrl, "/chat/completions");
+  const body = {
+    model,
+    messages,
+    stream: true,
+  };
+
+  await logLlmOutbound({
+    url,
+    apiKey: config.apiKey,
+    label: "chat-stream",
+    body,
+  });
+
   const res = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: true,
-    }),
+    body: JSON.stringify(body),
     signal,
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    const responseText = await res.text();
+    void logLlmInbound({ data: responseText });
+    throw new Error(responseText || `HTTP ${res.status}`);
   }
 
   const reader = res.body?.getReader();
@@ -62,6 +120,7 @@ export async function* streamChatCompletion(
 
   const decoder = new TextDecoder();
   let buffer = "";
+  let received = "";
 
   while (true) {
     if (signal?.aborted) {
@@ -80,17 +139,27 @@ export async function* streamChatCompletion(
       const trimmed = line.trim();
       if (!trimmed || !trimmed.startsWith("data:")) continue;
       const data = trimmed.slice(5).trim();
-      if (data === "[DONE]") return;
+      if (data === "[DONE]") {
+        void logLlmInbound({ data: received });
+        return;
+      }
 
       try {
         const parsed = JSON.parse(data) as {
           choices?: Array<{ delta?: { content?: string } }>;
         };
         const delta = parsed.choices?.[0]?.delta?.content;
-        if (delta) yield delta;
+        if (delta) {
+          received += delta;
+          yield delta;
+        }
       } catch {
         /* skip malformed SSE chunk */
       }
     }
+  }
+
+  if (received) {
+    void logLlmInbound({ data: received });
   }
 }

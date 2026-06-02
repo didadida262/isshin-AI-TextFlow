@@ -42,3 +42,8 @@ commands.allow = ["get_art_skill_detail"]
 identifier = "allow-get-story-skill-detail"
 description = "Allows loading director manual detail"
 commands.allow = ["get_story_skill_detail"]
+
+[[permission]]
+identifier = "allow-llm"
+description = "Allows LLM requests with Rust-side logging"
+commands.allow = ["llm_chat_completion", "llm_log_outbound", "llm_log_inbound"]

@@ -2,11 +2,15 @@ import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import type { CreationProject, ProjectWorkflowStepId } from "../types";
+import type { AppConfig, CreationProject, ProjectWorkflowStepId } from "../types";
 import { ProjectStepper, type WorkflowStepItem } from "./ProjectStepper";
+import { ExtractEventsStep } from "./ExtractEventsStep";
 
 interface ProjectDetailViewProps {
   project: CreationProject;
+  config: AppConfig;
+  selectedModel: string;
+  onConfigError: (message: string | null) => void;
   onBack: () => void;
 }
 
@@ -19,7 +23,13 @@ const STEP_ORDER: ProjectWorkflowStepId[] = [
   "editExport",
 ];
 
-export function ProjectDetailView({ project, onBack }: ProjectDetailViewProps) {
+export function ProjectDetailView({
+  project,
+  config,
+  selectedModel,
+  onConfigError,
+  onBack,
+}: ProjectDetailViewProps) {
   const i18n = useTranslationMessages();
   const w = i18n.creation.workflow;
   const [activeStep, setActiveStep] =
@@ -37,7 +47,7 @@ export function ProjectDetailView({ project, onBack }: ProjectDetailViewProps) {
   const activeLabel = w[activeStep];
 
   return (
-    <main className="flex h-full min-h-0 flex-1 flex-col bg-black">
+    <main className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-black">
       <header className="shrink-0 overflow-visible px-6 pb-4 pt-5">
         <div className="mb-3 flex min-w-0 items-center gap-2.5">
           <button
@@ -69,15 +79,29 @@ export function ProjectDetailView({ project, onBack }: ProjectDetailViewProps) {
         />
       </header>
 
-      <div className="mx-6 h-px shrink-0 bg-white/10" aria-hidden />
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <h2 className="text-lg font-semibold text-white">{activeLabel}</h2>
-
-        <div className="mt-6 flex min-h-[280px] flex-1 items-center justify-center">
-          <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
-            {w.placeholder}
-          </p>
+      <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-1">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/20">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-5">
+            {activeStep === "extractEvents" ? (
+              <ExtractEventsStep
+                title={activeLabel}
+                config={config}
+                selectedModel={selectedModel}
+                onConfigError={onConfigError}
+              />
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <h2 key={activeStep} className="step-panel-title">
+                  {activeLabel}
+                </h2>
+                <div className="mt-6 flex min-h-[280px] flex-1 items-center justify-center">
+                  <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
+                    {w.placeholder}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </main>

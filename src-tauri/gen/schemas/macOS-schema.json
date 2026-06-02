@@ -351,6 +351,12 @@
           "markdownDescription": "Allows listing director manual skills"
         },
         {
+          "description": "Allows LLM requests with Rust-side logging",
+          "type": "string",
+          "const": "allow-llm",
+          "markdownDescription": "Allows LLM requests with Rust-side logging"
+        },
+        {
           "description": "Allows user login",
           "type": "string",
           "const": "allow-login",
