@@ -1,5 +1,5 @@
 use crate::db::init_db;
-use rusqlite::{params, Connection, Row};
+use rusqlite::{params, Connection, OptionalExtension, Row};
 use serde::{Deserialize, Serialize};
 
 pub const SCRIPT_STATE_PENDING: i32 = 0;
@@ -139,6 +139,21 @@ pub fn fetch_scripts(conn: &Connection, project_id: &str) -> Result<Vec<ScriptRe
         .map_err(|e| e.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+}
+
+pub fn fetch_script_by_episode(
+    conn: &Connection,
+    project_id: &str,
+    episode_index: i32,
+) -> Result<Option<ScriptRecord>, String> {
+    conn.query_row(
+        "SELECT id, project_id, episode_index, name, content, script_state, error_reason, updated_at
+         FROM scripts WHERE project_id = ?1 AND episode_index = ?2",
+        params![project_id, episode_index],
+        row_to_script,
+    )
+    .optional()
+    .map_err(|e| e.to_string())
 }
 
 pub fn is_ai_script_completed(
