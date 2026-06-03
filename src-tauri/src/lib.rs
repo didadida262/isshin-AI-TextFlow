@@ -31,6 +31,17 @@ use workflow::{
 };
 use std::fs;
 use std::path::PathBuf;
+use tauri::Manager;
+
+fn apply_app_icon(app: &tauri::App) {
+    let Ok(image) = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")) else {
+        return;
+    };
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_icon(image);
+    }
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -72,8 +83,9 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
-        .setup(|_| {
+        .setup(|app| {
             db::init_db().expect("failed to init database");
+            apply_app_icon(app);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
