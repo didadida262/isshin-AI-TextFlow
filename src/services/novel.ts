@@ -17,6 +17,7 @@ export interface NovelSourceRecord {
   sourceText: string;
   charCount: number;
   importedAt: number;
+  eventExtractionDurationMs: number | null;
 }
 
 export interface ImportNovelResult {
@@ -65,5 +66,14 @@ export async function updateNovelChapterEvent(
 ): Promise<void> {
   await invoke("update_novel_chapter_event", {
     input: { id, event, errorReason, eventState },
+  });
+}
+
+export async function setEventExtractionDuration(
+  projectId: string,
+  durationMs: number,
+): Promise<void> {
+  await invoke("set_event_extraction_duration", {
+    input: { projectId, durationMs },
   });
 }

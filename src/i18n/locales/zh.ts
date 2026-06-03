@@ -177,6 +177,10 @@ export type TranslationSchema = {
       colContent: string;
       colEvent: string;
       noEvent: string;
+      colErrorReason: string;
+      chapterDetailTitle: (index: number, name: string) => string;
+      extractionDurationLabel: string;
+      formatDuration: (ms: number) => string;
     };
     aiScriptStep: {
       generateScript: string;
@@ -529,6 +533,17 @@ export const zh: TranslationSchema = {
       colContent: "章节内容",
       colEvent: "事件",
       noEvent: "—",
+      colErrorReason: "失败原因",
+      chapterDetailTitle: (index: number, name: string) =>
+        `第 ${index} 章 · ${name}`,
+      extractionDurationLabel: "耗时",
+      formatDuration: (ms: number) => {
+        if (ms < 1000) return `${ms} 毫秒`;
+        if (ms < 60_000) return `${(ms / 1000).toFixed(1)} 秒`;
+        const minutes = Math.floor(ms / 60_000);
+        const seconds = Math.floor((ms % 60_000) / 1000);
+        return `${minutes} 分 ${seconds} 秒`;
+      },
     },
     aiScriptStep: {
       generateScript: "生成剧本",

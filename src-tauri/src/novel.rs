@@ -25,6 +25,7 @@ pub struct NovelSourceRecord {
     pub source_text: String,
     pub char_count: i32,
     pub imported_at: i64,
+    pub event_extraction_duration_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -59,8 +60,10 @@ static CHAPTER_HEADING: LazyLock<Regex> = LazyLock::new(|| {
     .expect("chapter regex")
 });
 
+/// Volume/section headings must be standalone lines, not in-body phrases like「第三卷上有…」.
 static REEL_HEADING: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"第\s*[0-9一二三四五六七八九十百千万零]+\s*[卷部篇][^\n\r]*").expect("reel regex")
+    Regex::new(r"(?m)^第\s*[0-9一二三四五六七八九十百千万零]+\s*[卷部篇][^\n\r]*")
+        .expect("reel regex")
 });
 
 static CHAPTER_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
@@ -122,6 +125,29 @@ pub fn init_schema(conn: &Connection) -> Result<(), String> {
         [],
     )
     .map_err(|e| e.to_string())?;
+
+    migrate_novel_schema(conn)?;
+
+    Ok(())
+}
+
+fn migrate_novel_schema(conn: &Connection) -> Result<(), String> {
+    let mut stmt = conn
+        .prepare("PRAGMA table_info(novel_source)")
+        .map_err(|e| e.to_string())?;
+    let columns = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    if !columns.iter().any(|name| name == "event_extraction_duration_ms") {
+        conn.execute(
+            "ALTER TABLE novel_source ADD COLUMN event_extraction_duration_ms INTEGER",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+    }
 
     Ok(())
 }
@@ -224,14 +250,30 @@ impl IfEmptyThen for String {
     }
 }
 
+fn is_plausible_reel_line(line: &str) -> bool {
+    let trimmed = line.trim();
+    if trimmed.is_empty() || trimmed.chars().count() > 32 {
+        return false;
+    }
+    const PROSE_MARKERS: &[&str] = &[
+        "。", "，", "、", "；", "：", "？", "！", "……", "——", "话说", "却说", "只见", "原来",
+    ];
+    if PROSE_MARKERS.iter().any(|marker| trimmed.contains(marker)) {
+        return false;
+    }
+    REEL_HEADING.is_match(trimmed)
+}
+
 fn detect_reel(text: &str, before_index: usize) -> String {
     let prefix = &text[..before_index.min(text.len())];
-    let mut last: Option<&str> = None;
+    let mut last: Option<String> = None;
     for mat in REEL_HEADING.find_iter(prefix) {
-        last = Some(mat.as_str());
+        let line = mat.as_str().trim();
+        if is_plausible_reel_line(line) {
+            last = Some(line.to_string());
+        }
     }
-    last.map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "正文卷".to_string())
+    last.unwrap_or_else(|| "正文卷".to_string())
 }
 
 pub fn split_novel_chapters(text: &str) -> Vec<ParsedChapter> {
@@ -305,7 +347,7 @@ pub(crate) fn fetch_novel_source(
     project_id: &str,
 ) -> Result<Option<NovelSourceRecord>, String> {
     let result = conn.query_row(
-        "SELECT project_id, source_text, char_count, imported_at
+        "SELECT project_id, source_text, char_count, imported_at, event_extraction_duration_ms
          FROM novel_source WHERE project_id = ?1",
         params![project_id],
         |row| {
@@ -314,6 +356,7 @@ pub(crate) fn fetch_novel_source(
                 source_text: row.get(1)?,
                 char_count: row.get(2)?,
                 imported_at: row.get(3)?,
+                event_extraction_duration_ms: row.get(4)?,
             })
         },
     );
@@ -394,12 +437,13 @@ pub fn import_novel(project_id: String, source_text: String) -> Result<ImportNov
     crate::script::clear_project_script_data(&tx, &project_id)?;
 
     tx.execute(
-        "INSERT INTO novel_source (project_id, source_text, char_count, imported_at)
-         VALUES (?1, ?2, ?3, ?4)
+        "INSERT INTO novel_source (project_id, source_text, char_count, imported_at, event_extraction_duration_ms)
+         VALUES (?1, ?2, ?3, ?4, NULL)
          ON CONFLICT(project_id) DO UPDATE SET
             source_text = excluded.source_text,
             char_count = excluded.char_count,
-            imported_at = excluded.imported_at",
+            imported_at = excluded.imported_at,
+            event_extraction_duration_ms = NULL",
         params![project_id, normalized, char_count, imported_at],
     )
     .map_err(|e| e.to_string())?;
@@ -442,6 +486,36 @@ pub fn get_novel_source(project_id: String) -> Result<Option<NovelSourceRecord>,
 pub fn list_novel_chapters(project_id: String) -> Result<Vec<NovelChapterRecord>, String> {
     let conn = init_db()?;
     fetch_novel_chapters(&conn, &project_id)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetEventExtractionDurationInput {
+    pub project_id: String,
+    pub duration_ms: i64,
+}
+
+#[tauri::command]
+pub fn set_event_extraction_duration(
+    input: SetEventExtractionDurationInput,
+) -> Result<(), String> {
+    let conn = init_db()?;
+    ensure_project_exists(&conn, &input.project_id)?;
+
+    let affected = conn
+        .execute(
+            "UPDATE novel_source SET event_extraction_duration_ms = ?2 WHERE project_id = ?1",
+            params![input.project_id, input.duration_ms],
+        )
+        .map_err(|e| e.to_string())?;
+
+    if affected == 0 {
+        return Err("请先导入小说原文".to_string());
+    }
+
+    crate::workflow::maybe_advance_after_extract(&conn, &input.project_id)?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -516,5 +590,23 @@ mod tests {
         assert_eq!(chapters.len(), 1);
         assert_eq!(chapters[0].title, "标题合并行");
         assert_eq!(chapters[0].content, "正文");
+    }
+
+    #[test]
+    fn ignores_inline_reel_mention_in_chapter_body() {
+        let text = "第三卷\n\
+            第五十四回 高太尉大兴三路兵\n\
+            正文第一句。\n\
+            第三卷上有回风返火破阵之法。宋江大喜，用心记了咒语并图诀，整点人马，五\n\
+            第五十五回 吴用使时迁偷甲\n\
+            第五十五回正文。";
+        let chapters = split_novel_chapters(text);
+        assert_eq!(chapters.len(), 2);
+        assert_eq!(chapters[0].reel, "第三卷");
+        assert_eq!(chapters[0].title, "高太尉大兴三路兵");
+        assert_eq!(chapters[1].reel, "第三卷");
+        assert_eq!(chapters[1].title, "吴用使时迁偷甲");
+        assert!(!chapters[0].reel.contains('。'));
+        assert!(!chapters[0].reel.contains("上有"));
     }
 }

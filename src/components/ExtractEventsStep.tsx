@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFileImport,
@@ -13,6 +13,7 @@ import {
   type NovelChapterRecord,
   type NovelSourceRecord,
 } from "../services/novel";
+import { invalidateWorkflowCache } from "../services/workflow";
 import type { AppConfig } from "../types";
 import { ImportNovelModal } from "./ImportNovelModal";
 import { EventChaptersTable } from "./EventChaptersTable";
@@ -24,6 +25,7 @@ interface ExtractEventsStepProps {
   selectedModel: string;
   initialSource: NovelSourceRecord | null;
   initialChapters: NovelChapterRecord[];
+  initialExtractionDurationMs: number | null;
   onConfigError: (message: string | null) => void;
   onWorkflowChange?: () => void;
 }
@@ -35,6 +37,7 @@ export function ExtractEventsStep({
   selectedModel,
   initialSource,
   initialChapters,
+  initialExtractionDurationMs,
   onConfigError,
   onWorkflowChange,
 }: ExtractEventsStepProps) {
@@ -44,12 +47,19 @@ export function ExtractEventsStep({
   const [novelText] = useState(initialSource?.sourceText ?? "");
   const [charCount] = useState(initialSource?.charCount ?? 0);
   const [chapters, setChapters] = useState(initialChapters);
+  const [extractionDurationMs, setExtractionDurationMs] = useState(
+    initialExtractionDurationMs,
+  );
   const [extracting, setExtracting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(
     null,
   );
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    setExtractionDurationMs(initialExtractionDurationMs);
+  }, [initialExtractionDurationMs]);
 
   const hasContent = chapters.length > 0;
   const hasResults = chapters.some(
@@ -63,6 +73,7 @@ export function ExtractEventsStep({
       onConfigError(null);
       try {
         await importNovel(projectId, content);
+        setExtractionDurationMs(null);
         setImportOpen(false);
         onWorkflowChange?.();
       } catch (error) {
@@ -97,7 +108,7 @@ export function ExtractEventsStep({
 
     try {
       const rows = await listNovelChapters(projectId);
-      const extracted = await extractEventsForChapters(
+      const { chapters: extracted, durationMs } = await extractEventsForChapters(
         config,
         selectedModel,
         rows,
@@ -110,8 +121,14 @@ export function ExtractEventsStep({
           }
         },
         controller.signal,
+        undefined,
+        projectId,
       );
       setChapters(extracted);
+      if (durationMs != null) {
+        setExtractionDurationMs(durationMs);
+      }
+      invalidateWorkflowCache(projectId);
       onWorkflowChange?.();
     } catch (error) {
       if (!controller.signal.aborted) {
@@ -151,6 +168,12 @@ export function ExtractEventsStep({
             <FontAwesomeIcon icon={faFileImport} className="text-xs text-accent" />
             {s.importSource}
           </button>
+          {extractionDurationMs != null ? (
+            <span className="shrink-0 text-xs text-text-muted">
+              {s.extractionDurationLabel}{" "}
+              {s.formatDuration(extractionDurationMs)}
+            </span>
+          ) : null}
           <button
             type="button"
             disabled={!hasContent || extracting || importing}

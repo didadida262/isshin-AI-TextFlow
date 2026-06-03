@@ -78,3 +78,21 @@ export async function getProjectWorkflowNodeDetail(
     }),
   );
 }
+
+export function invalidateWorkflowCache(
+  projectId: string,
+  nodeId?: ProjectWorkflowStepId,
+): void {
+  inflightRequests.delete(`list-nodes:${projectId}`);
+
+  if (nodeId) {
+    inflightRequests.delete(`node-detail:${projectId}:${nodeId}`);
+    return;
+  }
+
+  for (const key of inflightRequests.keys()) {
+    if (key.startsWith(`node-detail:${projectId}:`)) {
+      inflightRequests.delete(key);
+    }
+  }
+}

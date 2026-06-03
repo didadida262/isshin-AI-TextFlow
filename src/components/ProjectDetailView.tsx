@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   getProjectWorkflowNodeDetail,
+  invalidateWorkflowCache,
   listProjectWorkflowNodes,
   type WorkflowNodeDetail,
 } from "../services/workflow";
@@ -18,6 +19,7 @@ import { ProjectStepper, type WorkflowStepItem } from "./ProjectStepper";
 import { ExtractEventsStep } from "./ExtractEventsStep";
 import { AiScriptStep } from "./AiScriptStep";
 import { GenerateAssetsStep } from "./GenerateAssetsStep";
+import { isEventExtractionComplete } from "../services/novel";
 
 interface ProjectDetailViewProps {
   project: CreationProject;
@@ -71,6 +73,18 @@ const stepPanelVariants = {
   }),
 };
 
+function StepPanelLoading({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-3">
+      <FontAwesomeIcon
+        icon={faSpinner}
+        className="text-xl text-accent animate-spin"
+      />
+      <p className="text-sm text-text-muted">{label}</p>
+    </div>
+  );
+}
+
 export function ProjectDetailView({
   project,
   config,
@@ -86,10 +100,12 @@ export function ProjectDetailView({
     [],
   );
   const [nodeDetail, setNodeDetail] = useState<WorkflowNodeDetail | null>(null);
+  const [loadedStep, setLoadedStep] = useState<ProjectWorkflowStepId | null>(null);
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [stepDirection, setStepDirection] = useState(0);
   const [enableStepAnimation, setEnableStepAnimation] = useState(false);
+  const didSyncWorkflowRef = useRef(false);
 
   const workflowNodes = useMemo(
     () => mapWorkflowSteps(workflowNodesRaw, w),
@@ -107,6 +123,7 @@ export function ProjectDetailView({
       try {
         const detail = await getProjectWorkflowNodeDetail(project.id, nodeId);
         setNodeDetail(detail);
+        setLoadedStep(nodeId);
       } finally {
         if (!options?.silent) {
           setLoadingDetail(false);
@@ -117,8 +134,10 @@ export function ProjectDetailView({
   );
 
   const refreshProjectWorkflow = useCallback(async () => {
+    invalidateWorkflowCache(project.id);
     const nodes = await listProjectWorkflowNodes(project.id);
     setWorkflowNodesRaw(nodes);
+    invalidateWorkflowCache(project.id, selectedStep);
     await loadNodeDetail(selectedStep, { silent: true });
   }, [project.id, selectedStep, loadNodeDetail]);
 
@@ -128,6 +147,7 @@ export function ProjectDetailView({
     void (async () => {
       setLoadingWorkflow(true);
       try {
+        invalidateWorkflowCache(project.id);
         const nodes = await listProjectWorkflowNodes(project.id);
         if (cancelled) return;
 
@@ -144,6 +164,7 @@ export function ProjectDetailView({
         );
         if (!cancelled) {
           setNodeDetail(detail);
+          setLoadedStep(initialStep);
         }
       } finally {
         if (!cancelled) {
@@ -166,9 +187,11 @@ export function ProjectDetailView({
       setStepDirection(nextIndex >= prevIndex ? 1 : -1);
       setEnableStepAnimation(true);
       setSelectedStep(stepId);
+      setLoadingDetail(true);
+      invalidateWorkflowCache(project.id, stepId);
       void loadNodeDetail(stepId);
     },
-    [loadNodeDetail, selectedStep],
+    [loadNodeDetail, project.id, selectedStep],
   );
 
   const activeLabel = w[selectedStep];
@@ -178,6 +201,28 @@ export function ProjectDetailView({
       nodeDetail?.kind === "extractEvents" ? nodeDetail : null,
     [nodeDetail],
   );
+
+  useEffect(() => {
+    didSyncWorkflowRef.current = false;
+  }, [project.id]);
+
+  useEffect(() => {
+    if (loadingWorkflow || !extractEventsDetail || didSyncWorkflowRef.current) {
+      return;
+    }
+
+    const extractNode = workflowNodesRaw.find((node) => node.id === "extractEvents");
+    const allEventsComplete = isEventExtractionComplete(extractEventsDetail.chapters);
+    if (allEventsComplete && extractNode?.status === "current") {
+      didSyncWorkflowRef.current = true;
+      void refreshProjectWorkflow();
+    }
+  }, [
+    extractEventsDetail,
+    loadingWorkflow,
+    refreshProjectWorkflow,
+    workflowNodesRaw,
+  ]);
 
   const aiScriptDetail = useMemo(
     () => (nodeDetail?.kind === "aiScript" ? nodeDetail : null),
@@ -189,15 +234,10 @@ export function ProjectDetailView({
     [nodeDetail],
   );
 
-  const stepPanel = useMemo(() => {
-    if (loadingDetail) {
-      return (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-text-muted">{w.loading}</p>
-        </div>
-      );
-    }
+  const isStepContentLoading =
+    loadingDetail || loadedStep !== selectedStep;
 
+  const stepPanel = useMemo(() => {
     if (selectedStep === "extractEvents" && extractEventsDetail) {
       return (
         <ExtractEventsStep
@@ -209,6 +249,9 @@ export function ProjectDetailView({
           onConfigError={onConfigError}
           initialSource={extractEventsDetail.source}
           initialChapters={extractEventsDetail.chapters}
+          initialExtractionDurationMs={
+            extractEventsDetail.source?.eventExtractionDurationMs ?? null
+          }
           onWorkflowChange={() => void refreshProjectWorkflow()}
         />
       );
@@ -262,7 +305,6 @@ export function ProjectDetailView({
     extractEventsDetail,
     generateAssetsDetail,
     loadNodeDetail,
-    loadingDetail,
     onConfigError,
     project,
     refreshProjectWorkflow,
@@ -310,10 +352,8 @@ export function ProjectDetailView({
       <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-1">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/20">
           <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-5">
-            {loadingWorkflow ? (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-sm text-text-muted">{w.loading}</p>
-              </div>
+            {loadingWorkflow || isStepContentLoading ? (
+              <StepPanelLoading label={w.loading} />
             ) : (
               <AnimatePresence mode="wait" custom={stepDirection}>
                 <motion.div
