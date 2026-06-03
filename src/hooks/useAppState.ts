@@ -3,8 +3,7 @@ import type { AppConfig, ChatMessage, ChatMode, ChatSession } from "../types";
 import { useI18n } from "../contexts/I18nContext";
 import { getDefaultConfig, loadConfig, saveConfig } from "../services/config";
 import { runAgentLoop } from "../agents/assistant/graph";
-import { ISSHIN_AGENT_PERSONA } from "../agents/assistant/prompt";
-import { streamChatCompletion } from "../services/chat";
+import { streamSessionChat } from "../agents/sessionAgent/textflowChatAgent";
 
 function uid() {
   return crypto.randomUUID();
@@ -202,32 +201,18 @@ export function useAppState() {
         { role: "user" as const, content: text },
       ];
 
-      const systemParts: string[] = [];
-      if (chatMode === "agent") {
-        systemParts.push(ISSHIN_AGENT_PERSONA);
-      }
-      if (agentObservation) {
-        systemParts.push(t("agent.contextPrefix") + agentObservation);
-      }
-
-      const messages = [
-        ...(systemParts.length
-          ? [{ role: "system" as const, content: systemParts.join("\n") }]
-          : []),
-        ...history,
-      ];
-
       try {
         const controller = new AbortController();
         abortRef.current = controller;
 
         let full = "";
-        for await (const chunk of streamChatCompletion(
+        for await (const chunk of streamSessionChat({
           config,
-          selectedModel,
-          messages,
-          controller.signal,
-        )) {
+          model: selectedModel,
+          history,
+          agentObservation,
+          signal: controller.signal,
+        })) {
           if (cancelRef.current) break;
           full += chunk;
           patchMessage(sessionId, assistantId, { content: full.trimStart() });

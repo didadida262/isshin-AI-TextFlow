@@ -8,6 +8,7 @@ export const DEFAULT_IMAGE_API_KEY = "qwen-image@srd*wrtU8EVDF20bNF";
 export const DEFAULT_IMAGE_MODEL = "qwen-image-2512";
 export const DEFAULT_IMAGE_SIZE = "1024x1024";
 export const DEFAULT_IMAGE_COUNT = 1;
+export const DEFAULT_NUM_INFERENCE_STEPS = 25;
 
 const DEFAULT_CONFIG: AppConfig = {
   baseUrl: "https://aiplatform.njsrd.com/llm/v1",

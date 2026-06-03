@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   DEFAULT_IMAGE_COUNT,
   DEFAULT_IMAGE_SIZE,
+  DEFAULT_NUM_INFERENCE_STEPS,
   isImageSettingsValid,
   loadConfig,
   type ImageGenerationSettings,
@@ -10,6 +11,9 @@ import {
 export interface GenerateImageInput {
   prompt: string;
   size?: string;
+  model?: string;
+  n?: number;
+  numInferenceSteps?: number;
   settings?: ImageGenerationSettings;
 }
 
@@ -41,8 +45,10 @@ export async function generateImageB64(
       size: input.size ?? settings.imageDefaultSize ?? DEFAULT_IMAGE_SIZE,
       apiUrl: settings.imageApiUrl,
       apiKey: settings.imageApiKey,
-      model: settings.imageModel,
-      n: settings.imageCount,
+      model: input.model?.trim() || settings.imageModel,
+      n: input.n ?? settings.imageCount ?? DEFAULT_IMAGE_COUNT,
+      numInferenceSteps:
+        input.numInferenceSteps ?? DEFAULT_NUM_INFERENCE_STEPS,
     },
   });
 

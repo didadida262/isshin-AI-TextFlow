@@ -254,6 +254,8 @@ export type TranslationSchema = {
       modelLabel: string;
       modelEmpty: string;
       sizeLabel: string;
+      countLabel: string;
+      inferenceStepsLabel: string;
       cancel: string;
       confirm: string;
       generating: string;
@@ -357,8 +359,9 @@ export const zh: TranslationSchema = {
     title: "对话",
     greeting: "有什么需要帮忙的吗？",
     emptyAgent:
-      "Agent 模式：输入「查看文件」或「读取项目」可读取本地 package.json 等项目文件",
-    emptyChat: "对话模式：直接与模型聊天；切换到 Agent 可读取本地项目文件",
+      "TextFlow 助手 · Agent 模式：可读取本地项目文件；输入「查看文件」或「读取项目」试试",
+    emptyChat:
+      "TextFlow 助手：以产品助手身份与你对话，可解答流程与创作问题",
   },
   mode: {
     chat: "对话",
@@ -599,6 +602,8 @@ export const zh: TranslationSchema = {
       modelLabel: "模型",
       modelEmpty: "未配置（请在项目设置中选择图片模型）",
       sizeLabel: "尺寸",
+      countLabel: "生成数量 (n)",
+      inferenceStepsLabel: "推理步数",
       cancel: "取消",
       confirm: "开始生成",
       generating: "生成中…",

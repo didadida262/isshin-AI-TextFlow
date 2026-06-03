@@ -24,9 +24,9 @@ export const en: TranslationSchema = {
     title: "Chat",
     greeting: "How can I help you today?",
     emptyAgent:
-      'Agent mode: try "read project" or "view files" to read local package.json and other project files',
+      "TextFlow Assistant · Agent mode: can read local project files; try \"read project\" or \"view files\"",
     emptyChat:
-      "Chat mode: talk directly to the model; switch to Agent to read local project files",
+      "TextFlow Assistant: answers as the product assistant for workflow and creative questions",
   },
   mode: {
     chat: "Chat",
@@ -274,6 +274,8 @@ export const en: TranslationSchema = {
       modelLabel: "Model",
       modelEmpty: "Not configured (select an image model in project settings)",
       sizeLabel: "Size",
+      countLabel: "Image count (n)",
+      inferenceStepsLabel: "Inference steps",
       cancel: "Cancel",
       confirm: "Generate",
       generating: "Generating…",

@@ -3,7 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import { DEFAULT_IMAGE_SIZE } from "../services/config";
+import {
+  DEFAULT_IMAGE_COUNT,
+  DEFAULT_IMAGE_SIZE,
+  DEFAULT_NUM_INFERENCE_STEPS,
+} from "../services/config";
 import { generateImageB64 } from "../services/imageGeneration";
 import type { AppConfig } from "../types";
 import { PaintbrushLoading } from "./PaintbrushLoading";
@@ -16,6 +20,8 @@ export interface GenerateAssetFormValues {
   prompt: string;
   model: string;
   size: string;
+  n: number;
+  numInferenceSteps: number;
 }
 
 interface GenerateAssetModalProps {
@@ -33,6 +39,14 @@ const SIZE_OPTIONS = ["1024x1024", "768x768", "512x512"];
 const fieldClass =
   "box-border h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-accent/50 disabled:opacity-50";
 
+const readOnlyClass =
+  "box-border h-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-text-muted outline-none read-only:cursor-default read-only:opacity-70";
+
+function parsePositiveInt(value: string, fallback: number): number {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
+}
+
 export function GenerateAssetModal({
   open,
   config,
@@ -42,10 +56,18 @@ export function GenerateAssetModal({
   const m = useTranslationMessages().creation.generateAssetModal;
   const errors = useTranslationMessages().errors;
   const defaultSize = config.imageDefaultSize.trim() || DEFAULT_IMAGE_SIZE;
+  const imageModel = config.imageModel.trim();
+  const imageCount =
+    Number.isFinite(config.imageCount) && config.imageCount >= 1
+      ? config.imageCount
+      : DEFAULT_IMAGE_COUNT;
   const [name, setName] = useState("");
   const [assetType, setAssetType] = useState("scene");
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState(defaultSize);
+  const [numInferenceSteps, setNumInferenceSteps] = useState(
+    DEFAULT_NUM_INFERENCE_STEPS,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const abortRef = useRef(false);
@@ -59,10 +81,12 @@ export function GenerateAssetModal({
     setAssetType("scene");
     setPrompt("");
     setSize(defaultSize);
+    setNumInferenceSteps(DEFAULT_NUM_INFERENCE_STEPS);
     setError("");
-  }, [defaultSize, open]);
+  }, [config.imageModel, defaultSize, open]);
 
-  const canSubmit = name.trim() && prompt.trim() && !submitting;
+  const canSubmit =
+    name.trim() && prompt.trim() && imageModel && !submitting;
 
   const assetTypeOptions = useMemo(
     () => [
@@ -82,11 +106,11 @@ export function GenerateAssetModal({
     () => ({
       imageApiUrl: config.imageApiUrl,
       imageApiKey: config.imageApiKey,
-      imageModel: config.imageModel,
+      imageModel,
       imageDefaultSize: defaultSize,
-      imageCount: config.imageCount,
+      imageCount,
     }),
-    [config, defaultSize],
+    [config.imageApiKey, config.imageApiUrl, defaultSize, imageCount, imageModel],
   );
 
   const handleClose = useCallback(() => {
@@ -108,6 +132,9 @@ export function GenerateAssetModal({
       const imageB64 = await generateImageB64({
         prompt,
         size,
+        model: imageModel,
+        n: imageCount,
+        numInferenceSteps,
         settings: imageSettings,
       });
       if (abortRef.current || requestId !== requestIdRef.current) return;
@@ -117,8 +144,10 @@ export function GenerateAssetModal({
           name: name.trim(),
           assetType,
           prompt: prompt.trim(),
-          model: config.imageModel,
+          model: imageModel,
           size,
+          n: imageCount,
+          numInferenceSteps,
         },
         imageB64,
       );
@@ -141,10 +170,12 @@ export function GenerateAssetModal({
   }, [
     assetType,
     canSubmit,
-    config.imageModel,
     errors.imageConfigRequired,
+    imageCount,
+    imageModel,
     imageSettings,
     name,
+    numInferenceSteps,
     onClose,
     onSubmit,
     prompt,
@@ -174,7 +205,7 @@ export function GenerateAssetModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="generate-asset-title"
-            className={`relative z-10 flex max-h-[min(520px,calc(100dvh-7rem))] w-full max-w-lg flex-col overflow-hidden rounded-lg border bg-surface shadow-2xl ${
+            className={`relative z-10 flex max-h-[min(680px,calc(100dvh-4rem))] w-full max-w-lg flex-col overflow-hidden rounded-lg border bg-surface shadow-2xl ${
               submitting
                 ? "modal-generating-border border-transparent"
                 : "border-white/10"
@@ -238,6 +269,16 @@ export function GenerateAssetModal({
                   />
                 </label>
 
+                <label className="block space-y-1.5">
+                  <span className="text-xs text-text-muted">{m.modelLabel}</span>
+                  <input
+                    readOnly
+                    value={imageModel}
+                    placeholder={m.modelEmpty}
+                    className={readOnlyClass}
+                  />
+                </label>
+
                 <div className="block space-y-1.5">
                   <span className="text-xs text-text-muted">{m.sizeLabel}</span>
                   <Select
@@ -246,6 +287,34 @@ export function GenerateAssetModal({
                     onChange={setSize}
                     disabled={submitting}
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block space-y-1.5">
+                    <span className="text-xs text-text-muted">{m.countLabel}</span>
+                    <input
+                      readOnly
+                      value={imageCount}
+                      className={readOnlyClass}
+                    />
+                  </label>
+
+                  <label className="block space-y-1.5">
+                    <span className="text-xs text-text-muted">{m.inferenceStepsLabel}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={numInferenceSteps}
+                      onChange={(event) =>
+                        setNumInferenceSteps(
+                          parsePositiveInt(event.target.value, DEFAULT_NUM_INFERENCE_STEPS),
+                        )
+                      }
+                      disabled={submitting}
+                      className={fieldClass}
+                    />
+                  </label>
                 </div>
 
                 {error ? (

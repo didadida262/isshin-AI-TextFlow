@@ -5,6 +5,7 @@ const DEFAULT_IMAGE_API_URL: &str = "http://27.159.92.216:8091/v1/images/generat
 const DEFAULT_IMAGE_API_KEY: &str = "qwen-image@srd*wrtU8EVDF20bNF";
 const IMAGE_MODEL: &str = "qwen-image-2512";
 const DEFAULT_IMAGE_SIZE: &str = "1024x1024";
+const DEFAULT_NUM_INFERENCE_STEPS: u32 = 25;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,6 +16,7 @@ pub struct GenerateImageInput {
     pub api_key: Option<String>,
     pub model: Option<String>,
     pub n: Option<u32>,
+    pub num_inference_steps: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -57,16 +59,23 @@ pub async fn generate_image(input: GenerateImageInput) -> Result<GenerateImageRe
         .unwrap_or_else(|| IMAGE_MODEL.to_string());
 
     let n = input.n.unwrap_or(1).max(1);
+    let num_inference_steps = input
+        .num_inference_steps
+        .unwrap_or(DEFAULT_NUM_INFERENCE_STEPS)
+        .max(1);
 
     let body = json!({
         "model": model,
         "prompt": prompt,
         "n": n,
         "size": size,
+        "num_inference_steps": num_inference_steps,
         "response_format": "b64_json",
     });
 
-    println!("[Image] 发送 → {url} model={model} size={size} n={n}");
+    println!(
+        "[Image] 发送 → {url} model={model} size={size} n={n} steps={num_inference_steps}"
+    );
 
     let client = reqwest::Client::new();
     let response = client
