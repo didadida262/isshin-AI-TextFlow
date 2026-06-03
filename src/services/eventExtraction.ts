@@ -1,5 +1,5 @@
 import type { AppConfig } from "../types";
-import { EVENT_EXTRACTION_PROMPT } from "../prompts/eventExtraction";
+import { EVENT_EXTRACTION_PROMPT } from "../prompts/workflowAgent/eventExtraction";
 import { chatCompletion } from "./chat";
 import {
   EVENT_STATE_ERROR,

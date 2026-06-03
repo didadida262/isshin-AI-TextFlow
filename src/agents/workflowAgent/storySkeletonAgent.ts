@@ -1,4 +1,4 @@
-import { STORY_SKELETON_PROMPT } from "../../prompts/script/storySkeleton";
+import { STORY_SKELETON_PROMPT } from "../../prompts/workflowAgent/storySkeleton";
 import { chatCompletion } from "../../services/chat";
 import { stripThink } from "../../utils/stripThink";
 import {

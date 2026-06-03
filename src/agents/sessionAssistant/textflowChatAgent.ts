@@ -1,5 +1,5 @@
-import { SESSION_ASSISTANT_PROMPT } from "../../prompts/session/textflowAssistant";
-import { TEXTFLOW_PRODUCT_SKILL } from "../../prompts/session/textflowProductSkill";
+import { SESSION_ASSISTANT_PROMPT } from "../../prompts/sessionAssistant/textflowAssistant";
+import { TEXTFLOW_PRODUCT_SKILL } from "../../prompts/sessionAssistant/textflowProductSkill";
 import {
   type ChatCompletionMessage,
   streamChatCompletion,

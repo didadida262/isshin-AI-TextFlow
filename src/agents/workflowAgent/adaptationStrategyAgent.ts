@@ -1,4 +1,4 @@
-import { ADAPTATION_STRATEGY_PROMPT } from "../../prompts/script/adaptationStrategy";
+import { ADAPTATION_STRATEGY_PROMPT } from "../../prompts/workflowAgent/adaptationStrategy";
 import { chatCompletion } from "../../services/chat";
 import { stripThink } from "../../utils/stripThink";
 import {

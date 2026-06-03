@@ -1,4 +1,4 @@
-import { COORDINATOR_PROMPT } from "../../prompts/script/coordinator";
+import { COORDINATOR_PROMPT } from "../../prompts/workflowAgent/coordinator";
 import {
   type ChatCompletionMessage,
   streamChatCompletion,

@@ -1,4 +1,4 @@
-import { EPISODE_SCRIPT_PROMPT } from "../../prompts/script/episodeScript";
+import { EPISODE_SCRIPT_PROMPT } from "../../prompts/workflowAgent/episodeScript";
 import { chatCompletion } from "../../services/chat";
 import type { NovelChapterRecord } from "../../services/novel";
 import { stripThink } from "../../utils/stripThink";
