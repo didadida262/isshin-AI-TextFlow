@@ -1,19 +1,19 @@
-import { COORDINATOR_PROMPT } from "../../prompts/workflowAgent/coordinator";
+import { COORDINATOR_PROMPT } from "../../../prompts/workflowAgent/scriptGeneration/coordinator";
 import {
   type ChatCompletionMessage,
   streamChatCompletion,
-} from "../../services/chat";
+} from "../../../services/chat";
 import {
   isEventExtractionComplete,
   type NovelChapterRecord,
-} from "../../services/novel";
+} from "../../../services/novel";
 import {
   SCRIPT_STATE_ERROR,
   SCRIPT_STATE_SUCCESS,
   type ScriptRecord,
   type ScriptWorkData,
-} from "../../services/script";
-import type { AppConfig, CreationProject } from "../../types";
+} from "../../../services/script";
+import type { AppConfig, CreationProject } from "../../../types";
 import { buildProjectConfigBlock } from "./tools";
 
 const MAX_HISTORY = 16;

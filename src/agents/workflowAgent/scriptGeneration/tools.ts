@@ -1,6 +1,6 @@
-import type { NovelChapterRecord } from "../../services/novel";
-import type { ScriptRecord } from "../../services/script";
-import type { CreationProject } from "../../types";
+import type { NovelChapterRecord } from "../../../services/novel";
+import type { ScriptRecord } from "../../../services/script";
+import type { CreationProject } from "../../../types";
 
 export function buildProjectConfigBlock(project: CreationProject): string {
   return [

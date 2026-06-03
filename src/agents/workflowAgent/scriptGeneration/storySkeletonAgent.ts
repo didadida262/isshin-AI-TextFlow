@@ -1,10 +1,10 @@
-import { STORY_SKELETON_PROMPT } from "../../prompts/workflowAgent/storySkeleton";
-import { chatCompletion } from "../../services/chat";
-import { stripThink } from "../../utils/stripThink";
+import { STORY_SKELETON_PROMPT } from "../../../prompts/workflowAgent/scriptGeneration/storySkeleton";
+import { chatCompletion } from "../../../services/chat";
+import { stripThink } from "../../../utils/stripThink";
 import {
   buildXmlRetryHint,
   parseTaggedAgentOutput,
-} from "../../utils/xmlTags";
+} from "../../../utils/xmlTags";
 import {
   buildProjectConfigBlock,
   formatChapterEvents,

@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { streamCoordinatorChat } from "../agents/workflowAgent/coordinatorChatAgent";
-import { runScriptPipeline, regenerateFailedEpisodes } from "../agents/workflowAgent/orchestrator";
+import {
+  regenerateFailedEpisodes,
+  runScriptPipeline,
+  streamCoordinatorChat,
+} from "../agents/workflowAgent/scriptGeneration";
 import { SCRIPT_STATE_ERROR, SCRIPT_STATE_SUCCESS } from "../services/script";
-import type { ScriptGenerationProgress } from "../agents/workflowAgent/types";
-import type { ScriptChatMessage } from "../agents/workflowAgent/chatTypes";
+import type {
+  ScriptChatMessage,
+  ScriptGenerationProgress,
+} from "../agents/workflowAgent/scriptGeneration";
 import {
   isEventExtractionComplete,
   type NovelChapterRecord,

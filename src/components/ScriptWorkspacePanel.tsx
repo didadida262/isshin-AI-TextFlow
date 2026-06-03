@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import type { ScriptRecord, ScriptWorkData } from "../services/script";
+import { formatAdaptationStrategyDisplay } from "../utils/xmlTags";
 import { MarkdownContent } from "./MarkdownContent";
 import { ScriptEpisodesTable } from "./ScriptEpisodesTable";
 
@@ -94,7 +95,11 @@ export function ScriptWorkspacePanel({
         {activeTab === "strategy" ? (
           workData.adaptationStrategy.trim() ? (
             <div className="h-full min-w-0 overflow-auto text-sm text-text-muted">
-              <MarkdownContent content={workData.adaptationStrategy} />
+              <MarkdownContent
+                content={formatAdaptationStrategyDisplay(
+                  workData.adaptationStrategy,
+                )}
+              />
             </div>
           ) : (
             <EmptyHint text={s.tabStrategyEmpty} />

@@ -6,7 +6,7 @@ import {
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import { extractEventsForChapters } from "../services/eventExtraction";
+import { extractEventsForChapters } from "../agents/workflowAgent/eventExtraction";
 import {
   importNovel,
   listNovelChapters,

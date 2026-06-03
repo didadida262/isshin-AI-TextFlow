@@ -1,8 +1,8 @@
-import { EPISODE_SCRIPT_PROMPT } from "../../prompts/workflowAgent/episodeScript";
-import { chatCompletion } from "../../services/chat";
-import type { NovelChapterRecord } from "../../services/novel";
-import { stripThink } from "../../utils/stripThink";
-import { parseEpisodeScriptOutput } from "../../utils/xmlTags";
+import { EPISODE_SCRIPT_PROMPT } from "../../../prompts/workflowAgent/scriptGeneration/episodeScript";
+import { chatCompletion } from "../../../services/chat";
+import type { NovelChapterRecord } from "../../../services/novel";
+import { stripThink } from "../../../utils/stripThink";
+import { parseEpisodeScriptOutput } from "../../../utils/xmlTags";
 import {
   buildProjectConfigBlock,
   episodeName,

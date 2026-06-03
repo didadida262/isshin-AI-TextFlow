@@ -1,10 +1,10 @@
-import { ADAPTATION_STRATEGY_PROMPT } from "../../prompts/workflowAgent/adaptationStrategy";
-import { chatCompletion } from "../../services/chat";
-import { stripThink } from "../../utils/stripThink";
+import { ADAPTATION_STRATEGY_PROMPT } from "../../../prompts/workflowAgent/scriptGeneration/adaptationStrategy";
+import { chatCompletion } from "../../../services/chat";
+import { stripThink } from "../../../utils/stripThink";
 import {
-  buildXmlRetryHint,
-  parseTaggedAgentOutput,
-} from "../../utils/xmlTags";
+  buildMarkdownRetryHint,
+  parseAdaptationStrategyOutput,
+} from "../../../utils/xmlTags";
 import {
   buildProjectConfigBlock,
   formatChapterEvents,
@@ -13,6 +13,8 @@ import type { ScriptAgentContext } from "./types";
 
 const MAX_ATTEMPTS = 3;
 const SCRIPT_MAX_TOKENS = 8192;
+
+const STRATEGY_SECTIONS = "改编基调、人物改编、场景改编、分集脚本指引、衔接规则";
 
 export async function runAdaptationStrategyAgent(
   ctx: ScriptAgentContext,
@@ -24,10 +26,10 @@ export async function runAdaptationStrategyAgent(
     ctx.workData.storySkeleton,
     "\n## 章节事件表\n",
     formatChapterEvents(ctx.chapters),
-    "\n请基于故事骨架制定改编策略，并按 XML 格式输出 <adaptationStrategy>。",
+    "\n请基于故事骨架制定改编策略。先写 200-300 字思路阐述，再以 Markdown 输出正文（从 ## 改编基调 开始）。",
   ].join("\n");
 
-  let lastError = "改编策略 Agent 未返回有效的 <adaptationStrategy> 内容";
+  let lastError = "改编策略 Agent 未返回有效的 Markdown 正文";
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     if (ctx.signal?.aborted) {
@@ -42,7 +44,8 @@ export async function runAdaptationStrategyAgent(
         {
           role: "user",
           content:
-            baseUserContent + buildXmlRetryHint("adaptationStrategy", attempt),
+            baseUserContent +
+            buildMarkdownRetryHint(STRATEGY_SECTIONS, attempt),
         },
       ],
       ctx.signal,
@@ -50,15 +53,12 @@ export async function runAdaptationStrategyAgent(
       { maxTokens: SCRIPT_MAX_TOKENS },
     );
 
-    const strategy = parseTaggedAgentOutput(
-      stripThink(raw),
-      "adaptationStrategy",
-    );
+    const strategy = parseAdaptationStrategyOutput(stripThink(raw));
     if (strategy) {
       return strategy;
     }
 
-    lastError = `改编策略 Agent 未返回有效的 <adaptationStrategy> 内容（尝试 ${attempt + 1}/${MAX_ATTEMPTS}）`;
+    lastError = `改编策略 Agent 未返回有效的 Markdown 正文（尝试 ${attempt + 1}/${MAX_ATTEMPTS}）`;
   }
 
   throw new Error(lastError);

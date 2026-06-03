@@ -26,6 +26,24 @@ export function buildXmlRetryHint(tagName: string, attempt: number): string {
 const SKELETON_MARKERS = /(?:\*\*故事核\*\*|##\s*故事核|#\s*故事骨架|三幕结构)/i;
 const STRATEGY_MARKERS = /(?:\*\*改编基调\*\*|##\s*改编基调|#\s*改编策略|分集脚本指引)/i;
 
+function stripXmlDecorations(text: string): string {
+  return text
+    .replace(/<\/[^>]+>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function buildMarkdownRetryHint(sectionList: string, attempt: number): string {
+  if (attempt === 0) return "";
+  return (
+    `\n\n【重要】上次输出格式无效。思路阐述之后必须用 Markdown 输出策略正文，` +
+    `以 \`## 改编基调\` 开头，依次包含：${sectionList}。` +
+    "禁止 XML/HTML 标签，禁止用 ``` 代码块包裹正文。"
+  );
+}
+
 function extractUnclosedXmlTag(text: string, tagName: string): string | null {
   const pattern = new RegExp(`<${tagName}(\\s+[^>]*)?>([\\s\\S]+)$`, "i");
   const match = text.match(pattern);
@@ -60,6 +78,46 @@ export function parseTaggedAgentOutput(
   if (unclosed && unclosed.length >= minLength) return unclosed;
 
   return extractMarkdownFallback(normalized, markerPattern, minLength);
+}
+
+/** Parse adaptation strategy: Markdown-first; legacy XML is stripped to plain text. */
+export function parseAdaptationStrategyOutput(
+  text: string,
+  minLength = 200,
+): string | null {
+  const normalized = stripMarkdownCodeFences(text.trim());
+
+  const markdown = extractMarkdownFallback(normalized, STRATEGY_MARKERS, minLength);
+  if (markdown) {
+    return stripXmlDecorations(markdown);
+  }
+
+  const xml = extractXmlTag(normalized, "adaptationStrategy");
+  const unclosed = extractUnclosedXmlTag(normalized, "adaptationStrategy");
+  const legacyBody = xml ?? unclosed;
+  if (legacyBody) {
+    const stripped = stripXmlDecorations(legacyBody);
+    const fromLegacy = extractMarkdownFallback(stripped, STRATEGY_MARKERS, minLength);
+    if (fromLegacy) return stripXmlDecorations(fromLegacy);
+    if (stripped.length >= minLength) return stripped;
+  }
+
+  return null;
+}
+
+/** Normalize stored strategy for workspace display (handles older XML-shaped records). */
+export function formatAdaptationStrategyDisplay(stored: string): string {
+  const trimmed = stored.trim();
+  if (!trimmed) return trimmed;
+
+  const parsed = parseAdaptationStrategyOutput(trimmed, 50);
+  if (parsed) return parsed;
+
+  if (/<[a-z][\w.-]*(\s|>)/i.test(trimmed)) {
+    return stripXmlDecorations(trimmed);
+  }
+
+  return trimmed;
 }
 
 export interface ScriptItemPayload {

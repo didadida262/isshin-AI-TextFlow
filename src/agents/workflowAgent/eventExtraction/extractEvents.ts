@@ -1,13 +1,13 @@
-import type { AppConfig } from "../types";
-import { EVENT_EXTRACTION_PROMPT } from "../prompts/workflowAgent/eventExtraction";
-import { chatCompletion } from "./chat";
+import type { AppConfig } from "../../../types";
+import { EVENT_EXTRACTION_PROMPT } from "../../../prompts/workflowAgent/eventExtraction/prompt";
+import { chatCompletion } from "../../../services/chat";
 import {
   EVENT_STATE_ERROR,
   EVENT_STATE_SUCCESS,
   type NovelChapterRecord,
   updateNovelChapterEvent,
-} from "./novel";
-import { stripThink } from "../utils/stripThink";
+} from "../../../services/novel";
+import { stripThink } from "../../../utils/stripThink";
 
 export interface ExtractEventsProgress {
   completed: number;

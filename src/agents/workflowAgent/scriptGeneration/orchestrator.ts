@@ -2,19 +2,19 @@ import { runAdaptationStrategyAgent } from "./adaptationStrategyAgent";
 import { runEpisodeScriptAgent } from "./episodeScriptAgent";
 import { runStorySkeletonAgent } from "./storySkeletonAgent";
 import type { ScriptAgentContext, ScriptGenerationProgress } from "./types";
-import { loadStorySkillDetail } from "../../services/skills";
+import { loadStorySkillDetail } from "../../../services/skills";
 import {
   isEventExtractionComplete,
   type NovelChapterRecord,
-} from "../../services/novel";
+} from "../../../services/novel";
 import {
   SCRIPT_STATE_ERROR,
   SCRIPT_STATE_SUCCESS,
   setScriptWorkData,
   upsertScript,
   type ScriptRecord,
-} from "../../services/script";
-import type { AppConfig, CreationProject } from "../../types";
+} from "../../../services/script";
+import type { AppConfig, CreationProject } from "../../../types";
 
 export interface RunScriptPipelineOptions {
   project: CreationProject;
