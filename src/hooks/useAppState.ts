@@ -140,8 +140,8 @@ export function useAppState() {
           const agentResult = await runToolLoop(text, (phase, detail) => {
             const labels: Record<string, string> = {
               thought: detail ?? t("toolAgent.recognizing"),
-              action: t("toolAgent.reading", {
-                file: detail ?? t("toolAgent.projectFile"),
+              action: t("toolAgent.querying", {
+                count: detail ?? "…",
               }),
               observation: t("toolAgent.organizing"),
               done: t("toolAgent.done"),

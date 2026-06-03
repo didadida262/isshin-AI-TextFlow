@@ -19,9 +19,9 @@ description = "Allows updating projects"
 commands.allow = ["update_project"]
 
 [[permission]]
-identifier = "allow-read-project-file"
-description = "Allows reading project files"
-commands.allow = ["read_project_file"]
+identifier = "allow-assistant-context"
+description = "Allows session assistant to query project database context"
+commands.allow = ["query_assistant_context"]
 
 [[permission]]
 identifier = "allow-list-art-skills"

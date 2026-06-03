@@ -190,9 +190,7 @@ pub fn create_project(input: ProjectInput) -> Result<Project, String> {
     insert_project(&conn, &input, input.created_at)
 }
 
-#[tauri::command]
-pub fn list_projects() -> Result<Vec<Project>, String> {
-    let conn = init_db()?;
+pub(crate) fn list_projects_internal(conn: &Connection) -> Result<Vec<Project>, String> {
     let mut stmt = conn
         .prepare(&format!("{PROJECT_SELECT} ORDER BY created_at DESC"))
         .map_err(|e| e.to_string())?;
@@ -203,6 +201,12 @@ pub fn list_projects() -> Result<Vec<Project>, String> {
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_projects() -> Result<Vec<Project>, String> {
+    let conn = init_db()?;
+    list_projects_internal(&conn)
 }
 
 #[derive(Debug, Deserialize)]

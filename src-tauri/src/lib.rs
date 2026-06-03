@@ -1,4 +1,5 @@
 mod image;
+mod assistant_context;
 mod assets;
 mod db;
 mod db_admin;
@@ -9,6 +10,7 @@ mod script;
 mod skills;
 mod workflow;
 
+use assistant_context::query_assistant_context;
 use image::generate_image;
 use assets::{create_project_asset, delete_project_asset, list_project_assets, update_project_asset};
 use db::login;
@@ -21,7 +23,6 @@ use novel::{
     get_novel_source, import_novel, list_novel_chapters, update_novel_chapter_event,
 };
 use projects::{create_project, list_projects, update_project};
-use serde::Serialize;
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
 use script::{
     get_script_work_data, list_scripts, set_script_work_data, upsert_script,
@@ -29,8 +30,6 @@ use script::{
 use workflow::{
     get_project_workflow_node_detail, list_project_workflow_nodes,
 };
-use std::fs;
-use std::path::PathBuf;
 use tauri::Manager;
 
 fn apply_app_icon(app: &tauri::App) {
@@ -41,41 +40,6 @@ fn apply_app_icon(app: &tauri::App) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_icon(image);
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileReadResult {
-    pub filename: String,
-    pub content: String,
-    pub path: String,
-}
-
-fn project_root() -> PathBuf {
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-}
-
-#[tauri::command]
-fn read_project_file(filename: String) -> Result<FileReadResult, String> {
-    let allowed = ["package.json", ".gitignore"];
-    if !allowed.contains(&filename.as_str()) {
-        return Err(format!("不允许读取的文件: {filename}"));
-    }
-
-    let root = project_root();
-    let file_path = root.join(&filename);
-
-    if !file_path.exists() {
-        return Err(format!("文件不存在: {}", file_path.display()));
-    }
-
-    let content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
-
-    Ok(FileReadResult {
-        filename: filename.clone(),
-        content,
-        path: file_path.display().to_string(),
-    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -93,7 +57,7 @@ pub fn run() {
             create_project,
             list_projects,
             update_project,
-            read_project_file,
+            query_assistant_context,
             list_art_skills,
             list_story_skills,
             get_art_skill_detail,

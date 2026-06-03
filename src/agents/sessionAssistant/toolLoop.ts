@@ -11,8 +11,7 @@ export async function runToolLoop(
     userMessage,
     thought: null,
     shouldAct: false,
-    targetFile: null,
-    fileResult: null,
+    dbContext: null,
     errorMessage: null,
     phase: "idle",
     observation: null,
@@ -26,9 +25,9 @@ export async function runToolLoop(
     return state;
   }
 
-  onPhase?.("action", state.targetFile ?? undefined);
+  onPhase?.("action");
   state = { ...state, ...(await actionNode(state)) };
-  onPhase?.(state.phase);
+  onPhase?.("action", state.dbContext ? String(state.dbContext.projectCount) : undefined);
 
   onPhase?.("observation");
   state = { ...state, ...observationNode(state) };

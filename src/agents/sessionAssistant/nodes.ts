@@ -1,72 +1,56 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  AGENT_KEYWORDS,
-  FILE_KEYWORD_MAP,
   type AgentGraphState,
+  type AssistantContextResult,
+  isDataQuery,
 } from "./schema";
 
-/** 节点一：Thought — 意图识别 */
+/** 节点一：Thought — 判断是否为数据类问题 */
 export async function thoughtNode(
   state: AgentGraphState,
 ): Promise<Partial<AgentGraphState>> {
-  const msg = state.userMessage.toLowerCase();
-  const matched = AGENT_KEYWORDS.some((kw) => state.userMessage.includes(kw));
-
-  if (!matched) {
+  if (!isDataQuery(state.userMessage)) {
     return {
-      thought: "用户消息未触发 Agent 工具链，走普通对话。",
+      thought: "用户消息未触发数据库查询，走普通对话。",
       shouldAct: false,
       phase: "done",
     };
   }
 
-  let targetFile = "package.json";
-  for (const [key, file] of Object.entries(FILE_KEYWORD_MAP)) {
-    if (msg.includes(key.toLowerCase())) {
-      targetFile = file;
-      break;
-    }
-  }
-
   return {
-    thought: `检测到文件操作意图，准备读取项目文件：${targetFile}`,
+    thought: "检测到数据类问题，准备查询本地数据库（项目与工作流状态）。",
     shouldAct: true,
-    targetFile,
     phase: "thought",
   };
 }
 
-/** 节点二：Action — 通过 Tauri IPC 读取本地文件 */
+/** 节点二：Action — 通过 Tauri IPC 查询 SQLite 业务数据 */
 export async function actionNode(
   state: AgentGraphState,
 ): Promise<Partial<AgentGraphState>> {
-  if (!state.shouldAct || !state.targetFile) {
+  if (!state.shouldAct) {
     return { phase: "done" };
   }
 
   try {
-    const result = await invoke<{
-      filename: string;
-      content: string;
-      path: string;
-    }>("read_project_file", { filename: state.targetFile });
+    const result = await invoke<AssistantContextResult>("query_assistant_context");
 
     return {
-      fileResult: result,
+      dbContext: result,
       errorMessage: null,
       phase: "action",
     };
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);
     return {
-      fileResult: null,
+      dbContext: null,
       errorMessage: err,
       phase: "action",
     };
   }
 }
 
-/** 节点三：Observation — 将执行结果格式化为可拼入对话的 Markdown */
+/** 节点三：Observation — 将查询结果格式化为可拼入对话的 Markdown */
 export function observationNode(
   state: AgentGraphState,
 ): Partial<AgentGraphState> {
@@ -76,25 +60,25 @@ export function observationNode(
 
   if (state.errorMessage) {
     return {
-      observation: `**Agent 执行失败**\n\n\`\`\`\n${state.errorMessage}\n\`\`\``,
+      observation: `**数据库查询失败**\n\n\`\`\`\n${state.errorMessage}\n\`\`\``,
       phase: "observation",
     };
   }
 
-  if (!state.fileResult) {
+  if (!state.dbContext) {
     return {
-      observation: "**Agent 执行完成**，但未返回文件内容。",
+      observation: "**数据库查询完成**，但未返回数据。",
       phase: "observation",
     };
   }
 
-  const { filename, content, path } = state.fileResult;
-  const ext = filename.endsWith(".json") ? "json" : "text";
   const observation = [
-    `**Agent 观察结果** — 已读取 \`${path}\``,
+    `**数据库查询结果** — 共 ${state.dbContext.projectCount} 个项目`,
     "",
-    `\`\`\`${ext}`,
-    content,
+    "请严格基于以下 JSON 回答用户关于项目、工作流节点、章节、剧本、资产等数据的问题，不要编造未出现在数据中的内容。",
+    "",
+    "```json",
+    JSON.stringify(state.dbContext, null, 2),
     "```",
   ].join("\n");
 

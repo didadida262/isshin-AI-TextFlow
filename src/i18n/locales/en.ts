@@ -24,7 +24,7 @@ export const en: TranslationSchema = {
     title: "Chat",
     greeting: "How can I help you today?",
     emptyAssistant:
-      "Assistant mode · TextFlow assistant: product Skill plus local project file access",
+      "Assistant mode · TextFlow assistant: product Skill plus local project and workflow data",
     emptyChat:
       "Chat mode: talk directly to the selected model, no product persona or tools",
   },
@@ -36,7 +36,7 @@ export const en: TranslationSchema = {
   input: {
     placeholderChat: "Type a message… Shift+Enter for newline, Enter to send",
     placeholderAssistant:
-      'Assistant mode: try "read project", "view files", etc.',
+      "Assistant mode: ask about project count, workflow progress, chapters, scripts, assets…",
     send: "Send",
     stop: "Stop generating",
   },
@@ -126,13 +126,12 @@ export const en: TranslationSchema = {
   toolAgent: {
     analyzing: "Analyzing intent…",
     recognizing: "Recognizing intent…",
-    reading: "Reading {{file}}…",
-    projectFile: "project file",
-    organizing: "Organizing observations…",
-    done: "Tool run completed",
+    querying: "Querying database ({{count}} projects)…",
+    organizing: "Organizing query results…",
+    done: "Query completed",
     idle: "Idle",
     contextPrefix:
-      "The following is real file content read by the local tool Agent. Answer the user based on it:\n",
+      "The following is real business data from the local database. Answer the user based on it:\n",
   },
   auth: {
     title: "Isshin AI TextFlow",
@@ -157,7 +156,7 @@ export const en: TranslationSchema = {
     backShort: "Back",
     workflow: {
       extractEvents: "Extract Events",
-      aiScript: "AI Scriptwriting",
+      aiScript: "Generate Script",
       generateAssets: "Generate Assets",
       storyboard: "Storyboard",
       generateVideo: "Generate Video",

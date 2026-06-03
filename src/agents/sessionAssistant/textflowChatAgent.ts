@@ -16,7 +16,7 @@ export interface SessionChatTurn {
 export function buildSessionSystemPrompt(agentObservation?: string | null): string {
   const parts = [SESSION_ASSISTANT_PROMPT, TEXTFLOW_PRODUCT_SKILL];
   if (agentObservation?.trim()) {
-    parts.push(`## 本地工具 Agent 读取结果\n${agentObservation.trim()}`);
+    parts.push(`## 本地数据库查询结果\n${agentObservation.trim()}`);
   }
   return parts.join("\n\n");
 }

@@ -164,7 +164,7 @@ fn compute_node_statuses(
         .collect())
 }
 
-fn build_workflow_nodes(conn: &Connection, project_id: &str) -> Result<Vec<ProjectWorkflowNode>, String> {
+pub(crate) fn build_workflow_nodes(conn: &Connection, project_id: &str) -> Result<Vec<ProjectWorkflowNode>, String> {
     let statuses = compute_node_statuses(conn, project_id)?;
 
     Ok(WORKFLOW_NODE_IDS

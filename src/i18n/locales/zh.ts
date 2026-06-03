@@ -118,8 +118,7 @@ export type TranslationSchema = {
   toolAgent: {
     analyzing: string;
     recognizing: string;
-    reading: string;
-    projectFile: string;
+    querying: string;
     organizing: string;
     done: string;
     idle: string;
@@ -362,7 +361,7 @@ export const zh: TranslationSchema = {
     title: "对话",
     greeting: "有什么需要帮忙的吗？",
     emptyAssistant:
-      "Assistant 模式 · TextFlow 助手：注入产品 Skill，并可读取本地项目文件",
+      "Assistant 模式 · TextFlow 助手：注入产品 Skill，并可查询本地项目与工作流数据",
     emptyChat: "对话模式：直接与所选模型对话，无产品人设与工具",
   },
   mode: {
@@ -372,7 +371,7 @@ export const zh: TranslationSchema = {
   },
   input: {
     placeholderChat: "输入消息… Shift+Enter 换行，Enter 发送",
-    placeholderAssistant: "Assistant 模式：可输入「读取项目」「查看文件」等…",
+    placeholderAssistant: "Assistant 模式：可询问项目数量、工作流进度、章节/剧本/资产等数据…",
     send: "发送",
     stop: "停止生成",
   },
@@ -461,13 +460,12 @@ export const zh: TranslationSchema = {
   toolAgent: {
     analyzing: "正在分析意图…",
     recognizing: "意图识别中…",
-    reading: "正在读取 {{file}}…",
-    projectFile: "项目文件",
-    organizing: "整理观察结果…",
-    done: "工具执行完成",
+    querying: "正在查询数据库（{{count}} 个项目）…",
+    organizing: "整理查询结果…",
+    done: "查询完成",
     idle: "待命",
     contextPrefix:
-      "以下是通过本地工具 Agent 读取的真实文件内容，请基于此回答用户：\n",
+      "以下是通过本地数据库查询的真实业务数据，请基于此回答用户：\n",
   },
   auth: {
     title: "Isshin AI TextFlow",
@@ -492,7 +490,7 @@ export const zh: TranslationSchema = {
     backShort: "返回",
     workflow: {
       extractEvents: "提取事件",
-      aiScript: "AI 写剧本",
+      aiScript: "生成剧本",
       generateAssets: "生成资产",
       storyboard: "制作分镜",
       generateVideo: "生成视频",
