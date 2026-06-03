@@ -49,3 +49,6 @@ Thumbs.db
 # SQLite database (generated at runtime)
 data/sqlite/*.db
 data/sqlite/*.db-*
+
+# Local documentation (not versioned)
+docs/
