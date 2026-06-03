@@ -1,4 +1,5 @@
 mod image;
+mod video;
 mod assistant_context;
 mod assets;
 mod db;
@@ -12,6 +13,7 @@ mod workflow;
 
 use assistant_context::query_assistant_context;
 use image::generate_image;
+use video::generate_video;
 use assets::{create_project_asset, delete_project_asset, list_project_assets, update_project_asset};
 use db::login;
 use db_admin::{
@@ -20,8 +22,8 @@ use db_admin::{
 };
 use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
 use novel::{
-    get_novel_source, import_novel, list_novel_chapters, set_event_extraction_duration,
-    update_novel_chapter_event,
+    begin_event_extraction, get_novel_source, import_novel, list_novel_chapters,
+    set_event_extraction_duration, update_novel_chapter_event,
 };
 use projects::{create_project, delete_project, list_projects, update_project};
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
@@ -68,6 +70,7 @@ pub fn run() {
             llm_log_outbound,
             llm_log_inbound,
             import_novel,
+            begin_event_extraction,
             get_novel_source,
             list_novel_chapters,
             set_event_extraction_duration,
@@ -83,6 +86,7 @@ pub fn run() {
             update_project_asset,
             delete_project_asset,
             generate_image,
+            generate_video,
             get_database_overview,
             export_database,
             export_database_to_file,

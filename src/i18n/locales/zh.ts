@@ -64,6 +64,11 @@ export type TranslationSchema = {
     imageCount: string;
     imageTestTitle: string;
     imageTestPromptLabel: string;
+    videoSection: string;
+    videoApiUrl: string;
+    videoApiKey: string;
+    videoModel: string;
+    videoTestTitle: string;
     tabModelService: string;
     tabDatabase: string;
     database: {
@@ -113,6 +118,7 @@ export type TranslationSchema = {
     configRequired: string;
     modelsRequired: string;
     imageConfigRequired: string;
+    videoConfigRequired: string;
     requestFailed: string;
   };
   toolAgent: {
@@ -220,6 +226,7 @@ export type TranslationSchema = {
     };
     generateAssetsStep: {
       generateAsset: string;
+      textToVideo: string;
       emptyHint: string;
       loading: string;
       colPreview: string;
@@ -246,8 +253,10 @@ export type TranslationSchema = {
       typeCharacter: string;
       typeScene: string;
       typeProp: string;
+      typeVideo: string;
       noPreview: string;
       viewImage: string;
+      viewVideo: string;
       previewTitle: string;
       previewClose: string;
       prevPage: string;
@@ -262,6 +271,7 @@ export type TranslationSchema = {
       typeCharacter: string;
       typeScene: string;
       typeProp: string;
+      typeVideo: string;
       promptLabel: string;
       promptPlaceholder: string;
       modelLabel: string;
@@ -269,6 +279,28 @@ export type TranslationSchema = {
       sizeLabel: string;
       countLabel: string;
       inferenceStepsLabel: string;
+      cancel: string;
+      confirm: string;
+      generating: string;
+      abortGenerating: string;
+    };
+    textToVideoModal: {
+      title: string;
+      nameLabel: string;
+      namePlaceholder: string;
+      promptLabel: string;
+      promptPlaceholder: string;
+      modelLabel: string;
+      modelDefault: string;
+      sizeLabel: string;
+      numFramesLabel: string;
+      fpsLabel: string;
+      inferenceStepsLabel: string;
+      guidanceScaleLabel: string;
+      guidanceScale2Label: string;
+      boundaryRatioLabel: string;
+      flowShiftLabel: string;
+      seedLabel: string;
       cancel: string;
       confirm: string;
       generating: string;
@@ -415,6 +447,11 @@ export const zh: TranslationSchema = {
     imageCount: "生成数量 (n)",
     imageTestTitle: "图片连接测试",
     imageTestPromptLabel: "测试提示词",
+    videoSection: "视频生成 API",
+    videoApiUrl: "视频 API 地址",
+    videoApiKey: "视频 API 密钥",
+    videoModel: "视频模型",
+    videoTestTitle: "视频连接测试",
     tabModelService: "模型服务",
     tabDatabase: "数据库操作",
     database: {
@@ -466,6 +503,7 @@ export const zh: TranslationSchema = {
     configRequired: "请先在设置中配置 Base URL 与 API Key",
     modelsRequired: "请先在设置中同步模型列表",
     imageConfigRequired: "请先在设置中配置图片生成 API",
+    videoConfigRequired: "请先在设置中配置视频生成 API",
     requestFailed: "请求失败：{{error}}",
   },
   toolAgent: {
@@ -587,7 +625,8 @@ export const zh: TranslationSchema = {
     },
     generateAssetsStep: {
       generateAsset: "资产生成",
-      emptyHint: "点击右上角「资产生成」，填写提示词后将调用图片服务生成并保存资产。",
+      textToVideo: "文生视频",
+      emptyHint: "点击右上角「资产生成」或「文生视频」，填写提示词后将调用服务生成并保存资产。",
       loading: "加载资产列表…",
       colPreview: "预览",
       colName: "名称",
@@ -614,8 +653,10 @@ export const zh: TranslationSchema = {
       typeCharacter: "角色",
       typeScene: "场景",
       typeProp: "道具",
+      typeVideo: "视频",
       noPreview: "无",
       viewImage: "查看大图",
+      viewVideo: "播放视频",
       previewTitle: "生成结果",
       previewClose: "关闭",
       prevPage: "上一页",
@@ -631,6 +672,7 @@ export const zh: TranslationSchema = {
       typeCharacter: "角色",
       typeScene: "场景",
       typeProp: "道具",
+      typeVideo: "视频",
       promptLabel: "提示词",
       promptPlaceholder: "描述你想生成的画面，例如：一只可爱的卡通熊猫在吃竹子，3D风格",
       modelLabel: "模型",
@@ -638,6 +680,29 @@ export const zh: TranslationSchema = {
       sizeLabel: "尺寸",
       countLabel: "生成数量 (n)",
       inferenceStepsLabel: "推理步数",
+      cancel: "取消",
+      confirm: "开始生成",
+      generating: "生成中…",
+      abortGenerating: "中断生成",
+    },
+    textToVideoModal: {
+      title: "文生视频",
+      nameLabel: "视频名称",
+      namePlaceholder: "例如：柯基奔跑",
+      promptLabel: "提示词",
+      promptPlaceholder:
+        "描述你想生成的视频画面，例如：一只可爱的柯基犬在开满向日葵的田野里快乐地奔跑",
+      modelLabel: "模型",
+      modelDefault: "wan2.2-t2v-5b",
+      sizeLabel: "尺寸",
+      numFramesLabel: "帧数",
+      fpsLabel: "帧率 (fps)",
+      inferenceStepsLabel: "推理步数",
+      guidanceScaleLabel: "Guidance Scale",
+      guidanceScale2Label: "Guidance Scale 2",
+      boundaryRatioLabel: "Boundary Ratio",
+      flowShiftLabel: "Flow Shift",
+      seedLabel: "Seed",
       cancel: "取消",
       confirm: "开始生成",
       generating: "生成中…",

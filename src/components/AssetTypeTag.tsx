@@ -2,6 +2,7 @@ interface AssetTypeTagLabels {
   typeCharacter: string;
   typeScene: string;
   typeProp: string;
+  typeVideo?: string;
 }
 
 interface AssetTypeTagProps {
@@ -11,6 +12,9 @@ interface AssetTypeTagProps {
 }
 
 function tagStyle(assetType: string): string {
+  if (assetType === "video") {
+    return "border-sky-400/30 bg-sky-400/10 text-sky-300";
+  }
   if (assetType === "character") {
     return "border-cyan-400/30 bg-cyan-400/10 text-cyan-300";
   }
@@ -21,6 +25,7 @@ function tagStyle(assetType: string): string {
 }
 
 function tagLabel(assetType: string, labels: AssetTypeTagLabels): string {
+  if (assetType === "video") return labels.typeVideo ?? "Video";
   if (assetType === "character") return labels.typeCharacter;
   if (assetType === "prop") return labels.typeProp;
   return labels.typeScene;

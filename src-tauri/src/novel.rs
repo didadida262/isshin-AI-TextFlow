@@ -1,6 +1,6 @@
 use crate::db::init_db;
 use regex::Regex;
-use rusqlite::{params, Connection, Row};
+use rusqlite::{params, Connection, OptionalExtension, Row};
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 
@@ -144,6 +144,14 @@ fn migrate_novel_schema(conn: &Connection) -> Result<(), String> {
     if !columns.iter().any(|name| name == "event_extraction_duration_ms") {
         conn.execute(
             "ALTER TABLE novel_source ADD COLUMN event_extraction_duration_ms INTEGER",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    if !columns.iter().any(|name| name == "event_extraction_started_at") {
+        conn.execute(
+            "ALTER TABLE novel_source ADD COLUMN event_extraction_started_at INTEGER",
             [],
         )
         .map_err(|e| e.to_string())?;
@@ -405,6 +413,48 @@ fn ensure_project_exists(conn: &Connection, project_id: &str) -> Result<(), Stri
     Ok(())
 }
 
+fn now_millis() -> Result<i64, String> {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())
+        .map(|duration| duration.as_millis() as i64)
+}
+
+pub(crate) fn finalize_event_extraction_duration(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<(), String> {
+    let chapters = fetch_novel_chapters(conn, project_id)?;
+    if !is_extract_events_completed(&chapters) {
+        return Ok(());
+    }
+
+    let started_at: Option<i64> = conn
+        .query_row(
+            "SELECT event_extraction_started_at FROM novel_source WHERE project_id = ?1",
+            params![project_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    let Some(started_at) = started_at else {
+        return Ok(());
+    };
+
+    let duration_ms = now_millis()? - started_at;
+    conn.execute(
+        "UPDATE novel_source SET
+            event_extraction_duration_ms = ?2,
+            event_extraction_started_at = NULL
+         WHERE project_id = ?1",
+        params![project_id, duration_ms.max(0)],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn import_novel(project_id: String, source_text: String) -> Result<ImportNovelResult, String> {
     let conn = init_db()?;
@@ -437,13 +487,14 @@ pub fn import_novel(project_id: String, source_text: String) -> Result<ImportNov
     crate::script::clear_project_script_data(&tx, &project_id)?;
 
     tx.execute(
-        "INSERT INTO novel_source (project_id, source_text, char_count, imported_at, event_extraction_duration_ms)
-         VALUES (?1, ?2, ?3, ?4, NULL)
+        "INSERT INTO novel_source (project_id, source_text, char_count, imported_at, event_extraction_duration_ms, event_extraction_started_at)
+         VALUES (?1, ?2, ?3, ?4, NULL, NULL)
          ON CONFLICT(project_id) DO UPDATE SET
             source_text = excluded.source_text,
             char_count = excluded.char_count,
             imported_at = excluded.imported_at,
-            event_extraction_duration_ms = NULL",
+            event_extraction_duration_ms = NULL,
+            event_extraction_started_at = NULL",
         params![project_id, normalized, char_count, imported_at],
     )
     .map_err(|e| e.to_string())?;
@@ -493,6 +544,26 @@ pub fn list_novel_chapters(project_id: String) -> Result<Vec<NovelChapterRecord>
 pub struct SetEventExtractionDurationInput {
     pub project_id: String,
     pub duration_ms: i64,
+}
+
+#[tauri::command]
+pub fn begin_event_extraction(project_id: String) -> Result<(), String> {
+    let conn = init_db()?;
+    ensure_project_exists(&conn, &project_id)?;
+
+    let started_at = now_millis()?;
+    let affected = conn
+        .execute(
+            "UPDATE novel_source SET event_extraction_started_at = ?2 WHERE project_id = ?1",
+            params![project_id, started_at],
+        )
+        .map_err(|e| e.to_string())?;
+
+    if affected == 0 {
+        return Err("请先导入小说原文".to_string());
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -550,6 +621,7 @@ pub fn update_novel_chapter_event(input: UpdateChapterEventInput) -> Result<(), 
         .map_err(|e| e.to_string())?;
 
     crate::workflow::maybe_advance_after_extract(&conn, &project_id)?;
+    let _ = finalize_event_extraction_duration(&conn, &project_id);
 
     Ok(())
 }

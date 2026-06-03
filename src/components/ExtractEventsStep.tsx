@@ -8,8 +8,12 @@ import {
 import { useTranslationMessages } from "../contexts/I18nContext";
 import { extractEventsForChapters } from "../agents/workflowAgent/eventExtraction";
 import {
+  EVENT_STATE_SUCCESS,
+  getNovelSource,
   importNovel,
+  isEventExtractionComplete,
   listNovelChapters,
+  setEventExtractionDuration,
   type NovelChapterRecord,
   type NovelSourceRecord,
 } from "../services/novel";
@@ -105,10 +109,14 @@ export function ExtractEventsStep({
 
     setExtracting(true);
     setProgress(null);
+    const startedAt = Date.now();
 
     try {
       const rows = await listNovelChapters(projectId);
-      const { chapters: extracted, durationMs } = await extractEventsForChapters(
+      const hadPending = rows.some(
+        (chapter) => chapter.eventState !== EVENT_STATE_SUCCESS,
+      );
+      const { chapters: extracted } = await extractEventsForChapters(
         config,
         selectedModel,
         rows,
@@ -121,12 +129,14 @@ export function ExtractEventsStep({
           }
         },
         controller.signal,
-        undefined,
-        projectId,
       );
       setChapters(extracted);
-      if (durationMs != null) {
-        setExtractionDurationMs(durationMs);
+
+      if (hadPending && isEventExtractionComplete(extracted)) {
+        const durationMs = Date.now() - startedAt;
+        await setEventExtractionDuration(projectId, durationMs);
+        const source = await getNovelSource(projectId);
+        setExtractionDurationMs(source?.eventExtractionDurationMs ?? durationMs);
       }
       invalidateWorkflowCache(projectId);
       onWorkflowChange?.();

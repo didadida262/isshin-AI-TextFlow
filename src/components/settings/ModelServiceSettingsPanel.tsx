@@ -11,8 +11,9 @@ import {
 import type { AppConfig } from "../../types";
 import { useI18n, useTranslationMessages } from "../../contexts/I18nContext";
 import { testConnection } from "../../services/chat";
-import { isImageSettingsValid, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "../../services/config";
+import { isImageSettingsValid, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE, getFixedVideoSettings, isVideoSettingsValid } from "../../services/config";
 import { ImageTestResultModal } from "./ImageTestResultModal";
+import { VideoTestResultModal } from "./VideoTestResultModal";
 
 interface ModelServiceSettingsPanelProps {
   draft: AppConfig;
@@ -37,11 +38,13 @@ export function ModelServiceSettingsPanel({
   const i18n = useTranslationMessages();
   const [showKey, setShowKey] = useState(false);
   const [showImageKey, setShowImageKey] = useState(false);
+  const [showVideoKey, setShowVideoKey] = useState(false);
   const [testStatus, setTestStatus] = useState<
     "idle" | "loading" | "ok" | "error"
   >("idle");
   const [testError, setTestError] = useState("");
   const [imageTestOpen, setImageTestOpen] = useState(false);
+  const [videoTestOpen, setVideoTestOpen] = useState(false);
 
   const imageSettings = {
     imageApiUrl: draft.imageApiUrl,
@@ -50,6 +53,11 @@ export function ModelServiceSettingsPanel({
     imageDefaultSize: DEFAULT_IMAGE_SIZE,
     imageCount: DEFAULT_IMAGE_COUNT,
   };
+
+  const videoSettings = getFixedVideoSettings();
+
+  const readOnlyFieldClass =
+    "w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-text-muted outline-none read-only:cursor-default";
 
   useEffect(() => {
     setTestStatus("idle");
@@ -91,6 +99,13 @@ export function ModelServiceSettingsPanel({
   const runImageTest = () => {
     if (!canTestImageConnection || imageTestOpen) return;
     setImageTestOpen(true);
+  };
+
+  const canTestVideoConnection = isVideoSettingsValid(videoSettings);
+
+  const runVideoTest = () => {
+    if (!canTestVideoConnection || videoTestOpen) return;
+    setVideoTestOpen(true);
   };
 
   return (
@@ -312,6 +327,68 @@ export function ModelServiceSettingsPanel({
         open={imageTestOpen}
         settings={imageTestOpen ? imageSettings : null}
         onClose={() => setImageTestOpen(false)}
+      />
+
+      <div className="h-px bg-white/10" />
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-white">{i18n.settings.videoSection}</h3>
+
+        <label className="block space-y-2">
+          <span className="text-sm text-text-muted">{i18n.settings.videoApiUrl}</span>
+          <input
+            type="url"
+            readOnly
+            value={videoSettings.videoApiUrl}
+            className={readOnlyFieldClass}
+          />
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-sm text-text-muted">{i18n.settings.videoApiKey}</span>
+          <div className="relative">
+            <input
+              type={showVideoKey ? "text" : "password"}
+              readOnly
+              value={videoSettings.videoApiKey}
+              className={`${readOnlyFieldClass} pr-10`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowVideoKey((value) => !value)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white"
+            >
+              <FontAwesomeIcon icon={showVideoKey ? faEyeSlash : faEye} />
+            </button>
+          </div>
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-sm text-text-muted">{i18n.settings.videoModel}</span>
+          <input
+            type="text"
+            readOnly
+            value={videoSettings.videoModel}
+            className={readOnlyFieldClass}
+          />
+        </label>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={runVideoTest}
+            disabled={videoTestOpen || !canTestVideoConnection}
+            className="rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {videoTestOpen ? i18n.settings.testing : i18n.settings.testConnection}
+          </button>
+        </div>
+      </div>
+
+      <VideoTestResultModal
+        open={videoTestOpen}
+        settings={videoTestOpen ? videoSettings : null}
+        onClose={() => setVideoTestOpen(false)}
       />
     </div>
   );

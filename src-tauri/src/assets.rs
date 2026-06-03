@@ -52,7 +52,8 @@ pub struct CreateProjectAssetInput {
     pub prompt: String,
     pub model: String,
     pub size: String,
-    pub image_b64: String,
+    pub image_b64: Option<String>,
+    pub video_b64: Option<String>,
     pub generation_duration_ms: Option<i64>,
     pub num_inference_steps: Option<i32>,
 }
@@ -160,6 +161,21 @@ fn save_asset_image(project_id: &str, asset_id: i64, image_b64: &str) -> Result<
 
     let path = project_assets_dir(project_id)?.join(format!("{asset_id}.png"));
     fs::write(&path, bytes).map_err(|error| format!("保存图片失败: {error}"))?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+fn save_asset_video(project_id: &str, asset_id: i64, video_b64: &str) -> Result<String, String> {
+    use base64::Engine;
+
+    let cleaned = video_b64
+        .trim()
+        .trim_start_matches("data:video/mp4;base64,");
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(cleaned)
+        .map_err(|error| format!("视频 Base64 解码失败: {error}"))?;
+
+    let path = project_assets_dir(project_id)?.join(format!("{asset_id}.mp4"));
+    fs::write(&path, bytes).map_err(|error| format!("保存视频失败: {error}"))?;
     Ok(path.to_string_lossy().into_owned())
 }
 
@@ -302,8 +318,14 @@ pub fn create_project_asset(input: CreateProjectAssetInput) -> Result<ProjectAss
     if prompt.is_empty() {
         return Err("提示词不能为空".to_string());
     }
-    if input.image_b64.trim().is_empty() {
-        return Err("图片数据不能为空".to_string());
+
+    let image_b64 = input.image_b64.as_deref().unwrap_or("").trim();
+    let video_b64 = input.video_b64.as_deref().unwrap_or("").trim();
+    let has_image = !image_b64.is_empty();
+    let has_video = !video_b64.is_empty();
+
+    if has_image == has_video {
+        return Err("请提供图片或视频数据（且仅提供一种）".to_string());
     }
 
     conn.execute(
@@ -328,21 +350,37 @@ pub fn create_project_asset(input: CreateProjectAssetInput) -> Result<ProjectAss
     .map_err(|e| e.to_string())?;
 
     let asset_id = conn.last_insert_rowid();
-    let image_path = match save_asset_image(&input.project_id, asset_id, &input.image_b64) {
-        Ok(path) => Some(path),
-        Err(error) => {
-            conn.execute(
-                "UPDATE project_assets
-                 SET asset_state = ?1, error_reason = ?2, updated_at = ?3
-                 WHERE id = ?4",
-                params![ASSET_STATE_ERROR, error.clone(), now, asset_id],
-            )
-            .map_err(|e| e.to_string())?;
-            return fetch_asset_by_id(&conn, &input.project_id, asset_id);
+    let media_path = if has_video {
+        match save_asset_video(&input.project_id, asset_id, video_b64) {
+            Ok(path) => Some(path),
+            Err(error) => {
+                conn.execute(
+                    "UPDATE project_assets
+                     SET asset_state = ?1, error_reason = ?2, updated_at = ?3
+                     WHERE id = ?4",
+                    params![ASSET_STATE_ERROR, error.clone(), now, asset_id],
+                )
+                .map_err(|e| e.to_string())?;
+                return fetch_asset_by_id(&conn, &input.project_id, asset_id);
+            }
+        }
+    } else {
+        match save_asset_image(&input.project_id, asset_id, image_b64) {
+            Ok(path) => Some(path),
+            Err(error) => {
+                conn.execute(
+                    "UPDATE project_assets
+                     SET asset_state = ?1, error_reason = ?2, updated_at = ?3
+                     WHERE id = ?4",
+                    params![ASSET_STATE_ERROR, error.clone(), now, asset_id],
+                )
+                .map_err(|e| e.to_string())?;
+                return fetch_asset_by_id(&conn, &input.project_id, asset_id);
+            }
         }
     };
 
-    if let Some(path) = image_path {
+    if let Some(path) = media_path {
         conn.execute(
             "UPDATE project_assets SET image_path = ?1, updated_at = ?2 WHERE id = ?3",
             params![path, now, asset_id],
@@ -363,7 +401,7 @@ pub fn update_project_asset(input: UpdateProjectAssetInput) -> Result<ProjectAss
     if name.is_empty() {
         return Err("资产名称不能为空".to_string());
     }
-    if !matches!(asset_type, "character" | "scene" | "prop") {
+    if !matches!(asset_type, "character" | "scene" | "prop" | "video") {
         return Err("资产类型无效".to_string());
     }
 

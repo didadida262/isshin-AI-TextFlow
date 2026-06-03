@@ -34,7 +34,8 @@ export interface CreateProjectAssetInput {
   prompt: string;
   model: string;
   size: string;
-  imageB64: string;
+  imageB64?: string;
+  videoB64?: string;
   generationDurationMs?: number;
   numInferenceSteps?: number;
 }

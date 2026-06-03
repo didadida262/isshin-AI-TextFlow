@@ -25,8 +25,10 @@ interface AssetListTableLabels {
   typeCharacter: string;
   typeScene: string;
   typeProp: string;
+  typeVideo: string;
   noPreview: string;
   viewImage: string;
+  viewVideo: string;
 }
 
 interface AssetListTableProps {
@@ -44,6 +46,13 @@ function statusLabel(
   if (asset.assetState === ASSET_STATE_SUCCESS) return labels.statusSuccess;
   if (asset.assetState === ASSET_STATE_ERROR) return labels.statusError;
   return labels.statusError;
+}
+
+function isVideoAsset(asset: ProjectAssetRecord): boolean {
+  return (
+    asset.assetType === "video" ||
+    asset.imagePath?.toLowerCase().endsWith(".mp4") === true
+  );
 }
 
 function statusClass(asset: ProjectAssetRecord): string {
@@ -101,18 +110,35 @@ export function AssetListTable({
             >
               <td className="px-3 py-2.5">
                 {asset.imagePath ? (
-                  <button
-                    type="button"
-                    title={labels.viewImage}
-                    onClick={() => onViewImage?.(asset)}
-                    className="block overflow-hidden rounded-md border border-white/10 transition hover:border-accent/40 hover:ring-1 hover:ring-accent/30"
-                  >
-                    <img
-                      src={convertFileSrc(asset.imagePath)}
-                      alt={asset.name}
-                      className="h-14 w-14 object-cover"
-                    />
-                  </button>
+                  isVideoAsset(asset) ? (
+                    <button
+                      type="button"
+                      title={labels.viewVideo}
+                      onClick={() => onViewImage?.(asset)}
+                      className="block overflow-hidden rounded-md border border-white/10 transition hover:border-accent/40 hover:ring-1 hover:ring-accent/30"
+                    >
+                      <video
+                        src={convertFileSrc(asset.imagePath)}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="h-14 w-14 object-cover"
+                      />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      title={labels.viewImage}
+                      onClick={() => onViewImage?.(asset)}
+                      className="block overflow-hidden rounded-md border border-white/10 transition hover:border-accent/40 hover:ring-1 hover:ring-accent/30"
+                    >
+                      <img
+                        src={convertFileSrc(asset.imagePath)}
+                        alt={asset.name}
+                        className="h-14 w-14 object-cover"
+                      />
+                    </button>
+                  )
                 ) : (
                   <span className="inline-flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-white/10 text-[10px] text-text-dim">
                     {labels.noPreview}

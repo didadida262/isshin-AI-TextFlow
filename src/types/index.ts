@@ -54,6 +54,9 @@ export interface AppConfig {
   imageModel: string;
   imageDefaultSize: string;
   imageCount: number;
+  videoApiUrl: string;
+  videoApiKey: string;
+  videoModel: string;
 }
 
 export type MessageRole = "user" | "assistant" | "tool-status";

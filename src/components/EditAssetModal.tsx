@@ -49,8 +49,17 @@ export function EditAssetModal({ asset, onClose, onSubmit }: EditAssetModalProps
       { value: "character", label: generateLabels.typeCharacter },
       { value: "scene", label: generateLabels.typeScene },
       { value: "prop", label: generateLabels.typeProp },
+      ...(asset?.assetType === "video"
+        ? [{ value: "video", label: generateLabels.typeVideo ?? "Video" }]
+        : []),
     ],
-    [generateLabels.typeCharacter, generateLabels.typeProp, generateLabels.typeScene],
+    [
+      asset?.assetType,
+      generateLabels.typeCharacter,
+      generateLabels.typeProp,
+      generateLabels.typeScene,
+      generateLabels.typeVideo,
+    ],
   );
 
   const trimmedName = name.trim();
@@ -122,11 +131,22 @@ export function EditAssetModal({ asset, onClose, onSubmit }: EditAssetModalProps
               <div className="space-y-4">
                 {asset.imagePath ? (
                   <div className="flex justify-center">
-                    <img
-                      src={convertFileSrc(asset.imagePath)}
-                      alt={asset.name}
-                      className="h-20 w-20 rounded-lg border border-white/10 object-cover"
-                    />
+                    {asset.assetType === "video" ||
+                    asset.imagePath.toLowerCase().endsWith(".mp4") ? (
+                      <video
+                        src={convertFileSrc(asset.imagePath)}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="h-20 w-20 rounded-lg border border-white/10 object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={convertFileSrc(asset.imagePath)}
+                        alt={asset.name}
+                        className="h-20 w-20 rounded-lg border border-white/10 object-cover"
+                      />
+                    )}
                   </div>
                 ) : null}
 

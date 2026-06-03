@@ -14,6 +14,13 @@ interface AssetImagePreviewModalProps {
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
+function isVideoAsset(asset: ProjectAssetRecord): boolean {
+  return (
+    asset.assetType === "video" ||
+    asset.imagePath?.toLowerCase().endsWith(".mp4") === true
+  );
+}
+
 export function AssetImagePreviewModal({
   asset,
   onClose,
@@ -69,11 +76,20 @@ export function AssetImagePreviewModal({
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
               <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-white/10 bg-black/30 p-3">
                 {asset.imagePath ? (
-                  <img
-                    src={convertFileSrc(asset.imagePath)}
-                    alt={asset.name}
-                    className="max-h-[min(60vh,640px)] w-auto max-w-full rounded-md object-contain"
-                  />
+                  isVideoAsset(asset) ? (
+                    <video
+                      src={convertFileSrc(asset.imagePath)}
+                      controls
+                      playsInline
+                      className="max-h-[min(60vh,640px)] w-auto max-w-full rounded-md object-contain"
+                    />
+                  ) : (
+                    <img
+                      src={convertFileSrc(asset.imagePath)}
+                      alt={asset.name}
+                      className="max-h-[min(60vh,640px)] w-auto max-w-full rounded-md object-contain"
+                    />
+                  )
                 ) : (
                   <p className="text-sm text-text-muted">{s.noPreview}</p>
                 )}

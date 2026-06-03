@@ -4,8 +4,6 @@ import { chatCompletion } from "../../../services/chat";
 import {
   EVENT_STATE_ERROR,
   EVENT_STATE_SUCCESS,
-  isEventExtractionComplete,
-  setEventExtractionDuration,
   type NovelChapterRecord,
   updateNovelChapterEvent,
 } from "../../../services/novel";
@@ -180,7 +178,6 @@ async function extractChapterEvent(
 
 export interface ExtractEventsResult {
   chapters: NovelChapterRecord[];
-  durationMs: number | null;
 }
 
 /** Extract events for DB chapters with bounded concurrency; results persisted to SQLite. */
@@ -191,10 +188,9 @@ export async function extractEventsForChapters(
   onProgress?: (progress: ExtractEventsProgress) => void,
   signal?: AbortSignal,
   concurrency = DEFAULT_EVENT_EXTRACTION_CONCURRENCY,
-  projectId?: string,
 ): Promise<ExtractEventsResult> {
   if (chapters.length === 0) {
-    return { chapters: [], durationMs: null };
+    return { chapters: [] };
   }
 
   const results = [...chapters];
@@ -214,10 +210,9 @@ export async function extractEventsForChapters(
   }
 
   if (pendingIndices.length === 0) {
-    return { chapters: results, durationMs: null };
+    return { chapters: results };
   }
 
-  const startedAt = Date.now();
   let nextPending = 0;
 
   const worker = async () => {
@@ -240,14 +235,8 @@ export async function extractEventsForChapters(
   await Promise.all(workers);
 
   if (signal?.aborted) {
-    return { chapters: results, durationMs: null };
+    return { chapters: results };
   }
 
-  let durationMs: number | null = null;
-  if (projectId && isEventExtractionComplete(results)) {
-    durationMs = Date.now() - startedAt;
-    await setEventExtractionDuration(projectId, durationMs);
-  }
-
-  return { chapters: results, durationMs };
+  return { chapters: results };
 }

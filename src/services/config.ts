@@ -10,6 +10,21 @@ export const DEFAULT_IMAGE_SIZE = "1024x1024";
 export const DEFAULT_IMAGE_COUNT = 1;
 export const DEFAULT_NUM_INFERENCE_STEPS = 25;
 
+export const DEFAULT_VIDEO_API_URL =
+  "http://218.93.211.227:8081/v1/videos/sync";
+export const DEFAULT_VIDEO_API_KEY =
+  "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
+export const DEFAULT_VIDEO_MODEL = "wan2.2-t2v-5b";
+export const DEFAULT_VIDEO_SIZE = "832x480";
+export const DEFAULT_VIDEO_NUM_FRAMES = 33;
+export const DEFAULT_VIDEO_FPS = 16;
+export const DEFAULT_VIDEO_INFERENCE_STEPS = 40;
+export const DEFAULT_VIDEO_GUIDANCE_SCALE = 4.0;
+export const DEFAULT_VIDEO_GUIDANCE_SCALE_2 = 4.0;
+export const DEFAULT_VIDEO_BOUNDARY_RATIO = 0.875;
+export const DEFAULT_VIDEO_FLOW_SHIFT = 5.0;
+export const DEFAULT_VIDEO_SEED = 42;
+
 const DEFAULT_CONFIG: AppConfig = {
   baseUrl: "https://aiplatform.njsrd.com/llm/v1",
   apiKey: "",
@@ -19,6 +34,9 @@ const DEFAULT_CONFIG: AppConfig = {
   imageModel: DEFAULT_IMAGE_MODEL,
   imageDefaultSize: DEFAULT_IMAGE_SIZE,
   imageCount: DEFAULT_IMAGE_COUNT,
+  videoApiUrl: DEFAULT_VIDEO_API_URL,
+  videoApiKey: DEFAULT_VIDEO_API_KEY,
+  videoModel: DEFAULT_VIDEO_MODEL,
 };
 
 function mergeConfig(partial: Partial<AppConfig>): AppConfig {
@@ -38,6 +56,9 @@ function mergeConfig(partial: Partial<AppConfig>): AppConfig {
   if (!Number.isFinite(merged.imageCount) || merged.imageCount < 1) {
     merged.imageCount = DEFAULT_IMAGE_COUNT;
   }
+  merged.videoApiUrl = DEFAULT_VIDEO_API_URL;
+  merged.videoApiKey = DEFAULT_VIDEO_API_KEY;
+  merged.videoModel = DEFAULT_VIDEO_MODEL;
   return merged;
 }
 
@@ -90,3 +111,24 @@ export type ImageGenerationSettings = Pick<
   AppConfig,
   "imageApiUrl" | "imageApiKey" | "imageModel" | "imageDefaultSize" | "imageCount"
 >;
+
+export function isVideoSettingsValid(
+  settings: VideoGenerationSettings,
+): boolean {
+  return Boolean(
+    settings.videoApiUrl.trim() && settings.videoApiKey.trim(),
+  );
+}
+
+export type VideoGenerationSettings = Pick<
+  AppConfig,
+  "videoApiUrl" | "videoApiKey" | "videoModel"
+>;
+
+export function getFixedVideoSettings(): VideoGenerationSettings {
+  return {
+    videoApiUrl: DEFAULT_VIDEO_API_URL,
+    videoApiKey: DEFAULT_VIDEO_API_KEY,
+    videoModel: DEFAULT_VIDEO_MODEL,
+  };
+}
