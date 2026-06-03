@@ -39,7 +39,6 @@ const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:3"];
 function createDefaultDraft(
   models: string[],
   defaults: {
-    projectName: string;
     novelType: string;
     intro: string;
     artStyle: string;
@@ -49,7 +48,7 @@ function createDefaultDraft(
   const firstModel = models[0] ?? "";
   return {
     projectType: "novel",
-    name: defaults.projectName,
+    name: "",
     novelType: defaults.novelType,
     imageModel: firstModel,
     imageQuality: "standard",
@@ -84,7 +83,6 @@ export function NewProjectModal({
   const [submitting, setSubmitting] = useState(false);
   const [draft, setDraft] = useState<NewProjectDraft>(() =>
     createDefaultDraft(models, {
-      projectName: m.defaultProjectName,
       novelType: m.defaultNovelType,
       intro: m.defaultIntro,
       artStyle: "",
@@ -111,7 +109,6 @@ export function NewProjectModal({
         } else {
           setDraft(
             createDefaultDraft(models, {
-              projectName: m.defaultProjectName,
               novelType: m.defaultNovelType,
               intro: m.defaultIntro,
               artStyle: art[0]?.id ?? "",
@@ -130,7 +127,6 @@ export function NewProjectModal({
     mode,
     editingProject,
     models,
-    m.defaultProjectName,
     m.defaultNovelType,
     m.defaultIntro,
   ]);
@@ -141,10 +137,11 @@ export function NewProjectModal({
   }));
 
   const handleConfirm = async () => {
-    if (!draft.name.trim() || submitting) return;
+    if (submitting) return;
+    const name = draft.name.trim() || m.defaultProjectName;
     setSubmitting(true);
     try {
-      await onConfirm(draft);
+      await onConfirm({ ...draft, name });
     } finally {
       setSubmitting(false);
     }
@@ -214,7 +211,7 @@ export function NewProjectModal({
                         onChange={(e) =>
                           setDraft((d) => ({ ...d, name: e.target.value }))
                         }
-                        placeholder={m.projectNamePlaceholder}
+                        placeholder={m.defaultProjectName}
                         className={fieldClass}
                       />
                     </label>
@@ -297,7 +294,7 @@ export function NewProjectModal({
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  disabled={!draft.name.trim() || submitting}
+                  disabled={submitting}
                   className="rounded-lg bg-accent px-5 py-2 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {confirmLabel}
