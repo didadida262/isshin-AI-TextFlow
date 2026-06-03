@@ -21,17 +21,17 @@ export type TranslationSchema = {
   chat: {
     title: string;
     greeting: string;
-    emptyAgent: string;
+    emptyAssistant: string;
     emptyChat: string;
   };
   mode: {
     chat: string;
-    agent: string;
+    assistant: string;
     ariaLabel: string;
   };
   input: {
     placeholderChat: string;
-    placeholderAgent: string;
+    placeholderAssistant: string;
     send: string;
     stop: string;
   };
@@ -115,7 +115,7 @@ export type TranslationSchema = {
     imageConfigRequired: string;
     requestFailed: string;
   };
-  agent: {
+  toolAgent: {
     analyzing: string;
     recognizing: string;
     reading: string;
@@ -361,19 +361,18 @@ export const zh: TranslationSchema = {
   chat: {
     title: "对话",
     greeting: "有什么需要帮忙的吗？",
-    emptyAgent:
-      "TextFlow 助手 · Agent 模式：可读取本地项目文件；输入「查看文件」或「读取项目」试试",
-    emptyChat:
-      "TextFlow 助手：以产品助手身份与你对话，可解答流程与创作问题",
+    emptyAssistant:
+      "Assistant 模式 · TextFlow 助手：注入产品 Skill，并可读取本地项目文件",
+    emptyChat: "对话模式：直接与所选模型对话，无产品人设与工具",
   },
   mode: {
     chat: "对话",
-    agent: "Agent",
+    assistant: "Assistant",
     ariaLabel: "对话模式",
   },
   input: {
     placeholderChat: "输入消息… Shift+Enter 换行，Enter 发送",
-    placeholderAgent: "Agent 模式：可输入「读取项目」「查看文件」等…",
+    placeholderAssistant: "Assistant 模式：可输入「读取项目」「查看文件」等…",
     send: "发送",
     stop: "停止生成",
   },
@@ -459,16 +458,16 @@ export const zh: TranslationSchema = {
     imageConfigRequired: "请先在设置中配置图片生成 API",
     requestFailed: "请求失败：{{error}}",
   },
-  agent: {
+  toolAgent: {
     analyzing: "正在分析意图…",
     recognizing: "意图识别中…",
     reading: "正在读取 {{file}}…",
     projectFile: "项目文件",
     organizing: "整理观察结果…",
-    done: "Agent 执行完成",
+    done: "工具执行完成",
     idle: "待命",
     contextPrefix:
-      "以下是通过本地 Agent 读取的真实文件内容，请基于此回答用户：\n",
+      "以下是通过本地工具 Agent 读取的真实文件内容，请基于此回答用户：\n",
   },
   auth: {
     title: "Isshin AI TextFlow",

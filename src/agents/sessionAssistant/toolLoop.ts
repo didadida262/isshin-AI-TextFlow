@@ -1,9 +1,9 @@
 import { actionNode, observationNode, thoughtNode } from "./nodes";
 import type { AgentGraphState } from "./schema";
 
-/** 最简 Agent 闭环：Thought → Action → Observation（对应 Week1 的 StateGraph 串联） */
+/** 会话 Assistant 本地工具链：Thought → Action → Observation */
 
-export async function runAgentLoop(
+export async function runToolLoop(
   userMessage: string,
   onPhase?: (phase: AgentGraphState["phase"], detail?: string) => void,
 ): Promise<AgentGraphState> {

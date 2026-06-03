@@ -23,20 +23,20 @@ export const en: TranslationSchema = {
   chat: {
     title: "Chat",
     greeting: "How can I help you today?",
-    emptyAgent:
-      "TextFlow Assistant · Agent mode: can read local project files; try \"read project\" or \"view files\"",
+    emptyAssistant:
+      "Assistant mode · TextFlow assistant: product Skill plus local project file access",
     emptyChat:
-      "TextFlow Assistant: answers as the product assistant for workflow and creative questions",
+      "Chat mode: talk directly to the selected model, no product persona or tools",
   },
   mode: {
     chat: "Chat",
-    agent: "Agent",
+    assistant: "Assistant",
     ariaLabel: "Chat mode",
   },
   input: {
     placeholderChat: "Type a message… Shift+Enter for newline, Enter to send",
-    placeholderAgent:
-      'Agent mode: try "read project", "view files", etc.',
+    placeholderAssistant:
+      'Assistant mode: try "read project", "view files", etc.',
     send: "Send",
     stop: "Stop generating",
   },
@@ -123,16 +123,16 @@ export const en: TranslationSchema = {
     imageConfigRequired: "Please configure the image generation API in Settings first",
     requestFailed: "Request failed: {{error}}",
   },
-  agent: {
+  toolAgent: {
     analyzing: "Analyzing intent…",
     recognizing: "Recognizing intent…",
     reading: "Reading {{file}}…",
     projectFile: "project file",
     organizing: "Organizing observations…",
-    done: "Agent completed",
+    done: "Tool run completed",
     idle: "Idle",
     contextPrefix:
-      "The following is real file content read by the local Agent. Answer the user based on it:\n",
+      "The following is real file content read by the local tool Agent. Answer the user based on it:\n",
   },
   auth: {
     title: "Isshin AI TextFlow",

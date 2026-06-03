@@ -42,12 +42,12 @@ export function ModeToggle({ mode, onChange, disabled }: ModeToggleProps) {
       <button
         type="button"
         disabled={disabled}
-        onClick={() => onChange("agent")}
+        onClick={() => onChange("assistant")}
         className={`relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
-          mode === "agent" ? "text-accent" : "text-text-muted hover:text-white"
+          mode === "assistant" ? "text-accent" : "text-text-muted hover:text-white"
         }`}
       >
-        {mode === "agent" && (
+        {mode === "assistant" && (
           <motion.span
             layoutId="mode-pill"
             className="absolute inset-0 rounded-md bg-accent/15 ring-1 ring-accent/30"
@@ -55,7 +55,7 @@ export function ModeToggle({ mode, onChange, disabled }: ModeToggleProps) {
           />
         )}
         <FontAwesomeIcon icon={faRobot} className="relative z-10 text-[10px]" />
-        <span className="relative z-10">{i18n.mode.agent}</span>
+        <span className="relative z-10">{i18n.mode.assistant}</span>
       </button>
     </div>
   );

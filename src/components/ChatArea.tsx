@@ -111,8 +111,8 @@ export function ChatArea({
                 {i18n.chat.greeting}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-text-muted">
-                {chatMode === "agent"
-                  ? i18n.chat.emptyAgent
+                {chatMode === "assistant"
+                  ? i18n.chat.emptyAssistant
                   : i18n.chat.emptyChat}
               </p>
             </div>

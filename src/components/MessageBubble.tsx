@@ -19,7 +19,7 @@ const bubbleSpring = {
 };
 
 export function MessageBubble({ message }: MessageBubbleProps) {
-  if (message.role === "agent-status") {
+  if (message.role === "tool-status") {
     return (
       <motion.div
         className="flex justify-start"
@@ -30,20 +30,20 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <motion.div
           className="flex max-w-lg items-start gap-3 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-sm"
           animate={
-            message.agentPhase !== "done"
+            message.toolPhase !== "done"
               ? { borderColor: ["rgba(0,255,102,0.2)", "rgba(0,255,102,0.5)", "rgba(0,255,102,0.2)"] }
               : {}
           }
-          transition={{ repeat: message.agentPhase !== "done" ? Infinity : 0, duration: 1.5 }}
+          transition={{ repeat: message.toolPhase !== "done" ? Infinity : 0, duration: 1.5 }}
         >
           <FontAwesomeIcon
-            icon={message.agentPhase === "done" ? faBrain : faSpinner}
-            spin={message.agentPhase !== "done"}
+            icon={message.toolPhase === "done" ? faBrain : faSpinner}
+            spin={message.toolPhase !== "done"}
             className="mt-0.5 text-accent"
           />
           <motion.div>
             <p className="text-accent text-xs font-medium uppercase tracking-wider">
-              Agent · {message.agentPhase ?? "thought"}
+              Tool · {message.toolPhase ?? "thought"}
             </p>
             <p className="mt-1 text-text-muted">{message.content}</p>
           </motion.div>

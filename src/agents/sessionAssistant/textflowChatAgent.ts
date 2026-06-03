@@ -16,7 +16,7 @@ export interface SessionChatTurn {
 export function buildSessionSystemPrompt(agentObservation?: string | null): string {
   const parts = [SESSION_ASSISTANT_PROMPT, TEXTFLOW_PRODUCT_SKILL];
   if (agentObservation?.trim()) {
-    parts.push(`## 本地 Agent 读取结果\n${agentObservation.trim()}`);
+    parts.push(`## 本地工具 Agent 读取结果\n${agentObservation.trim()}`);
   }
   return parts.join("\n\n");
 }
@@ -40,3 +40,6 @@ export async function* streamSessionChat(options: {
 
   yield* streamChatCompletion(config, model, messages, signal);
 }
+
+export { runToolLoop } from "./toolLoop";
+export type { AgentGraphState } from "./schema";

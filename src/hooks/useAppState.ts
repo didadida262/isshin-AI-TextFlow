@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppConfig, ChatMessage, ChatMode, ChatSession } from "../types";
 import { useI18n } from "../contexts/I18nContext";
 import { getDefaultConfig, loadConfig, saveConfig } from "../services/config";
-import { runAgentLoop } from "../agents/assistant/graph";
-import { streamSessionChat } from "../agents/sessionAgent/textflowChatAgent";
+import { streamSessionChat, runToolLoop } from "../agents/sessionAssistant/textflowChatAgent";
+import { streamChatCompletion } from "../services/chat";
 
 function uid() {
   return crypto.randomUUID();
@@ -22,7 +22,7 @@ export function useAppState() {
   const [activeSessionId, setActiveSessionId] = useState(sessions[0].id);
   const [selectedModel, setSelectedModel] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [agentRunning, setAgentRunning] = useState(false);
+  const [toolAgentRunning, setToolAgentRunning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<ChatMode>("chat");
@@ -86,7 +86,7 @@ export function useAppState() {
     cancelRef.current = true;
     abortRef.current?.abort();
     setIsLoading(false);
-    setAgentRunning(false);
+    setToolAgentRunning(false);
   }, []);
 
   const sendMessage = useCallback(
@@ -126,29 +126,29 @@ export function useAppState() {
 
       let agentObservation: string | null = null;
 
-      if (chatMode === "agent") {
-        setAgentRunning(true);
-        const agentStatusId = uid();
+      if (chatMode === "assistant") {
+        setToolAgentRunning(true);
+        const toolStatusId = uid();
         appendMessage(sessionId, {
-          id: agentStatusId,
-          role: "agent-status",
-          content: t("agent.analyzing"),
-          agentPhase: "thought",
+          id: toolStatusId,
+          role: "tool-status",
+          content: t("toolAgent.analyzing"),
+          toolPhase: "thought",
         });
 
         try {
-          const agentResult = await runAgentLoop(text, (phase, detail) => {
+          const agentResult = await runToolLoop(text, (phase, detail) => {
             const labels: Record<string, string> = {
-              thought: detail ?? t("agent.recognizing"),
-              action: t("agent.reading", {
-                file: detail ?? t("agent.projectFile"),
+              thought: detail ?? t("toolAgent.recognizing"),
+              action: t("toolAgent.reading", {
+                file: detail ?? t("toolAgent.projectFile"),
               }),
-              observation: t("agent.organizing"),
-              done: t("agent.done"),
-              idle: t("agent.idle"),
+              observation: t("toolAgent.organizing"),
+              done: t("toolAgent.done"),
+              idle: t("toolAgent.idle"),
             };
-            patchMessage(sessionId, agentStatusId, {
-              agentPhase:
+            patchMessage(sessionId, toolStatusId, {
+              toolPhase:
                 phase === "done"
                   ? "done"
                   : phase === "observation"
@@ -163,18 +163,18 @@ export function useAppState() {
           agentObservation = agentResult.observation;
 
           if (agentResult.shouldAct || agentObservation) {
-            patchMessage(sessionId, agentStatusId, {
-              agentPhase: "done",
-              content: agentResult.thought ?? t("agent.done"),
+            patchMessage(sessionId, toolStatusId, {
+              toolPhase: "done",
+              content: agentResult.thought ?? t("toolAgent.done"),
             });
           } else {
             updateSession(sessionId, (s) => ({
               ...s,
-              messages: s.messages.filter((m) => m.id !== agentStatusId),
+              messages: s.messages.filter((m) => m.id !== toolStatusId),
             }));
           }
         } finally {
-          setAgentRunning(false);
+          setToolAgentRunning(false);
         }
       }
 
@@ -206,13 +206,23 @@ export function useAppState() {
         abortRef.current = controller;
 
         let full = "";
-        for await (const chunk of streamSessionChat({
-          config,
-          model: selectedModel,
-          history,
-          agentObservation,
-          signal: controller.signal,
-        })) {
+        const replyStream =
+          chatMode === "assistant"
+            ? streamSessionChat({
+                config,
+                model: selectedModel,
+                history,
+                agentObservation,
+                signal: controller.signal,
+              })
+            : streamChatCompletion(
+                config,
+                selectedModel,
+                history,
+                controller.signal,
+              );
+
+        for await (const chunk of replyStream) {
           if (cancelRef.current) break;
           full += chunk;
           patchMessage(sessionId, assistantId, { content: full.trimStart() });
@@ -310,7 +320,7 @@ export function useAppState() {
     setSelectedModel,
     settingsOpen,
     setSettingsOpen,
-    agentRunning,
+    toolAgentRunning,
     isLoading,
     configError,
     setConfigError,

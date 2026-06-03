@@ -1,8 +1,8 @@
 /** 侧边栏主导航 */
 export type AppNav = "session" | "creation";
 
-/** 对话模式：普通直连 LLM / 启用本地 Agent 工具链 */
-export type ChatMode = "chat" | "agent";
+/** 对话模式：直连 LLM / 启用 Assistant（产品助手 + 本地工具链） */
+export type ChatMode = "chat" | "assistant";
 
 export interface AuthUser {
   id: number;
@@ -56,13 +56,13 @@ export interface AppConfig {
   imageCount: number;
 }
 
-export type MessageRole = "user" | "assistant" | "agent-status";
+export type MessageRole = "user" | "assistant" | "tool-status";
 
 export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
-  agentPhase?: "thought" | "action" | "observation" | "done";
+  toolPhase?: "thought" | "action" | "observation" | "done";
   isStreaming?: boolean;
 }
 

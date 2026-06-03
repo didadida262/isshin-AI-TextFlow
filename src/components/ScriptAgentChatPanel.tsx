@@ -9,7 +9,7 @@ import {
 import type {
   ScriptChatMessage,
   ScriptChatSuggestion,
-} from "../agents/scriptAgent/chatTypes";
+} from "../agents/workflowAgent/chatTypes";
 import ChatGptLogo from "../assets/ChatGptLogo";
 import { MarkdownContent } from "./MarkdownContent";
 

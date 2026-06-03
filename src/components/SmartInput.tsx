@@ -47,8 +47,8 @@ export function SmartInput({
   };
 
   const placeholder =
-    chatMode === "agent"
-      ? i18n.input.placeholderAgent
+    chatMode === "assistant"
+      ? i18n.input.placeholderAssistant
       : i18n.input.placeholderChat;
 
   return (
