@@ -77,7 +77,7 @@ export function AssetListTable({
   if (items.length === 0) return null;
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto">
+    <div className="min-h-0 flex-1 overflow-auto select-none">
       <table className="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
         {colgroup}
         <thead className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm">
