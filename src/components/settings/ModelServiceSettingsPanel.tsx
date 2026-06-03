@@ -11,7 +11,7 @@ import {
 import type { AppConfig } from "../../types";
 import { useI18n, useTranslationMessages } from "../../contexts/I18nContext";
 import { testConnection } from "../../services/chat";
-import { isImageSettingsValid } from "../../services/config";
+import { isImageSettingsValid, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE } from "../../services/config";
 import { ImageTestResultModal } from "./ImageTestResultModal";
 
 interface ModelServiceSettingsPanelProps {
@@ -47,8 +47,8 @@ export function ModelServiceSettingsPanel({
     imageApiUrl: draft.imageApiUrl,
     imageApiKey: draft.imageApiKey,
     imageModel: draft.imageModel,
-    imageDefaultSize: draft.imageDefaultSize,
-    imageCount: draft.imageCount,
+    imageDefaultSize: DEFAULT_IMAGE_SIZE,
+    imageCount: DEFAULT_IMAGE_COUNT,
   };
 
   useEffect(() => {
@@ -295,43 +295,6 @@ export function ModelServiceSettingsPanel({
             className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
           />
         </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block space-y-2">
-            <span className="text-sm text-text-muted">
-              {i18n.settings.imageDefaultSize}
-            </span>
-            <input
-              type="text"
-              value={draft.imageDefaultSize}
-              onChange={(event) =>
-                onDraftChange((current) => ({
-                  ...current,
-                  imageDefaultSize: event.target.value,
-                }))
-              }
-              placeholder="1024x1024"
-              className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
-            />
-          </label>
-
-          <label className="block space-y-2">
-            <span className="text-sm text-text-muted">{i18n.settings.imageCount}</span>
-            <input
-              type="number"
-              min={1}
-              value={draft.imageCount}
-              onChange={(event) => {
-                const next = Number.parseInt(event.target.value, 10);
-                onDraftChange((current) => ({
-                  ...current,
-                  imageCount: Number.isFinite(next) && next >= 1 ? next : 1,
-                }));
-              }}
-              className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
-            />
-          </label>
-        </div>
 
         <div className="space-y-2">
           <button

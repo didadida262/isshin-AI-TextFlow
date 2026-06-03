@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -46,15 +46,15 @@ export function ImageTestResultModal({
   const [error, setError] = useState("");
   const requestIdRef = useRef(0);
 
-  useEffect(() => {
-    if (!open || !settings) return;
+  const runTest = useCallback(() => {
+    if (!settings) return;
 
     const requestId = ++requestIdRef.current;
     setPhase("generating");
     setImageB64("");
     setError("");
 
-    void testImageConnection(settings)
+    void testImageConnection(settings, IMAGE_TEST_PROMPT)
       .then((b64) => {
         if (requestId !== requestIdRef.current) return;
         setImageB64(b64);
@@ -71,13 +71,16 @@ export function ImageTestResultModal({
         );
         setPhase("error");
       });
-  }, [errors.imageConfigRequired, open, settings]);
+  }, [errors.imageConfigRequired, settings]);
+
+  useEffect(() => {
+    if (!open || !settings) return;
+    runTest();
+  }, [open, runTest, settings]);
 
   const generating = phase === "generating";
-  const canClose = !generating;
 
   const handleClose = () => {
-    if (!canClose) return;
     requestIdRef.current += 1;
     onClose();
   };
@@ -115,8 +118,7 @@ export function ImageTestResultModal({
                 <button
                   type="button"
                   onClick={handleClose}
-                  disabled={!canClose}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white disabled:opacity-40"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white"
                 >
                   <FontAwesomeIcon icon={faXmark} />
                 </button>
@@ -124,15 +126,6 @@ export function ImageTestResultModal({
 
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
                 <div className="space-y-4">
-                  <label className="block space-y-1.5">
-                    <span className="text-xs text-text-muted">
-                      {i18n.settings.imageTestPromptLabel}
-                    </span>
-                    <p className="rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm leading-relaxed text-white">
-                      {IMAGE_TEST_PROMPT}
-                    </p>
-                  </label>
-
                   {generating ? (
                     <div
                       className="flex min-h-[240px] items-center justify-center rounded-lg border border-white/10 bg-black/30 p-6"
@@ -145,10 +138,6 @@ export function ImageTestResultModal({
 
                   {phase === "success" ? (
                     <>
-                      <p className="flex items-center gap-2 text-sm text-accent">
-                        <FontAwesomeIcon icon={faCircleCheck} />
-                        {i18n.settings.connectionOk}
-                      </p>
                       <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-white/10 bg-black/30 p-3">
                         <img
                           src={toImageSrc(imageB64)}
@@ -156,6 +145,10 @@ export function ImageTestResultModal({
                           className="max-h-[min(50vh,420px)] w-auto max-w-full rounded-md object-contain"
                         />
                       </div>
+                      <p className="flex items-center justify-center gap-2 text-sm text-accent">
+                        <FontAwesomeIcon icon={faCircleCheck} />
+                        {i18n.settings.connectionOk}
+                      </p>
                     </>
                   ) : null}
 
@@ -166,17 +159,6 @@ export function ImageTestResultModal({
                     </p>
                   ) : null}
                 </div>
-              </div>
-
-              <div className="flex shrink-0 justify-end border-t border-white/10 px-5 py-3.5">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  disabled={!canClose}
-                  className="rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {generateLabels.cancel}
-                </button>
               </div>
             </motion.div>
           </motion.div>

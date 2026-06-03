@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faEye,
-  faEyeSlash,
-  faVideo,
-} from "@fortawesome/free-solid-svg-icons";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import AppLogo from "../assets/AppLogo";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import { login } from "../services/auth";
 import type { AuthUser } from "../types";
@@ -51,9 +48,7 @@ export function LoginView({ onSuccess }: LoginViewProps) {
     <div className="flex h-screen min-h-0 items-center justify-center bg-black px-6">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#121212] p-8 shadow-2xl">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-surface">
-            <FontAwesomeIcon icon={faVideo} className="text-2xl text-accent" />
-          </div>
+          <AppLogo className="mb-4 h-14 w-14 rounded-2xl" />
           <h1 className="text-xl font-semibold text-white">{t.title}</h1>
           <p className="mt-2 text-sm text-text-muted">{t.subtitle}</p>
         </div>

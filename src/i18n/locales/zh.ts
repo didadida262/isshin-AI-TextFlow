@@ -3,6 +3,8 @@ export type TranslationSchema = {
     session: string;
     creation: string;
     settings: string;
+    collapseSidebar: string;
+    expandSidebar: string;
   };
   language: {
     label: string;
@@ -336,6 +338,8 @@ export const zh: TranslationSchema = {
     session: "会话",
     creation: "项目",
     settings: "设置",
+    collapseSidebar: "收起侧边栏",
+    expandSidebar: "展开侧边栏",
   },
   language: {
     label: "语言",

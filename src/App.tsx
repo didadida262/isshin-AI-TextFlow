@@ -47,6 +47,7 @@ function MainApp({
   const [activeNav, setActiveNav] = useState<AppNav>("creation");
   const [navDirection, setNavDirection] = useState(0);
   const [enableNavAnimation, setEnableNavAnimation] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleNavChange = useCallback((nav: AppNav) => {
     if (nav === activeNav) return;
@@ -97,6 +98,8 @@ function MainApp({
       <Sidebar
         user={user}
         activeNav={activeNav}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((prev) => !prev)}
         onNavChange={handleNavChange}
         onOpenSettings={() => {
           setConfigError(null);
@@ -148,6 +151,7 @@ function MainApp({
                 config={config}
                 selectedModel={selectedModel}
                 onConfigError={handleCreationConfigError}
+                onProjectDetailChange={setSidebarCollapsed}
               />
             )}
           </motion.div>

@@ -23,6 +23,7 @@ interface CreationViewProps {
   config: AppConfig;
   selectedModel: string;
   onConfigError: (message: string | null) => void;
+  onProjectDetailChange?: (inDetail: boolean) => void;
 }
 
 function formatProjectDate(timestamp: number): string {
@@ -37,6 +38,7 @@ export function CreationView({
   config,
   selectedModel,
   onConfigError,
+  onProjectDetailChange,
 }: CreationViewProps) {
   const i18n = useTranslationMessages();
   const [modalOpen, setModalOpen] = useState(false);
@@ -94,10 +96,12 @@ export function CreationView({
 
   const openProject = (project: CreationProject) => {
     setActiveProjectId(project.id);
+    onProjectDetailChange?.(true);
   };
 
   const backToList = () => {
     setActiveProjectId(null);
+    onProjectDetailChange?.(false);
   };
 
   if (activeProject) {

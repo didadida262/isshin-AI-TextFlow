@@ -5,6 +5,8 @@ export const en: TranslationSchema = {
     session: "Chat",
     creation: "Projects",
     settings: "Settings",
+    collapseSidebar: "Collapse sidebar",
+    expandSidebar: "Expand sidebar",
   },
   language: {
     label: "Language",

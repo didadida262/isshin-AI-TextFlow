@@ -81,9 +81,7 @@ export function isImageSettingsValid(
   return Boolean(
     settings.imageApiUrl.trim() &&
       settings.imageApiKey.trim() &&
-      settings.imageModel.trim() &&
-      settings.imageDefaultSize.trim() &&
-      settings.imageCount >= 1,
+      settings.imageModel.trim(),
   );
 }
 

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
+  DEFAULT_IMAGE_COUNT,
   DEFAULT_IMAGE_SIZE,
   isImageSettingsValid,
   loadConfig,
@@ -52,19 +53,25 @@ export const IMAGE_TEST_PROMPT = "一只可爱的卡通熊猫在吃竹子，3D�
 
 export async function testImageConnection(
   settings: ImageGenerationSettings,
+  prompt: string = IMAGE_TEST_PROMPT,
 ): Promise<string> {
   if (!isImageSettingsValid(settings)) {
     throw new Error("IMAGE_CONFIG_REQUIRED");
   }
 
+  const trimmedPrompt = prompt.trim();
+  if (!trimmedPrompt) {
+    throw new Error("IMAGE_TEST_PROMPT_REQUIRED");
+  }
+
   const result = await invoke<{ b64Json: string }>("generate_image", {
     input: {
-      prompt: IMAGE_TEST_PROMPT,
-      size: settings.imageDefaultSize.trim() || DEFAULT_IMAGE_SIZE,
+      prompt: trimmedPrompt,
+      size: DEFAULT_IMAGE_SIZE,
       apiUrl: settings.imageApiUrl.trim(),
       apiKey: settings.imageApiKey.trim(),
       model: settings.imageModel.trim(),
-      n: 1,
+      n: DEFAULT_IMAGE_COUNT,
     },
   });
 

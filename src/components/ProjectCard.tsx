@@ -26,7 +26,7 @@ export function ProjectCard({
         <button
           type="button"
           onClick={onOpen}
-          className="relative flex h-full w-full flex-col overflow-hidden rounded-[calc(1rem-1px)] bg-[#0c0c0c] p-5 pr-11 text-left transition hover:bg-[#0e0e0e]"
+          className="relative flex h-full w-full flex-col overflow-hidden rounded-[calc(1rem-1px)] bg-[#0c0c0c] p-4 text-left transition hover:bg-[#0e0e0e]"
         >
           <div
             className="pointer-events-none absolute inset-0 rounded-[calc(1rem-1px)] bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-accent/[0.06]"
@@ -45,21 +45,21 @@ export function ProjectCard({
             aria-hidden
           />
 
-          <div className="relative mb-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] text-accent shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-              <FontAwesomeIcon icon={faClapperboard} className="text-sm" />
+          <div className="relative flex items-start gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] text-accent shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <FontAwesomeIcon icon={faClapperboard} className="text-xs" />
             </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-sm font-semibold tracking-tight text-white transition group-hover:text-accent">
+                {project.name}
+              </h3>
+              <p className="mt-1 line-clamp-2 text-xs leading-snug text-text-muted">
+                {project.intro || project.novelType}
+              </p>
+            </div>
           </div>
 
-          <h3 className="relative truncate text-base font-semibold tracking-tight text-white transition group-hover:text-accent">
-            {project.name}
-          </h3>
-
-          <p className="relative mt-2 line-clamp-2 min-h-[2.5rem] text-xs leading-relaxed text-text-muted">
-            {project.intro || project.novelType}
-          </p>
-
-          <div className="relative mt-5 flex flex-wrap gap-2">
+          <div className="relative mt-3 flex flex-wrap gap-1.5">
             <span className="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-0.5 text-[11px] font-medium text-cyan-200/90">
               {project.aspectRatio}
             </span>
@@ -70,7 +70,7 @@ export function ProjectCard({
             ) : null}
           </div>
 
-          <p className="relative mt-4 text-[11px] tabular-nums text-text-dim">
+          <p className="relative mt-2 text-[11px] tabular-nums text-text-dim">
             {formatDate(project.createdAt)}
           </p>
         </button>
@@ -83,7 +83,7 @@ export function ProjectCard({
           }}
           title={editLabel}
           aria-label={editLabel}
-          className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-black/60 text-text-muted backdrop-blur-sm transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent"
+          className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-black/60 text-text-muted opacity-0 backdrop-blur-sm transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 pointer-events-none"
         >
           <FontAwesomeIcon icon={faPenToSquare} className="text-[10px]" />
         </button>
