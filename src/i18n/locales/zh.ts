@@ -143,6 +143,13 @@ export type TranslationSchema = {
     newProject: string;
     empty: string;
     editProject: string;
+    deleteProject: string;
+    openProjectMenu: string;
+    deleteConfirmTitle: string;
+    deleteConfirm: (name: string) => string;
+    deleteConfirmHint: string;
+    cancel: string;
+    deleting: string;
     backToList: string;
     backShort: string;
     workflow: {
@@ -485,7 +492,15 @@ export const zh: TranslationSchema = {
     title: "项目列表",
     newProject: "新建项目",
     empty: "暂无项目，点击右上角创建第一个视频创作",
-    editProject: "编辑项目",
+    editProject: "编辑",
+    deleteProject: "删除",
+    openProjectMenu: "项目操作",
+    deleteConfirmTitle: "删除项目",
+    deleteConfirm: (name: string) => `确定删除「${name}」吗？`,
+    deleteConfirmHint:
+      "将删除该项目下的原文、事件、剧本、资产等全部数据，且不可恢复。",
+    cancel: "取消",
+    deleting: "删除中…",
     backToList: "返回项目列表",
     backShort: "返回",
     workflow: {

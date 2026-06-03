@@ -79,6 +79,12 @@ pub fn llm_log_inbound(log: LlmInboundLog) -> Result<(), String> {
 }
 
 fn parse_api_error(text: &str, status: reqwest::StatusCode) -> String {
+    if status == reqwest::StatusCode::PAYLOAD_TOO_LARGE
+        || text.contains("413 Request Entity Too Large")
+    {
+        return "请求体过大（413）。章节可能未正确切分，请重新导入原文后再试。".to_string();
+    }
+
     if let Ok(json) = serde_json::from_str::<Value>(text) {
         let message = json
             .pointer("/error/message")

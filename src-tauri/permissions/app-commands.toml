@@ -19,6 +19,11 @@ description = "Allows updating projects"
 commands.allow = ["update_project"]
 
 [[permission]]
+identifier = "allow-delete-project"
+description = "Allows deleting projects"
+commands.allow = ["delete_project"]
+
+[[permission]]
 identifier = "allow-assistant-context"
 description = "Allows session assistant to query project database context"
 commands.allow = ["query_assistant_context"]

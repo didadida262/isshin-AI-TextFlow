@@ -9,6 +9,7 @@
     "allow-create-project",
     "allow-list-projects",
     "allow-update-project",
+    "allow-delete-project",
     "allow-assistant-context",
     "allow-list-art-skills",
     "allow-list-story-skills",

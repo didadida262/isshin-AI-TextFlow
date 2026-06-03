@@ -97,13 +97,20 @@ export function ProjectDetailView({
   );
 
   const loadNodeDetail = useCallback(
-    async (nodeId: ProjectWorkflowStepId) => {
-      setLoadingDetail(true);
+    async (
+      nodeId: ProjectWorkflowStepId,
+      options?: { silent?: boolean },
+    ) => {
+      if (!options?.silent) {
+        setLoadingDetail(true);
+      }
       try {
         const detail = await getProjectWorkflowNodeDetail(project.id, nodeId);
         setNodeDetail(detail);
       } finally {
-        setLoadingDetail(false);
+        if (!options?.silent) {
+          setLoadingDetail(false);
+        }
       }
     },
     [project.id],
@@ -112,7 +119,7 @@ export function ProjectDetailView({
   const refreshProjectWorkflow = useCallback(async () => {
     const nodes = await listProjectWorkflowNodes(project.id);
     setWorkflowNodesRaw(nodes);
-    await loadNodeDetail(selectedStep);
+    await loadNodeDetail(selectedStep, { silent: true });
   }, [project.id, selectedStep, loadNodeDetail]);
 
   useEffect(() => {
@@ -210,7 +217,7 @@ export function ProjectDetailView({
     if (selectedStep === "aiScript" && aiScriptDetail) {
       return (
         <AiScriptStep
-          key={`${project.id}-ai-script-${aiScriptDetail.scripts.length}`}
+          key={`${project.id}-ai-script`}
           project={project}
           title={activeLabel}
           config={config}
@@ -220,7 +227,7 @@ export function ProjectDetailView({
           scripts={aiScriptDetail.scripts}
           onConfigError={onConfigError}
           onWorkflowChange={() => void refreshProjectWorkflow()}
-          onScriptsUpdated={() => void loadNodeDetail("aiScript")}
+          onScriptsUpdated={() => void loadNodeDetail("aiScript", { silent: true })}
         />
       );
     }

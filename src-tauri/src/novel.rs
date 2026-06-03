@@ -50,16 +50,38 @@ pub(crate) struct ParsedChapter {
     content: String,
 }
 
+static CHAPTER_UNIT: &str = r"[章回节话]";
+
 static CHAPTER_HEADING: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"第\s*[0-9一二三四五六七八九十百千万]+\s*章[^\n\r]*").expect("chapter regex")
+    Regex::new(&format!(
+        r"(?m)^第\s*[0-9一二三四五六七八九十百千万零]+\s*{CHAPTER_UNIT}[^\n\r]*"
+    ))
+    .expect("chapter regex")
 });
 
 static REEL_HEADING: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"第\s*[0-9一二三四五六七八九十百千万]+\s*[卷部篇][^\n\r]*").expect("reel regex")
+    Regex::new(r"第\s*[0-9一二三四五六七八九十百千万零]+\s*[卷部篇][^\n\r]*").expect("reel regex")
 });
 
 static CHAPTER_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^第\s*[0-9一二三四五六七八九十百千万]+\s*章\s*").expect("chapter prefix regex")
+    Regex::new(&format!(
+        r"^第\s*[0-9一二三四五六七八九十百千万零]+\s*{CHAPTER_UNIT}\s*"
+    ))
+    .expect("chapter prefix regex")
+});
+
+static CHAPTER_HEADER_LINE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^第\s*[0-9一二三四五六七八九十百千万零]+\s*{CHAPTER_UNIT}\s*$"
+    ))
+    .expect("chapter header line regex")
+});
+
+static CHAPTER_NUM_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"第\s*([0-9一二三四五六七八九十百千万零]+)\s*{CHAPTER_UNIT}"
+    ))
+    .expect("chapter num token regex")
 });
 
 pub fn init_schema(conn: &Connection) -> Result<(), String> {
@@ -104,6 +126,20 @@ pub fn init_schema(conn: &Connection) -> Result<(), String> {
     Ok(())
 }
 
+pub fn clear_project_novel_data(conn: &Connection, project_id: &str) -> Result<(), String> {
+    conn.execute(
+        "DELETE FROM novel_chapters WHERE project_id = ?1",
+        params![project_id],
+    )
+    .map_err(|e| e.to_string())?;
+    conn.execute(
+        "DELETE FROM novel_source WHERE project_id = ?1",
+        params![project_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 fn parse_chapter_title(heading: &str) -> String {
     let trimmed = heading.trim();
     CHAPTER_PREFIX
@@ -111,6 +147,67 @@ fn parse_chapter_title(heading: &str) -> String {
         .trim()
         .to_string()
         .if_empty_then(|| trimmed.to_string())
+}
+
+fn chapter_num_token(heading: &str) -> Option<String> {
+    CHAPTER_NUM_TOKEN
+        .captures(heading.trim())
+        .and_then(|caps| caps.get(1))
+        .map(|m| m.as_str().replace(' ', ""))
+}
+
+fn dedupe_chapter_boundaries<'a>(matches: Vec<regex::Match<'a>>) -> Vec<regex::Match<'a>> {
+    let mut seen_tokens = std::collections::HashSet::new();
+    let mut deduped = Vec::with_capacity(matches.len());
+
+    for mat in matches {
+        match chapter_num_token(mat.as_str()) {
+            Some(token) if seen_tokens.contains(&token) => continue,
+            Some(token) => {
+                seen_tokens.insert(token);
+                deduped.push(mat);
+            }
+            None => deduped.push(mat),
+        }
+    }
+
+    deduped
+}
+
+fn strip_leading_duplicate_headers(content: &str, title: &str) -> String {
+    let title = title.trim();
+    let mut remaining = content.trim_start();
+
+    loop {
+        if remaining.is_empty() {
+            return String::new();
+        }
+
+        let Some((line, rest)) = remaining.split_once('\n') else {
+            let trimmed = remaining.trim();
+            if trimmed.is_empty() {
+                return String::new();
+            }
+            if CHAPTER_HEADER_LINE.is_match(trimmed) {
+                return String::new();
+            }
+            if !title.is_empty() && trimmed == title {
+                return String::new();
+            }
+            return remaining.to_string();
+        };
+
+        let trimmed = line.trim();
+        if trimmed.is_empty()
+            || CHAPTER_HEADER_LINE.is_match(trimmed)
+            || (!title.is_empty() && trimmed == title)
+        {
+            remaining = rest.trim_start();
+            continue;
+        }
+
+        return format!("{trimmed}\n{rest}").trim_end().to_string();
+    }
 }
 
 trait IfEmptyThen {
@@ -143,8 +240,8 @@ pub fn split_novel_chapters(text: &str) -> Vec<ParsedChapter> {
         return vec![];
     }
 
-    let matches: Vec<_> = CHAPTER_HEADING.find_iter(&normalized).collect();
-    if matches.is_empty() {
+    let raw_matches: Vec<_> = CHAPTER_HEADING.find_iter(&normalized).collect();
+    if raw_matches.is_empty() {
         return vec![ParsedChapter {
             index: 1,
             reel: detect_reel(&normalized, 0),
@@ -153,6 +250,7 @@ pub fn split_novel_chapters(text: &str) -> Vec<ParsedChapter> {
         }];
     }
 
+    let matches = dedupe_chapter_boundaries(raw_matches);
     let mut chapters = Vec::with_capacity(matches.len());
     for (i, mat) in matches.iter().enumerate() {
         let start = mat.start();
@@ -162,22 +260,24 @@ pub fn split_novel_chapters(text: &str) -> Vec<ParsedChapter> {
             .get(i + 1)
             .map(|next| next.start())
             .unwrap_or(normalized.len());
-        let content = normalized[body_start..body_end].trim();
+        let raw_content = normalized[body_start..body_end].trim();
         let title = parse_chapter_title(heading);
+        let resolved_title = if title.is_empty() {
+            heading.trim().to_string()
+        } else {
+            title
+        };
+        let content = if raw_content.is_empty() {
+            resolved_title.clone()
+        } else {
+            strip_leading_duplicate_headers(raw_content, &resolved_title)
+        };
 
         chapters.push(ParsedChapter {
             index: (i + 1) as i32,
             reel: detect_reel(&normalized, start),
-            title: if title.is_empty() {
-                heading.trim().to_string()
-            } else {
-                title
-            },
-            content: if content.is_empty() {
-                heading.trim().to_string()
-            } else {
-                content.to_string()
-            },
+            title: resolved_title,
+            content,
         });
     }
 
@@ -392,5 +492,29 @@ mod tests {
         assert_eq!(chapters[0].index, 1);
         assert_eq!(chapters[0].title, "开端");
         assert_eq!(chapters[1].index, 2);
+    }
+
+    #[test]
+    fn splits_hui_with_duplicate_headers() {
+        let text = "第一回王教头私走延安府九纹龙大闹史家村\n第一回\n王教头私走延安府九纹龙大闹史家村\n诗曰：\n正文内容\n第二回史大郎私走华州府\n第二回\n史大郎私走华州府\n却说\n第二回正文";
+        let chapters = split_novel_chapters(text);
+        assert_eq!(chapters.len(), 2);
+        assert_eq!(
+            chapters[0].title,
+            "王教头私走延安府九纹龙大闹史家村"
+        );
+        assert!(chapters[0].content.starts_with("诗曰："));
+        assert!(!chapters[0].content.contains("第一回\n"));
+        assert_eq!(chapters[1].title, "史大郎私走华州府");
+        assert!(chapters[1].content.contains("第二回正文"));
+    }
+
+    #[test]
+    fn dedupes_repeated_hui_marker_within_same_chapter() {
+        let text = "第一回标题合并行\n第一回\n标题合并行\n正文";
+        let chapters = split_novel_chapters(text);
+        assert_eq!(chapters.len(), 1);
+        assert_eq!(chapters[0].title, "标题合并行");
+        assert_eq!(chapters[0].content, "正文");
     }
 }

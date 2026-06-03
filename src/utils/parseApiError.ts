@@ -7,6 +7,10 @@ export function parseApiErrorMessage(
     return status ? `请求失败 (HTTP ${status})` : "请求失败";
   }
 
+  if (status === 413 || /413\s*Request Entity Too Large/i.test(trimmed)) {
+    return "请求体过大（413）。章节可能未正确切分，请重新导入原文后再试。";
+  }
+
   try {
     const json = JSON.parse(trimmed) as {
       error?: { message?: string; type?: string };

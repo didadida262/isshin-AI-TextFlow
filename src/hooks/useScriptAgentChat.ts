@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { streamCoordinatorChat } from "../agents/workflowAgent/coordinatorChatAgent";
 import { runScriptPipeline, regenerateFailedEpisodes } from "../agents/workflowAgent/orchestrator";
-import { SCRIPT_STATE_ERROR } from "../services/script";
+import { SCRIPT_STATE_ERROR, SCRIPT_STATE_SUCCESS } from "../services/script";
 import type { ScriptGenerationProgress } from "../agents/workflowAgent/types";
 import type { ScriptChatMessage } from "../agents/workflowAgent/chatTypes";
 import {
@@ -14,6 +14,80 @@ import type { AppConfig, CreationProject } from "../types";
 
 function createId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+const scriptChatCache = new Map<string, ScriptChatMessage[]>();
+
+function hasGeneratedScriptContent(
+  workData: ScriptWorkData,
+  scripts: ScriptRecord[],
+): boolean {
+  return (
+    scripts.length > 0 ||
+    workData.storySkeleton.trim().length > 0 ||
+    workData.adaptationStrategy.trim().length > 0
+  );
+}
+
+function buildWelcomeMessage(
+  labels: Pick<
+    UseScriptAgentChatOptions["labels"],
+    | "welcome"
+    | "welcomeHint"
+    | "suggestGenerate"
+    | "suggestGeneratePrompt"
+    | "agentCoordinator"
+  >,
+  withSuggestion: boolean,
+): ScriptChatMessage {
+  return {
+    id: createId(),
+    role: "assistant",
+    name: labels.agentCoordinator,
+    content: `${labels.welcome}\n\n${labels.welcomeHint}`,
+    status: "complete",
+    suggestions: withSuggestion
+      ? [
+          {
+            title: labels.suggestGenerate,
+            prompt: labels.suggestGeneratePrompt,
+          },
+        ]
+      : undefined,
+  };
+}
+
+function buildInitialMessages(
+  projectId: string,
+  workData: ScriptWorkData,
+  scripts: ScriptRecord[],
+  labels: UseScriptAgentChatOptions["labels"],
+): ScriptChatMessage[] {
+  const cached = scriptChatCache.get(projectId);
+  if (cached && cached.length > 0) {
+    return cached;
+  }
+
+  if (!hasGeneratedScriptContent(workData, scripts)) {
+    return [buildWelcomeMessage(labels, true)];
+  }
+
+  return [
+    buildWelcomeMessage(labels, false),
+    {
+      id: createId(),
+      role: "user",
+      content: labels.suggestGeneratePrompt,
+      status: "complete",
+    },
+    {
+      id: createId(),
+      role: "assistant",
+      name: labels.agentWriter,
+      content: labels.pipelineComplete,
+      status: "complete",
+    },
+  ];
 }
 
 function progressToAgentMessage(
@@ -78,53 +152,85 @@ export function useScriptAgentChat({
   onConfigError,
   onComplete,
 }: UseScriptAgentChatOptions) {
-  const [messages, setMessages] = useState<ScriptChatMessage[]>([]);
+  const [messages, setMessages] = useState<ScriptChatMessage[]>(() =>
+    buildInitialMessages(project.id, workData, scripts, labels),
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const progressMsgIdRef = useRef<string | null>(null);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-    setMessages([
-      {
-        id: createId(),
-        role: "assistant",
-        name: labels.agentCoordinator,
-        content: `${labels.welcome}\n\n${labels.welcomeHint}`,
-        status: "complete",
-        suggestions: [
-          {
-            title: labels.suggestGenerate,
-            prompt: labels.suggestGeneratePrompt,
-          },
-        ],
-      },
-    ]);
+    scriptChatCache.set(project.id, messages);
+  }, [messages, project.id]);
+
+  const updateMessages = useCallback(
+    (updater: (prev: ScriptChatMessage[]) => ScriptChatMessage[]) => {
+      setMessages((prev) => {
+        const next = updater(prev);
+        scriptChatCache.set(project.id, next);
+        return next;
+      });
+    },
+    [project.id],
+  );
+
+  useEffect(() => {
+    if (isGenerating) return;
+
+    const expectedCount = chapters.length;
+    if (expectedCount <= 0) return;
+
+    const successCount = scripts.filter(
+      (item) => item.scriptState === SCRIPT_STATE_SUCCESS,
+    ).length;
+    if (successCount < expectedCount) return;
+
+    updateMessages((prev) => {
+      let changed = false;
+      const next = prev.map((message) => {
+        if (
+          message.role === "assistant" &&
+          message.name === labels.agentWriter &&
+          message.status === "streaming"
+        ) {
+          changed = true;
+          return {
+            ...message,
+            content: labels.pipelineComplete,
+            status: "complete" as const,
+          };
+        }
+        return message;
+      });
+      return changed ? next : prev;
+    });
   }, [
-    labels.agentCoordinator,
-    labels.suggestGenerate,
-    labels.suggestGeneratePrompt,
-    labels.welcome,
-    labels.welcomeHint,
+    chapters.length,
+    isGenerating,
+    labels.agentWriter,
+    labels.pipelineComplete,
+    scripts,
+    updateMessages,
   ]);
 
   const patchMessage = useCallback(
     (id: string, patch: Partial<ScriptChatMessage>) => {
-      setMessages((prev) =>
+      updateMessages((prev) =>
         prev.map((message) =>
           message.id === id ? { ...message, ...patch } : message,
         ),
       );
     },
-    [],
+    [updateMessages],
   );
 
-  const appendMessage = useCallback((message: ScriptChatMessage) => {
-    setMessages((prev) => [...prev, message]);
-    return message.id;
-  }, []);
+  const appendMessage = useCallback(
+    (message: ScriptChatMessage) => {
+      updateMessages((prev) => [...prev, message]);
+      return message.id;
+    },
+    [updateMessages],
+  );
 
   const shouldStartPipeline = useCallback((text: string) => {
     const normalized = text.trim();

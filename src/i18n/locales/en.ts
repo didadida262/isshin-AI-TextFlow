@@ -151,7 +151,15 @@ export const en: TranslationSchema = {
     title: "Project List",
     newProject: "New Project",
     empty: "No projects yet. Click the button above to create your first one",
-    editProject: "Edit project",
+    editProject: "Edit",
+    deleteProject: "Delete",
+    openProjectMenu: "Project actions",
+    deleteConfirmTitle: "Delete project",
+    deleteConfirm: (name: string) => `Delete "${name}"?`,
+    deleteConfirmHint:
+      "This permanently removes all data for this project, including source text, events, scripts, and assets.",
+    cancel: "Cancel",
+    deleting: "Deleting…",
     backToList: "Back to project list",
     backShort: "Back",
     workflow: {

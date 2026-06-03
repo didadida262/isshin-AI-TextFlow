@@ -1,25 +1,56 @@
+import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faClapperboard,
-  faPenToSquare,
+  faEllipsisVertical,
 } from "@fortawesome/free-solid-svg-icons";
 import type { CreationProject } from "../types";
 
 interface ProjectCardProps {
   project: CreationProject;
+  openMenuLabel: string;
   editLabel: string;
+  deleteLabel: string;
   onOpen: () => void;
   onEdit: () => void;
+  onDelete: () => void;
   formatDate: (timestamp: number) => string;
 }
 
 export function ProjectCard({
   project,
+  openMenuLabel,
   editLabel,
+  deleteLabel,
   onOpen,
   onEdit,
+  onDelete,
   formatDate,
 }: ProjectCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
+
   return (
     <li className="group list-none">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-400/35 via-accent/25 to-emerald-500/10 p-px shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition duration-300 group-hover:-translate-y-1 group-hover:from-cyan-400/50 group-hover:via-accent/40 group-hover:shadow-[0_12px_36px_rgba(0,255,102,0.14)]">
@@ -76,18 +107,60 @@ export function ProjectCard({
           </div>
         </button>
 
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onEdit();
-          }}
-          title={editLabel}
-          aria-label={editLabel}
-          className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-black/60 text-text-muted opacity-0 backdrop-blur-sm transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 pointer-events-none"
+        <div
+          ref={menuRef}
+          className={`absolute right-3 top-3 z-10 transition ${
+            menuOpen
+              ? "pointer-events-auto opacity-100"
+              : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100"
+          }`}
         >
-          <FontAwesomeIcon icon={faPenToSquare} className="text-[10px]" />
-        </button>
+          <button
+            type="button"
+            aria-label={openMenuLabel}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            onClick={(event) => {
+              event.stopPropagation();
+              setMenuOpen((open) => !open);
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-black/60 text-text-muted backdrop-blur-sm transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent"
+          >
+            <FontAwesomeIcon icon={faEllipsisVertical} className="text-xs" />
+          </button>
+
+          {menuOpen ? (
+            <div
+              role="menu"
+              className="absolute right-0 top-full mt-1 min-w-[96px] overflow-hidden rounded-lg border border-white/10 bg-surface py-1 shadow-xl"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMenuOpen(false);
+                  onEdit();
+                }}
+                className="block w-full px-3 py-1.5 text-left text-xs text-text-muted transition hover:bg-white/5 hover:text-accent"
+              >
+                {editLabel}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMenuOpen(false);
+                  onDelete();
+                }}
+                className="block w-full px-3 py-1.5 text-left text-xs text-red-400 transition hover:bg-white/5 hover:text-red-300"
+              >
+                {deleteLabel}
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </li>
   );

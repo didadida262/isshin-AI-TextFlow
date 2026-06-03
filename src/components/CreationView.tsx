@@ -7,6 +7,7 @@ import {
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   createProject,
+  deleteProject,
   draftToProjectInput,
   loadProjects,
   updateProject,
@@ -15,6 +16,7 @@ import {
   NewProjectModal,
   type NewProjectDraft,
 } from "./NewProjectModal";
+import { DeleteProjectConfirmModal } from "./DeleteProjectConfirmModal";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectDetailView } from "./ProjectDetailView";
 import type { AppConfig, CreationProject } from "../types";
@@ -49,6 +51,10 @@ export function CreationView({
   const [projects, setProjects] = useState<CreationProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [deletingProject, setDeletingProject] = useState<CreationProject | null>(
+    null,
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const refreshProjects = useCallback(async () => {
     setLoading(true);
@@ -74,6 +80,37 @@ export function CreationView({
     setModalMode("edit");
     setEditingProject(project);
     setModalOpen(true);
+  };
+
+  const openDeleteModal = (project: CreationProject) => {
+    setDeletingProject(project);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setDeletingProject(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingProject) return;
+
+    setIsDeleting(true);
+    onConfigError(null);
+    const result = await deleteProject(deletingProject.id);
+    setIsDeleting(false);
+
+    if (!result.ok) {
+      onConfigError(result.message);
+      return;
+    }
+
+    if (activeProjectId === deletingProject.id) {
+      setActiveProjectId(null);
+      onProjectDetailChange?.(false);
+    }
+
+    setDeletingProject(null);
+    await refreshProjects();
   };
 
   const closeModal = () => {
@@ -157,10 +194,13 @@ export function CreationView({
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  openMenuLabel={i18n.creation.openProjectMenu}
                   editLabel={i18n.creation.editProject}
+                  deleteLabel={i18n.creation.deleteProject}
                   formatDate={formatProjectDate}
                   onOpen={() => openProject(project)}
                   onEdit={() => openEditModal(project)}
+                  onDelete={() => openDeleteModal(project)}
                 />
               ))}
             </ul>
@@ -175,6 +215,13 @@ export function CreationView({
         models={config.models}
         onClose={closeModal}
         onConfirm={handleConfirm}
+      />
+
+      <DeleteProjectConfirmModal
+        project={deletingProject}
+        deleting={isDeleting}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteConfirm}
       />
     </>
   );

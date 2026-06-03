@@ -339,6 +339,12 @@
           "markdownDescription": "Allows database overview, export, import, and clear operations"
         },
         {
+          "description": "Allows deleting projects",
+          "type": "string",
+          "const": "allow-delete-project",
+          "markdownDescription": "Allows deleting projects"
+        },
+        {
           "description": "Allows loading visual manual detail",
           "type": "string",
           "const": "allow-get-art-skill-detail",

@@ -1,4 +1,7 @@
+use crate::assets;
 use crate::db::init_db;
+use crate::novel;
+use crate::script;
 use rusqlite::{params, Connection, Row};
 use serde::{Deserialize, Serialize};
 
@@ -273,4 +276,34 @@ pub fn update_project(input: UpdateProjectInput) -> Result<Project, String> {
     }
 
     get_project_by_id(&conn, &input.id)
+}
+
+#[tauri::command]
+pub fn delete_project(project_id: String) -> Result<(), String> {
+    let id = project_id.trim();
+    if id.is_empty() {
+        return Err("项目 ID 无效".to_string());
+    }
+
+    let conn = init_db()?;
+    get_project_by_id(&conn, id)?;
+
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| e.to_string())?;
+
+    assets::clear_project_assets(&tx, id)?;
+    script::clear_project_script_data(&tx, id)?;
+    novel::clear_project_novel_data(&tx, id)?;
+
+    let affected = tx
+        .execute("DELETE FROM projects WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+
+    if affected == 0 {
+        return Err(format!("项目不存在: {id}"));
+    }
+
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(())
 }

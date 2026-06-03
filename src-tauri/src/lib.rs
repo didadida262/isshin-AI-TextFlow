@@ -22,7 +22,7 @@ use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
 use novel::{
     get_novel_source, import_novel, list_novel_chapters, update_novel_chapter_event,
 };
-use projects::{create_project, list_projects, update_project};
+use projects::{create_project, delete_project, list_projects, update_project};
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
 use script::{
     get_script_work_data, list_scripts, set_script_work_data, upsert_script,
@@ -57,6 +57,7 @@ pub fn run() {
             create_project,
             list_projects,
             update_project,
+            delete_project,
             query_assistant_context,
             list_art_skills,
             list_story_skills,

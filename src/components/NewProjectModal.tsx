@@ -135,11 +135,6 @@ export function NewProjectModal({
     m.defaultIntro,
   ]);
 
-  const modelOptions = [
-    { value: "", label: m.selectModel },
-    ...models.map((model) => ({ value: model, label: model })),
-  ];
-
   const aspectRatioOptions = ASPECT_RATIOS.map((ratio) => ({
     value: ratio,
     label: ratio,
@@ -236,34 +231,6 @@ export function NewProjectModal({
                         }
                         placeholder={m.novelTypePlaceholder}
                         className={fieldClass}
-                      />
-                    </label>
-
-                    <label className="block space-y-2">
-                      <span className="text-sm text-text-muted">
-                        {m.imageModel}
-                      </span>
-                      <Select
-                        value={draft.imageModel}
-                        options={modelOptions}
-                        placeholder={m.selectModel}
-                        onChange={(imageModel) =>
-                          setDraft((d) => ({ ...d, imageModel }))
-                        }
-                      />
-                    </label>
-
-                    <label className="block space-y-2">
-                      <span className="text-sm text-text-muted">
-                        {m.videoModel}
-                      </span>
-                      <Select
-                        value={draft.videoModel}
-                        options={modelOptions}
-                        placeholder={m.selectModel}
-                        onChange={(videoModel) =>
-                          setDraft((d) => ({ ...d, videoModel }))
-                        }
                       />
                     </label>
 

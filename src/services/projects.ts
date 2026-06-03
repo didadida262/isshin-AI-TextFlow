@@ -139,3 +139,16 @@ export async function updateProject(
     return null;
   }
 }
+
+export async function deleteProject(
+  id: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    await invoke("delete_project", { projectId: id });
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[projects] deleteProject failed:", error);
+    return { ok: false, message };
+  }
+}
