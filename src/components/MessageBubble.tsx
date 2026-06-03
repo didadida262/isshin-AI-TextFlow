@@ -61,7 +61,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <motion.div
-      className={`flex items-start ${isUser ? "justify-end" : "justify-start"}`}
+      className={`flex w-full min-w-0 items-start ${isUser ? "justify-end" : "justify-start"}`}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={bubbleSpring}
@@ -72,10 +72,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         </div>
       )}
       <motion.div
-        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+        className={`min-w-0 rounded-2xl px-4 py-3 text-sm leading-relaxed ${
           isUser
             ? "max-w-[75%] whitespace-pre-wrap bg-surface-elevated text-white"
-            : "max-w-[min(85%,48rem)] border border-white/10 bg-surface text-white/90"
+            : "max-w-[min(85%,48rem)] overflow-hidden border border-white/10 bg-surface text-white/90"
         }`}
       >
         {isUser ? (

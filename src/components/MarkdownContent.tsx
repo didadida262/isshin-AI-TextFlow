@@ -51,8 +51,8 @@ const components: Components = {
   ),
   hr: () => <hr className="my-4 border-white/10" />,
   table: ({ children }) => (
-    <div className="mb-3 last:mb-0">
-      <table className="w-max min-w-full border-collapse text-left text-xs">
+    <div className="mb-3 max-w-full overflow-x-auto rounded-lg border border-white/10 last:mb-0">
+      <table className="w-full min-w-[28rem] border-collapse text-left text-xs">
         {children}
       </table>
     </div>
@@ -66,9 +66,13 @@ const components: Components = {
     </th>
   ),
   td: ({ children }) => (
-    <td className="border-t border-white/5 px-3 py-2">{children}</td>
+    <td className="max-w-[14rem] border-t border-white/5 px-3 py-2 align-top break-words whitespace-normal">
+      {children}
+    </td>
   ),
-  pre: ({ children }) => <div className="mb-3 last:mb-0">{children}</div>,
+  pre: ({ children }) => (
+    <div className="mb-3 max-w-full overflow-x-auto last:mb-0">{children}</div>
+  ),
   code: ({ className, children }) => {
     const match = /language-(\w+)/.exec(className ?? "");
     const text = String(children).replace(/\n$/, "");
@@ -102,7 +106,7 @@ const components: Components = {
 
 export function MarkdownContent({ content }: MarkdownContentProps) {
   return (
-    <div className="markdown-body break-words">
+    <div className="markdown-body max-w-full overflow-hidden break-words">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>

@@ -414,6 +414,7 @@ fn query_script_list(
     let (project, scope_note) = resolve_target_project(conn, user_message)?;
     let records = script_store::fetch_scripts(conn, &project.id)?;
     let scripts: Vec<AssistantScriptBrief> = records.iter().map(script_to_brief).collect();
+    let is_empty = scripts.is_empty();
 
     Ok(AssistantContextResult {
         query_kind: "script_list".to_string(),
@@ -429,7 +430,7 @@ fn query_script_list(
         scripts: Some(scripts),
         story_skeleton: None,
         adaptation_strategy: None,
-        error_hint: if scripts.is_empty() {
+        error_hint: if is_empty {
             Some("该项目尚无剧本，请先生成剧本。".to_string())
         } else {
             None

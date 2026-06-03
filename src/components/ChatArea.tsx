@@ -98,7 +98,7 @@ export function ChatArea({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 space-y-4 overflow-y-auto px-6 py-6"
+        className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-6 py-6"
       >
         {messages.length === 0 ? (
           <motion.div
