@@ -218,6 +218,9 @@ export type TranslationSchema = {
       colPrompt: string;
       colModel: string;
       colSize: string;
+      colInferenceSteps: string;
+      colDuration: string;
+      formatDuration: (ms: number) => string;
       colStatus: string;
       colActions: string;
       edit: string;
@@ -565,6 +568,10 @@ export const zh: TranslationSchema = {
       colPrompt: "提示词",
       colModel: "模型",
       colSize: "尺寸",
+      colInferenceSteps: "推理步数",
+      colDuration: "生成耗时",
+      formatDuration: (ms: number) =>
+        ms < 1000 ? `${ms} 毫秒` : `${(ms / 1000).toFixed(1)} 秒`,
       colStatus: "状态",
       colActions: "操作",
       edit: "编辑",

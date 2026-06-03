@@ -95,6 +95,20 @@ export function AssetImagePreviewModal({
                   <dd className="mt-1 text-white">{asset.model}</dd>
                 </div>
                 <div>
+                  <dt className="text-text-dim">{s.colInferenceSteps}</dt>
+                  <dd className="mt-1 text-white">
+                    {asset.numInferenceSteps ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-text-dim">{s.colDuration}</dt>
+                  <dd className="mt-1 text-white">
+                    {asset.generationDurationMs != null
+                      ? s.formatDuration(asset.generationDurationMs)
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
                   <dt className="text-text-dim">{s.colStatus}</dt>
                   <dd className="mt-1 text-accent">{s.statusSuccess}</dd>
                 </div>

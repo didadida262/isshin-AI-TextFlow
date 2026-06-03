@@ -22,6 +22,7 @@ export interface GenerateAssetFormValues {
   size: string;
   n: number;
   numInferenceSteps: number;
+  generationDurationMs: number;
 }
 
 interface GenerateAssetModalProps {
@@ -128,6 +129,7 @@ export function GenerateAssetModal({
     abortRef.current = false;
     setSubmitting(true);
     setError("");
+    const startedAt = performance.now();
     try {
       const imageB64 = await generateImageB64({
         prompt,
@@ -139,6 +141,8 @@ export function GenerateAssetModal({
       });
       if (abortRef.current || requestId !== requestIdRef.current) return;
 
+      const generationDurationMs = Math.max(0, Math.round(performance.now() - startedAt));
+
       await onSubmit(
         {
           name: name.trim(),
@@ -148,6 +152,7 @@ export function GenerateAssetModal({
           size,
           n: imageCount,
           numInferenceSteps,
+          generationDurationMs,
         },
         imageB64,
       );

@@ -16,6 +16,8 @@ export interface ProjectAssetRecord {
   errorReason: string | null;
   createdAt: number;
   updatedAt: number;
+  generationDurationMs: number | null;
+  numInferenceSteps: number | null;
 }
 
 export interface ListProjectAssetsResult {
@@ -33,6 +35,8 @@ export interface CreateProjectAssetInput {
   model: string;
   size: string;
   imageB64: string;
+  generationDurationMs?: number;
+  numInferenceSteps?: number;
 }
 
 export async function listProjectAssets(

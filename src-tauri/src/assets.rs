@@ -22,6 +22,8 @@ pub struct ProjectAssetRecord {
     pub error_reason: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,
+    pub generation_duration_ms: Option<i64>,
+    pub num_inference_steps: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -51,6 +53,8 @@ pub struct CreateProjectAssetInput {
     pub model: String,
     pub size: String,
     pub image_b64: String,
+    pub generation_duration_ms: Option<i64>,
+    pub num_inference_steps: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,8 +87,15 @@ fn row_to_asset(row: &Row<'_>) -> rusqlite::Result<ProjectAssetRecord> {
         error_reason: row.get(9)?,
         created_at: row.get(10)?,
         updated_at: row.get(11)?,
+        generation_duration_ms: row.get(12)?,
+        num_inference_steps: row.get(13)?,
     })
 }
+
+const ASSET_SELECT: &str = "SELECT id, project_id, name, asset_type, prompt, model, size, image_path,
+                asset_state, error_reason, created_at, updated_at, generation_duration_ms,
+                num_inference_steps
+         FROM project_assets";
 
 fn timestamp() -> i64 {
     std::time::SystemTime::now()
@@ -167,11 +178,15 @@ pub fn init_schema(conn: &Connection) -> Result<(), String> {
             error_reason TEXT,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL,
+            generation_duration_ms INTEGER,
+            num_inference_steps INTEGER,
             FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
         )",
         [],
     )
     .map_err(|e| e.to_string())?;
+
+    migrate_assets_schema(conn)?;
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_project_assets_project_created
@@ -183,16 +198,42 @@ pub fn init_schema(conn: &Connection) -> Result<(), String> {
     Ok(())
 }
 
+fn migrate_assets_schema(conn: &Connection) -> Result<(), String> {
+    let mut stmt = conn
+        .prepare("PRAGMA table_info(project_assets)")
+        .map_err(|e| e.to_string())?;
+    let columns = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    if !columns.iter().any(|name| name == "generation_duration_ms") {
+        conn.execute(
+            "ALTER TABLE project_assets ADD COLUMN generation_duration_ms INTEGER",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    if !columns.iter().any(|name| name == "num_inference_steps") {
+        conn.execute(
+            "ALTER TABLE project_assets ADD COLUMN num_inference_steps INTEGER",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 pub fn fetch_asset_by_id(
     conn: &Connection,
     project_id: &str,
     asset_id: i64,
 ) -> Result<ProjectAssetRecord, String> {
     conn.query_row(
-        "SELECT id, project_id, name, asset_type, prompt, model, size, image_path,
-                asset_state, error_reason, created_at, updated_at
-         FROM project_assets
-         WHERE project_id = ?1 AND id = ?2",
+        &format!("{ASSET_SELECT} WHERE project_id = ?1 AND id = ?2"),
         params![project_id, asset_id],
         row_to_asset,
     )
@@ -219,12 +260,12 @@ pub fn list_project_assets_internal(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, project_id, name, asset_type, prompt, model, size, image_path,
-                    asset_state, error_reason, created_at, updated_at
-             FROM project_assets
+            &format!(
+                "{ASSET_SELECT}
              WHERE project_id = ?1
              ORDER BY created_at DESC, id DESC
-             LIMIT ?2 OFFSET ?3",
+             LIMIT ?2 OFFSET ?3"
+            ),
         )
         .map_err(|e| e.to_string())?;
 
@@ -268,8 +309,9 @@ pub fn create_project_asset(input: CreateProjectAssetInput) -> Result<ProjectAss
     conn.execute(
         "INSERT INTO project_assets (
             project_id, name, asset_type, prompt, model, size,
-            image_path, asset_state, error_reason, created_at, updated_at
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, ?7, NULL, ?8, ?8)",
+            image_path, asset_state, error_reason, created_at, updated_at,
+            generation_duration_ms, num_inference_steps
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, ?7, NULL, ?8, ?8, ?9, ?10)",
         params![
             input.project_id,
             name,
@@ -279,6 +321,8 @@ pub fn create_project_asset(input: CreateProjectAssetInput) -> Result<ProjectAss
             input.size,
             ASSET_STATE_SUCCESS,
             now,
+            input.generation_duration_ms,
+            input.num_inference_steps,
         ],
     )
     .map_err(|e| e.to_string())?;

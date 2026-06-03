@@ -12,7 +12,9 @@ interface AssetListTableLabels {
   colType: string;
   colPrompt: string;
   colModel: string;
-  colSize: string;
+  colInferenceSteps: string;
+  colDuration: string;
+  formatDuration: (ms: number) => string;
   colStatus: string;
   colActions: string;
   edit: string;
@@ -56,6 +58,7 @@ const colgroup = (
     <col className="w-20" />
     <col />
     <col className="w-28" />
+    <col className="w-20" />
     <col className="w-24" />
     <col className="w-20" />
     <col className="w-14" />
@@ -84,7 +87,8 @@ export function AssetListTable({
             <th className="px-3 py-2.5 font-medium">{labels.colType}</th>
             <th className="px-3 py-2.5 font-medium">{labels.colPrompt}</th>
             <th className="px-3 py-2.5 font-medium">{labels.colModel}</th>
-            <th className="px-3 py-2.5 font-medium">{labels.colSize}</th>
+            <th className="px-3 py-2.5 font-medium">{labels.colInferenceSteps}</th>
+            <th className="px-3 py-2.5 font-medium">{labels.colDuration}</th>
             <th className="px-3 py-2.5 font-medium">{labels.colStatus}</th>
             <th className="px-3 py-2.5 font-medium">{labels.colActions}</th>
           </tr>
@@ -127,7 +131,14 @@ export function AssetListTable({
               <td className="max-w-0 px-3 py-2.5 text-text-muted">
                 <HoverFullText text={asset.model} lines={1} />
               </td>
-              <td className="px-3 py-2.5 text-text-muted">{asset.size}</td>
+              <td className="px-3 py-2.5 text-text-muted">
+                {asset.numInferenceSteps ?? "—"}
+              </td>
+              <td className="px-3 py-2.5 text-text-muted">
+                {asset.generationDurationMs != null
+                  ? labels.formatDuration(asset.generationDurationMs)
+                  : "—"}
+              </td>
               <td className={`px-3 py-2.5 ${statusClass(asset)}`}>
                 {asset.assetState === ASSET_STATE_ERROR && asset.errorReason ? (
                   <HoverFullText

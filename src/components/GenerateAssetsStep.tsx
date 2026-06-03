@@ -82,6 +82,8 @@ export function GenerateAssetsStep({
         model: values.model,
         size: values.size,
         imageB64,
+        generationDurationMs: values.generationDurationMs,
+        numInferenceSteps: values.numInferenceSteps,
       });
 
       setPreviewAsset(saved);
@@ -148,7 +150,9 @@ export function GenerateAssetsStep({
     colType: s.colType,
     colPrompt: s.colPrompt,
     colModel: s.colModel,
-    colSize: s.colSize,
+    colInferenceSteps: s.colInferenceSteps,
+    colDuration: s.colDuration,
+    formatDuration: s.formatDuration,
     colStatus: s.colStatus,
     colActions: s.colActions,
     edit: s.edit,

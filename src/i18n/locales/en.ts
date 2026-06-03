@@ -236,6 +236,10 @@ export const en: TranslationSchema = {
       colPrompt: "Prompt",
       colModel: "Model",
       colSize: "Size",
+      colInferenceSteps: "Inference steps",
+      colDuration: "Duration",
+      formatDuration: (ms: number) =>
+        ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`,
       colStatus: "Status",
       colActions: "Actions",
       edit: "Edit",
