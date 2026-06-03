@@ -14,6 +14,7 @@ fn rerun_if_icons_changed(dir: &std::path::Path) {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=../src/assets/rounded-image.png");
     rerun_if_icons_changed(std::path::Path::new("icons"));
     tauri_build::build()
 }

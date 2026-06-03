@@ -1,4 +1,4 @@
-import logo from "./logo_v1.png";
+import logo from "./rounded-image.png";
 
 export default function AppLogo({
   className = "h-5 w-5",
@@ -11,7 +11,7 @@ export default function AppLogo({
     <img
       src={logo}
       alt={title}
-      className={`box-border rounded-md border border-white/28 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] ${className}`}
+      className={`box-border overflow-hidden rounded-[22%] border border-white/28 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] ${className}`}
       draggable={false}
     />
   );

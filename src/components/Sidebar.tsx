@@ -64,7 +64,7 @@ export function Sidebar({
           title={t("auth.title")}
         />
         {!collapsed && (
-          <span className="min-w-0 flex-1 text-[13px] font-semibold leading-tight tracking-wide">
+          <span className="min-w-0 flex-1 text-base font-semibold leading-tight tracking-wide">
             {t("auth.title")}
           </span>
         )}
