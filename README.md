@@ -29,12 +29,14 @@ npm run desktop:dev
 
 ## 桌面端打包（macOS / Windows）
 
-项目基于 **Tauri 2**，需在对应操作系统上分别打包（或使用下方 CI 在云端构建）。
+项目基于 **Tauri 2**。**Mac 上只能打 Mac 包，Windows 上只能打 Windows 包**（Tauri 限制，不是命令写错）。
 
-| 平台 | 命令 | 产出物 |
-|------|------|--------|
-| **macOS** | `npm run desktop:build:mac` | `.app`、`.dmg` |
-| **Windows** | `npm run desktop:build:win` | `.msi`、NSIS `.exe` |
+| 平台 | 在哪执行 | 命令 | 产出物 |
+|------|----------|------|--------|
+| **macOS** | 仅在 Mac 上 | `npm run desktop:build:mac` | `.app`、`.dmg` |
+| **Windows** | 仅在 Windows 上 | `npm run desktop:build:win` | `.msi`、NSIS `.exe` |
+
+在 Mac 上执行 `desktop:build:win` 会出现 `invalid value 'msi'`，因为当前环境不支持 Windows 安装包格式。
 
 也可使用脚本（参数 `mac` 或 `win`）：
 

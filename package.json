@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
-    "desktop:build:mac": "tauri build --bundles app,dmg",
-    "desktop:build:win": "tauri build --bundles msi,nsis"
+    "desktop:build:mac": "node scripts/ensure-desktop-platform.mjs mac && tauri build --bundles app,dmg",
+    "desktop:build:win": "node scripts/ensure-desktop-platform.mjs win && tauri build --bundles msi,nsis"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
