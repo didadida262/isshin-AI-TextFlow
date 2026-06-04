@@ -187,7 +187,7 @@ export function ModelServiceSettingsPanel({
           <p className="text-xs text-text-muted">{i18n.settings.fetchingModels}</p>
         ) : null}
         {draft.models.length > 0 ? (
-          <ul className="max-h-52 overflow-y-auto rounded-lg border border-white/10 bg-surface/50">
+          <ul className="mb-1 max-h-52 overflow-y-auto rounded-lg border border-white/10 bg-surface/50">
             {draft.models.map((model) => {
               const isActive = model === selectedModel;
               return (
@@ -228,20 +228,22 @@ export function ModelServiceSettingsPanel({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="mt-1 space-y-2">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2">
           <button
             type="button"
             onClick={() => void runTest()}
             disabled={testStatus === "loading" || !canTestConnection}
-            className="shrink-0 rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="relative z-10 shrink-0 rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {testStatus === "loading"
               ? i18n.settings.testing
-              : i18n.settings.testConnection}
+              : testStatus === "ok" || testStatus === "error"
+                ? i18n.settings.testAgain
+                : i18n.settings.testConnection}
           </button>
           {testStatus === "ok" ? (
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5">
               <span className="inline-flex items-center gap-2 text-sm text-accent">
                 <FontAwesomeIcon icon={faCircleCheck} />
                 {i18n.settings.connectionOk}
@@ -255,7 +257,7 @@ export function ModelServiceSettingsPanel({
             </div>
           ) : null}
           {testStatus === "error" ? (
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1.5">
               <span className="inline-flex items-start gap-2 text-sm text-red-400">
                 <FontAwesomeIcon icon={faCircleExclamation} className="mt-0.5 shrink-0" />
                 <span className="min-w-0 break-words">{testError}</span>
