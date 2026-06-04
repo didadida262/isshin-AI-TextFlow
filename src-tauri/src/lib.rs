@@ -22,8 +22,9 @@ use db_admin::{
 };
 use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
 use novel::{
-    begin_event_extraction, clear_novel_event_extraction, get_novel_source, import_novel,
-    list_novel_chapters, set_event_extraction_duration, update_novel_chapter_event,
+    begin_event_extraction, clear_novel_event_extraction, end_event_extraction_in_progress,
+    get_novel_source, import_novel, list_novel_chapters, set_event_extraction_duration,
+    update_novel_chapter_event,
 };
 use projects::{create_project, delete_project, list_projects, update_project};
 use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
@@ -72,6 +73,7 @@ pub fn run() {
             import_novel,
             clear_novel_event_extraction,
             begin_event_extraction,
+            end_event_extraction_in_progress,
             get_novel_source,
             list_novel_chapters,
             set_event_extraction_duration,

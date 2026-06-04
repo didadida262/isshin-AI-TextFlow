@@ -142,8 +142,18 @@ fn compute_node_statuses(
     conn: &Connection,
     project_id: &str,
 ) -> Result<Vec<WorkflowNodeStatus>, String> {
-    sync_current_node(conn, project_id)?;
-    let current_node = get_project_current_node(conn, project_id)?;
+    let in_progress = novel::is_event_extraction_in_progress(conn, project_id)?;
+
+    if !in_progress {
+        sync_current_node(conn, project_id)?;
+    }
+
+    let current_node = if in_progress {
+        NODE_EXTRACT_EVENTS.to_string()
+    } else {
+        get_project_current_node(conn, project_id)?
+    };
+
     let completions: Vec<bool> = WORKFLOW_NODE_IDS
         .iter()
         .map(|node_id| is_node_completed(conn, project_id, node_id))
@@ -153,7 +163,9 @@ fn compute_node_statuses(
         .iter()
         .enumerate()
         .map(|(index, node_id)| {
-            if *node_id == current_node.as_str() {
+            if in_progress && *node_id == NODE_EXTRACT_EVENTS {
+                WorkflowNodeStatus::Current
+            } else if *node_id == current_node.as_str() {
                 WorkflowNodeStatus::Current
             } else if completions[index] {
                 WorkflowNodeStatus::Completed

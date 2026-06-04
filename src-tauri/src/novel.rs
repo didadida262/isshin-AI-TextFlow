@@ -399,6 +399,28 @@ pub(crate) fn is_extract_events_completed(chapters: &[NovelChapterRecord]) -> bo
     !chapters.is_empty() && chapters.iter().all(|chapter| chapter.event_state == 1)
 }
 
+pub(crate) fn is_event_extraction_in_progress(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<bool, String> {
+    let started_at: Option<i64> = conn
+        .query_row(
+            "SELECT event_extraction_started_at FROM novel_source WHERE project_id = ?1",
+            params![project_id],
+            |row| row.get::<_, Option<i64>>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .and_then(|value| value);
+
+    if started_at.is_none() {
+        return Ok(false);
+    }
+
+    let chapters = fetch_novel_chapters(conn, project_id)?;
+    Ok(!is_extract_events_completed(&chapters))
+}
+
 fn ensure_project_exists(conn: &Connection, project_id: &str) -> Result<(), String> {
     let count: i64 = conn
         .query_row(
@@ -597,6 +619,22 @@ pub fn begin_event_extraction(project_id: String) -> Result<(), String> {
         return Err("请先导入小说原文".to_string());
     }
 
+    crate::workflow::reset_to_extract_events(&conn, &project_id)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn end_event_extraction_in_progress(project_id: String) -> Result<(), String> {
+    let conn = init_db()?;
+    ensure_project_exists(&conn, &project_id)?;
+
+    conn.execute(
+        "UPDATE novel_source SET event_extraction_started_at = NULL WHERE project_id = ?1",
+        params![project_id],
+    )
+    .map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
@@ -648,17 +686,6 @@ pub fn update_novel_chapter_event(input: UpdateChapterEventInput) -> Result<(), 
     if affected == 0 {
         return Err(format!("章节不存在: {}", input.id));
     }
-
-    let project_id: String = conn
-        .query_row(
-            "SELECT project_id FROM novel_chapters WHERE id = ?1",
-            params![input.id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-
-    crate::workflow::maybe_advance_after_extract(&conn, &project_id)?;
-    let _ = finalize_event_extraction_duration(&conn, &project_id);
 
     Ok(())
 }

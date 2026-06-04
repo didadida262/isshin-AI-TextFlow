@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
@@ -19,8 +19,6 @@ import { ProjectStepper, type WorkflowStepItem } from "./ProjectStepper";
 import { ExtractEventsStep } from "./ExtractEventsStep";
 import { AiScriptStep } from "./AiScriptStep";
 import { GenerateAssetsStep } from "./GenerateAssetsStep";
-import { isEventExtractionComplete } from "../services/novel";
-
 interface ProjectDetailViewProps {
   project: CreationProject;
   config: AppConfig;
@@ -105,7 +103,6 @@ export function ProjectDetailView({
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [stepDirection, setStepDirection] = useState(0);
   const [enableStepAnimation, setEnableStepAnimation] = useState(false);
-  const didSyncWorkflowRef = useRef(false);
 
   const workflowNodes = useMemo(
     () => mapWorkflowSteps(workflowNodesRaw, w),
@@ -201,28 +198,6 @@ export function ProjectDetailView({
       nodeDetail?.kind === "extractEvents" ? nodeDetail : null,
     [nodeDetail],
   );
-
-  useEffect(() => {
-    didSyncWorkflowRef.current = false;
-  }, [project.id]);
-
-  useEffect(() => {
-    if (loadingWorkflow || !extractEventsDetail || didSyncWorkflowRef.current) {
-      return;
-    }
-
-    const extractNode = workflowNodesRaw.find((node) => node.id === "extractEvents");
-    const allEventsComplete = isEventExtractionComplete(extractEventsDetail.chapters);
-    if (allEventsComplete && extractNode?.status === "current") {
-      didSyncWorkflowRef.current = true;
-      void refreshProjectWorkflow();
-    }
-  }, [
-    extractEventsDetail,
-    loadingWorkflow,
-    refreshProjectWorkflow,
-    workflowNodesRaw,
-  ]);
 
   const aiScriptDetail = useMemo(
     () => (nodeDetail?.kind === "aiScript" ? nodeDetail : null),

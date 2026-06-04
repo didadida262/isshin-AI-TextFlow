@@ -86,3 +86,7 @@ export async function setEventExtractionDuration(
 export async function beginEventExtraction(projectId: string): Promise<void> {
   await invoke("begin_event_extraction", { projectId });
 }
+
+export async function endEventExtractionInProgress(projectId: string): Promise<void> {
+  await invoke("end_event_extraction_in_progress", { projectId });
+}

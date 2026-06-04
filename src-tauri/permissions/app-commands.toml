@@ -58,6 +58,7 @@ commands.allow = [
   "list_novel_chapters",
   "update_novel_chapter_event",
   "begin_event_extraction",
+  "end_event_extraction_in_progress",
   "set_event_extraction_duration",
 ]
 

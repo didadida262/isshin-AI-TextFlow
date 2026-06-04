@@ -9,7 +9,9 @@ import {
 import { useTranslationMessages } from "../contexts/I18nContext";
 import { extractEventsForChapters } from "../agents/workflowAgent/eventExtraction";
 import {
+  beginEventExtraction,
   clearNovelEventExtraction,
+  endEventExtractionInProgress,
   getNovelSource,
   importNovel,
   isEventExtractionComplete,
@@ -156,6 +158,9 @@ export function ExtractEventsStep({
 
       let durationMs = 0;
       try {
+        await beginEventExtraction(projectId);
+        onWorkflowChange?.();
+
         const rows = prefetchedRows ?? (await listNovelChapters(projectId));
         setChapters(rows);
         const { chapters: extracted } = await extractEventsForChapters(
@@ -206,6 +211,14 @@ export function ExtractEventsStep({
           }
         }
       } finally {
+        if (controller.signal.aborted) {
+          try {
+            await endEventExtractionInProgress(projectId);
+            onWorkflowChange?.();
+          } catch {
+            /* ignore cleanup errors */
+          }
+        }
         extractingRef.current = false;
         if (abortRef.current === controller) {
           abortRef.current = null;
