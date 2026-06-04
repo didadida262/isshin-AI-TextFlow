@@ -53,9 +53,12 @@ identifier = "allow-novel"
 description = "Allows novel import and chapter persistence"
 commands.allow = [
   "import_novel",
+  "clear_novel_event_extraction",
   "get_novel_source",
   "list_novel_chapters",
   "update_novel_chapter_event",
+  "begin_event_extraction",
+  "set_event_extraction_duration",
 ]
 
 [[permission]]

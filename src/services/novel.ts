@@ -46,6 +46,11 @@ export async function importNovel(
   return invoke<ImportNovelResult>("import_novel", { projectId, sourceText });
 }
 
+/** Clear chapter events, extraction timing, and downstream script data for re-extraction. */
+export async function clearNovelEventExtraction(projectId: string): Promise<void> {
+  await invoke("clear_novel_event_extraction", { projectId });
+}
+
 export async function getNovelSource(
   projectId: string,
 ): Promise<NovelSourceRecord | null> {

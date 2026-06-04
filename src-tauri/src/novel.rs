@@ -547,6 +547,40 @@ pub struct SetEventExtractionDurationInput {
 }
 
 #[tauri::command]
+pub fn clear_novel_event_extraction(project_id: String) -> Result<(), String> {
+    let conn = init_db()?;
+    ensure_project_exists(&conn, &project_id)?;
+
+    if fetch_novel_source(&conn, &project_id)?.is_none() {
+        return Err("请先导入小说原文".to_string());
+    }
+
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+
+    tx.execute(
+        "UPDATE novel_chapters SET event = NULL, error_reason = NULL, event_state = 0
+         WHERE project_id = ?1",
+        params![project_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    tx.execute(
+        "UPDATE novel_source SET event_extraction_duration_ms = NULL, event_extraction_started_at = NULL
+         WHERE project_id = ?1",
+        params![project_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::script::clear_project_script_data(&tx, &project_id)?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+
+    crate::workflow::reset_to_extract_events(&conn, &project_id)?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn begin_event_extraction(project_id: String) -> Result<(), String> {
     let conn = init_db()?;
     ensure_project_exists(&conn, &project_id)?;
@@ -575,7 +609,10 @@ pub fn set_event_extraction_duration(
 
     let affected = conn
         .execute(
-            "UPDATE novel_source SET event_extraction_duration_ms = ?2 WHERE project_id = ?1",
+            "UPDATE novel_source SET
+                event_extraction_duration_ms = ?2,
+                event_extraction_started_at = NULL
+             WHERE project_id = ?1",
             params![input.project_id, input.duration_ms],
         )
         .map_err(|e| e.to_string())?;

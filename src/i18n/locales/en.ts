@@ -198,6 +198,9 @@ export const en: TranslationSchema = {
       extracting: "Extracting events…",
       extractingProgress: (completed: number, total: number) =>
         `Extracting events ${completed}/${total}…`,
+      extractingRowEvent: "Analyzing…",
+      reExtractEvents: "Re-extract",
+      extractionDurationTip: (duration: string) => `Duration ${duration}`,
       resultsEmpty:
         "Click Extract Events to analyze each chapter and show structured events here.",
       colIndex: "No.",

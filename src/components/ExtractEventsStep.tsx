@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faArrowsRotate,
   faFileImport,
   faSpinner,
   faWandMagicSparkles,
@@ -8,7 +9,7 @@ import {
 import { useTranslationMessages } from "../contexts/I18nContext";
 import { extractEventsForChapters } from "../agents/workflowAgent/eventExtraction";
 import {
-  EVENT_STATE_SUCCESS,
+  clearNovelEventExtraction,
   getNovelSource,
   importNovel,
   isEventExtractionComplete,
@@ -59,15 +60,165 @@ export function ExtractEventsStep({
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(
     null,
   );
+  const [loadingChapterIds, setLoadingChapterIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [scrollToChapterId, setScrollToChapterId] = useState<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const extractingRef = useRef(false);
+  const extractionStartedAtRef = useRef<number | null>(null);
+  const [liveElapsedMs, setLiveElapsedMs] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (extractingRef.current) return;
+    setChapters(initialChapters);
+  }, [initialChapters]);
 
   useEffect(() => {
     setExtractionDurationMs(initialExtractionDurationMs);
-  }, [initialExtractionDurationMs]);
+  }, [initialSource?.importedAt, initialExtractionDurationMs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getNovelSource(projectId).then((source) => {
+      if (cancelled) return;
+      const fromDb = source?.eventExtractionDurationMs;
+      if (fromDb != null) {
+        setExtractionDurationMs(fromDb);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, initialSource?.importedAt]);
+
+  useEffect(() => {
+    if (!extracting) {
+      setLiveElapsedMs(null);
+      return;
+    }
+    const startedAt = extractionStartedAtRef.current ?? Date.now();
+    const tick = () => setLiveElapsedMs(Math.max(0, Date.now() - startedAt));
+    tick();
+    const intervalId = window.setInterval(tick, 200);
+    return () => window.clearInterval(intervalId);
+  }, [extracting]);
+
+  const displayedDurationMs = extracting
+    ? (liveElapsedMs ?? 0)
+    : extractionDurationMs;
 
   const hasContent = chapters.length > 0;
-  const hasResults = chapters.some(
-    (chapter) => chapter.event || chapter.errorReason,
+  const extractionComplete = isEventExtractionComplete(chapters);
+  const showDurationTip =
+    extracting || (extractionComplete && displayedDurationMs != null);
+  const durationTipLabel =
+    displayedDurationMs != null
+      ? s.extractionDurationTip(s.formatDuration(displayedDurationMs))
+      : null;
+
+  const validateExtractConfig = useCallback((): string | null => {
+    const model = selectedModel.trim() || config.models[0]?.trim() || "";
+    if (!config.apiKey.trim() || !config.baseUrl.trim()) {
+      return i18n.errors.configRequired;
+    }
+    if (!model) {
+      return i18n.errors.modelsRequired;
+    }
+    return null;
+  }, [
+    config.apiKey,
+    config.baseUrl,
+    config.models,
+    i18n.errors.configRequired,
+    i18n.errors.modelsRequired,
+    selectedModel,
+  ]);
+
+  const performExtraction = useCallback(
+    async (prefetchedRows?: NovelChapterRecord[]) => {
+      const model = selectedModel.trim() || config.models[0]?.trim() || "";
+      setActionError(null);
+      onConfigError(null);
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      extractingRef.current = true;
+
+      setExtracting(true);
+      setProgress(null);
+      setLoadingChapterIds(new Set());
+      setScrollToChapterId(null);
+      setLiveElapsedMs(0);
+      const startedAt = Date.now();
+      extractionStartedAtRef.current = startedAt;
+
+      let durationMs = 0;
+      try {
+        const rows = prefetchedRows ?? (await listNovelChapters(projectId));
+        setChapters(rows);
+        const { chapters: extracted } = await extractEventsForChapters(
+          config,
+          model,
+          rows,
+          ({ completed, total, startedChapterId, latest }) => {
+            setProgress({ completed, total });
+            if (startedChapterId) {
+              setLoadingChapterIds((prev) => {
+                const next = new Set(prev);
+                next.add(startedChapterId);
+                return next;
+              });
+            }
+            if (latest) {
+              setLoadingChapterIds((prev) => {
+                const next = new Set(prev);
+                next.delete(latest.id);
+                return next;
+              });
+              setChapters((prev) =>
+                prev.map((row) => (row.id === latest.id ? latest : row)),
+              );
+              setScrollToChapterId(latest.id);
+            }
+          },
+          controller.signal,
+        );
+        setChapters(extracted);
+        durationMs = Math.max(0, Date.now() - startedAt);
+        await setEventExtractionDuration(projectId, durationMs);
+        const source = await getNovelSource(projectId);
+        setExtractionDurationMs(source?.eventExtractionDurationMs ?? durationMs);
+        invalidateWorkflowCache(projectId);
+        onWorkflowChange?.();
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          const message = error instanceof Error ? error.message : String(error);
+          setActionError(message);
+          onConfigError(message);
+          durationMs = Math.max(0, Date.now() - startedAt);
+          try {
+            await setEventExtractionDuration(projectId, durationMs);
+            setExtractionDurationMs(durationMs);
+          } catch {
+            setExtractionDurationMs(durationMs);
+          }
+        }
+      } finally {
+        extractingRef.current = false;
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
+        setExtracting(false);
+        setProgress(null);
+        setLoadingChapterIds(new Set());
+        if (!controller.signal.aborted && durationMs > 0) {
+          setExtractionDurationMs((current) => current ?? durationMs);
+        }
+      }
+    },
+    [config, onConfigError, onWorkflowChange, projectId, selectedModel],
   );
 
   const handleImportConfirm = useCallback(
@@ -75,6 +226,7 @@ export function ExtractEventsStep({
       abortRef.current?.abort();
       setImporting(true);
       onConfigError(null);
+      setActionError(null);
       try {
         await importNovel(projectId, content);
         setExtractionDurationMs(null);
@@ -91,77 +243,54 @@ export function ExtractEventsStep({
   );
 
   const handleExtract = useCallback(async () => {
-    if (!hasContent || extracting) return;
-
-    if (!config.apiKey.trim() || !config.baseUrl.trim()) {
-      onConfigError(i18n.errors.configRequired);
+    if (!hasContent || extractingRef.current) return;
+    const configError = validateExtractConfig();
+    if (configError) {
+      setActionError(configError);
+      onConfigError(configError);
       return;
     }
-    if (!selectedModel) {
-      onConfigError(i18n.errors.modelsRequired);
+    await performExtraction();
+  }, [
+    hasContent,
+    onConfigError,
+    performExtraction,
+    validateExtractConfig,
+  ]);
+
+  const handleReExtract = useCallback(async () => {
+    if (!hasContent || extractingRef.current) return;
+    const configError = validateExtractConfig();
+    if (configError) {
+      setActionError(configError);
+      onConfigError(configError);
       return;
     }
 
+    setActionError(null);
     onConfigError(null);
     abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setExtracting(true);
-    setProgress(null);
-    const startedAt = Date.now();
 
     try {
+      await clearNovelEventExtraction(projectId);
       const rows = await listNovelChapters(projectId);
-      const hadPending = rows.some(
-        (chapter) => chapter.eventState !== EVENT_STATE_SUCCESS,
-      );
-      const { chapters: extracted } = await extractEventsForChapters(
-        config,
-        selectedModel,
-        rows,
-        ({ completed, total, latest }) => {
-          setProgress({ completed, total });
-          if (latest) {
-            setChapters((prev) =>
-              prev.map((row) => (row.id === latest.id ? latest : row)),
-            );
-          }
-        },
-        controller.signal,
-      );
-      setChapters(extracted);
-
-      if (hadPending && isEventExtractionComplete(extracted)) {
-        const durationMs = Date.now() - startedAt;
-        await setEventExtractionDuration(projectId, durationMs);
-        const source = await getNovelSource(projectId);
-        setExtractionDurationMs(source?.eventExtractionDurationMs ?? durationMs);
-      }
+      setChapters(rows);
+      setExtractionDurationMs(null);
       invalidateWorkflowCache(projectId);
       onWorkflowChange?.();
+      await performExtraction(rows);
     } catch (error) {
-      if (!controller.signal.aborted) {
-        const message = error instanceof Error ? error.message : String(error);
-        onConfigError(message);
-      }
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-      }
-      setExtracting(false);
-      setProgress(null);
+      const message = error instanceof Error ? error.message : String(error);
+      setActionError(message);
+      onConfigError(message);
     }
   }, [
-    config,
-    extracting,
     hasContent,
-    i18n.errors.configRequired,
-    i18n.errors.modelsRequired,
     onConfigError,
     onWorkflowChange,
+    performExtraction,
     projectId,
-    selectedModel,
+    validateExtractConfig,
   ]);
 
   return (
@@ -178,28 +307,47 @@ export function ExtractEventsStep({
             <FontAwesomeIcon icon={faFileImport} className="text-xs text-accent" />
             {s.importSource}
           </button>
-          {extractionDurationMs != null ? (
-            <span className="shrink-0 text-xs text-text-muted">
-              {s.extractionDurationLabel}{" "}
-              {s.formatDuration(extractionDurationMs)}
+          {extractionComplete && !extracting ? (
+            <button
+              type="button"
+              disabled={!hasContent || importing}
+              onClick={() => void handleReExtract()}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm text-white transition hover:border-accent/40 hover:bg-surface-elevated disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FontAwesomeIcon icon={faArrowsRotate} className="text-xs text-accent" />
+              {s.reExtractEvents}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={!hasContent || extracting || importing}
+              onClick={() => void handleExtract()}
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FontAwesomeIcon
+                icon={extracting ? faSpinner : faWandMagicSparkles}
+                className={`text-xs ${extracting ? "animate-spin" : ""}`}
+              />
+              {extracting && progress
+                ? s.extractingProgress(progress.completed, progress.total)
+                : extracting
+                  ? s.extracting
+                  : s.extractEvents}
+            </button>
+          )}
+          {showDurationTip && durationTipLabel ? (
+            <span className="inline-flex shrink-0 items-center rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm text-text-muted">
+              {durationTipLabel}
             </span>
           ) : null}
-          <button
-            type="button"
-            disabled={!hasContent || extracting || importing}
-            onClick={() => void handleExtract()}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <FontAwesomeIcon
-              icon={extracting ? faSpinner : faWandMagicSparkles}
-              className={`text-xs ${extracting ? "animate-spin" : ""}`}
-            />
-            {extracting && progress
-              ? s.extractingProgress(progress.completed, progress.total)
-              : s.extractEvents}
-          </button>
         </div>
       </div>
+
+      {actionError ? (
+        <p className="mt-3 shrink-0 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          {actionError}
+        </p>
+      ) : null}
 
       <div className="mt-6 flex min-h-0 flex-1 flex-col gap-6">
         {hasContent ? (
@@ -223,20 +371,12 @@ export function ExtractEventsStep({
         )}
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-surface/20">
-          {extracting && !hasResults ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6">
-              <FontAwesomeIcon
-                icon={faSpinner}
-                className="text-xl text-accent animate-spin"
-              />
-              <p className="text-sm text-text-muted">
-                {progress
-                  ? s.extractingProgress(progress.completed, progress.total)
-                  : s.extracting}
-              </p>
-            </div>
-          ) : hasContent ? (
-            <EventChaptersTable chapters={chapters} />
+          {hasContent ? (
+            <EventChaptersTable
+              chapters={chapters}
+              loadingChapterIds={loadingChapterIds}
+              scrollToChapterId={scrollToChapterId}
+            />
           ) : (
             <div className="flex flex-1 items-center justify-center px-6">
               <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">

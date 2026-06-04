@@ -12,6 +12,9 @@ import { stripThink } from "../../../utils/stripThink";
 export interface ExtractEventsProgress {
   completed: number;
   total: number;
+  /** Chapter id when an LLM request for that row has started. */
+  startedChapterId?: number;
+  /** Chapter record when extraction for that row has finished. */
   latest?: NovelChapterRecord;
 }
 
@@ -221,6 +224,11 @@ export async function extractEventsForChapters(
       const chapterIndex = pendingIndices[nextPending];
       nextPending += 1;
       const chapter = chapters[chapterIndex];
+      onProgress?.({
+        completed,
+        total: chapters.length,
+        startedChapterId: chapter.id,
+      });
       const result = await extractChapterEvent(config, model, chapter, signal);
       results[chapterIndex] = result;
       completed += 1;

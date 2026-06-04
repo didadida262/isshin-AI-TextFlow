@@ -186,6 +186,9 @@ export type TranslationSchema = {
       chapterCount: (count: number) => string;
       extracting: string;
       extractingProgress: (completed: number, total: number) => string;
+      extractingRowEvent: string;
+      reExtractEvents: string;
+      extractionDurationTip: (duration: string) => string;
       resultsEmpty: string;
       colIndex: string;
       colReel: string;
@@ -584,6 +587,9 @@ export const zh: TranslationSchema = {
       extracting: "正在提取事件…",
       extractingProgress: (completed: number, total: number) =>
         `正在提取事件 ${completed}/${total}…`,
+      extractingRowEvent: "正在分析…",
+      reExtractEvents: "重新提取",
+      extractionDurationTip: (duration: string) => `耗时 ${duration}`,
       resultsEmpty: "点击「事件提取」，AI 将分析各章节并在此展示结构化事件。",
       colIndex: "序号",
       colReel: "卷",
