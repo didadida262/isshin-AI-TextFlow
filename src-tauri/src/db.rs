@@ -1,3 +1,4 @@
+use crate::paths;
 use rusqlite::{params, Connection};
 use serde::Serialize;
 use std::path::PathBuf;
@@ -10,46 +11,8 @@ pub struct UserSession {
     pub display_name: String,
 }
 
-fn walk_up_find_data_dir(mut start: PathBuf) -> Option<PathBuf> {
-    for _ in 0..10 {
-        let data = start.join("data");
-        if data.is_dir() {
-            return data.canonicalize().ok().or(Some(data));
-        }
-        if !start.pop() {
-            break;
-        }
-    }
-    None
-}
-
 fn sqlite_dir() -> Result<PathBuf, String> {
-    if let Ok(cwd) = std::env::current_dir() {
-        if let Some(data) = walk_up_find_data_dir(cwd) {
-            let dir = data.join("sqlite");
-            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-            return Ok(dir);
-        }
-    }
-
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            if let Some(data) = walk_up_find_data_dir(parent.to_path_buf()) {
-                let dir = data.join("sqlite");
-                std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-                return Ok(dir);
-            }
-        }
-    }
-
-    let data = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data");
-    if data.is_dir() {
-        let dir = data.join("sqlite");
-        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-        return dir.canonicalize().map_err(|e| e.to_string());
-    }
-
-    Err("未找到 data/sqlite 目录".to_string())
+    Ok(paths::get()?.sqlite_dir.clone())
 }
 
 fn db_path() -> Result<PathBuf, String> {

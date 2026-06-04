@@ -6,6 +6,7 @@ mod db;
 mod db_admin;
 mod llm;
 mod novel;
+mod paths;
 mod projects;
 mod script;
 mod skills;
@@ -52,7 +53,14 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            db::init_db().expect("failed to init database");
+            paths::install(app.handle()).map_err(|error| {
+                eprintln!("[isshin-ai-textflow] 路径初始化失败: {error}");
+                error
+            })?;
+            db::init_db().map_err(|error| {
+                eprintln!("[isshin-ai-textflow] 数据库初始化失败: {error}");
+                error
+            })?;
             apply_app_icon(app);
             Ok(())
         })

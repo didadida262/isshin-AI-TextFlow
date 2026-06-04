@@ -1,7 +1,7 @@
+use crate::paths;
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tauri::Manager;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -12,56 +12,8 @@ pub struct SkillManualItem {
     pub cover_path: Option<String>,
 }
 
-fn walk_up_find_skills(mut start: PathBuf) -> Option<PathBuf> {
-    for _ in 0..10 {
-        let skills = start.join("data").join("skills");
-        if skills.is_dir() {
-            return skills.canonicalize().ok().or(Some(skills));
-        }
-        if !start.pop() {
-            break;
-        }
-    }
-    None
-}
-
-fn skills_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    if let Ok(cwd) = std::env::current_dir() {
-        if let Some(path) = walk_up_find_skills(cwd) {
-            return Ok(path);
-        }
-    }
-
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            if let Some(path) = walk_up_find_skills(parent.to_path_buf()) {
-                return Ok(path);
-            }
-        }
-    }
-
-    let manifest_skills = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data/skills");
-    if manifest_skills.is_dir() {
-        return manifest_skills
-            .canonicalize()
-            .map_err(|e| e.to_string());
-    }
-
-    let resource = app
-        .path()
-        .resource_dir()
-        .map_err(|e| e.to_string())?;
-
-    for candidate in [
-        resource.join("_up_").join("data").join("skills"),
-        resource.join("data").join("skills"),
-    ] {
-        if candidate.is_dir() {
-            return Ok(candidate);
-        }
-    }
-
-    Err("未找到 skills 资源目录".to_string())
+fn skills_root(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(paths::get()?.skills_dir.clone())
 }
 
 fn normalize_title(line: &str) -> String {

@@ -105,41 +105,10 @@ fn timestamp() -> i64 {
         .unwrap_or(0)
 }
 
-fn walk_up_find_data_dir(mut start: PathBuf) -> Option<PathBuf> {
-    for _ in 0..10 {
-        let data = start.join("data");
-        if data.is_dir() {
-            return data.canonicalize().ok().or(Some(data));
-        }
-        if !start.pop() {
-            break;
-        }
-    }
-    None
-}
-
 fn assets_root_dir() -> Result<PathBuf, String> {
-    if let Ok(cwd) = std::env::current_dir() {
-        if let Some(data) = walk_up_find_data_dir(cwd) {
-            let dir = data.join("assets");
-            fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-            return Ok(dir);
-        }
-    }
-
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            if let Some(data) = walk_up_find_data_dir(parent.to_path_buf()) {
-                let dir = data.join("assets");
-                fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-                return Ok(dir);
-            }
-        }
-    }
-
-    let data = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data/assets");
-    fs::create_dir_all(&data).map_err(|e| e.to_string())?;
-    data.canonicalize().map_err(|e| e.to_string())
+    let dir = crate::paths::get()?.assets_dir.clone();
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir)
 }
 
 fn project_assets_dir(project_id: &str) -> Result<PathBuf, String> {
