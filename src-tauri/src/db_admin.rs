@@ -1,3 +1,4 @@
+use base64::Engine;
 use crate::assets::{
     list_project_ids, remove_all_asset_image_files, remove_asset_image_files_for_projects,
 };
@@ -257,6 +258,35 @@ pub fn export_database() -> Result<String, String> {
     };
 
     serde_json::to_string_pretty(&backup).map_err(|e| e.to_string())
+}
+
+fn decode_base64_payload(base64: &str) -> Result<Vec<u8>, String> {
+    let trimmed = base64.trim();
+    let payload = trimmed
+        .split_once("base64,")
+        .map(|(_, data)| data)
+        .unwrap_or(trimmed);
+    base64::engine::general_purpose::STANDARD
+        .decode(payload.trim())
+        .map_err(|error| format!("Base64 解码失败: {error}"))
+}
+
+#[tauri::command]
+pub fn write_base64_file(path: String, base64: String) -> Result<(), String> {
+    let path = path.trim();
+    if path.is_empty() {
+        return Err("请选择保存路径".to_string());
+    }
+
+    let bytes = decode_base64_payload(&base64)?;
+
+    if let Some(parent) = Path::new(path).parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(|error| format!("创建目录失败: {error}"))?;
+        }
+    }
+
+    std::fs::write(path, bytes).map_err(|error| format!("写入文件失败: {error}"))
 }
 
 #[tauri::command]

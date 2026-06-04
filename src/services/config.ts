@@ -11,7 +11,7 @@ export const DEFAULT_IMAGE_COUNT = 1;
 export const DEFAULT_NUM_INFERENCE_STEPS = 25;
 
 export const DEFAULT_VIDEO_API_URL =
-  "http://218.93.211.227:8081/v1/videos/sync";
+  "http://27.159.92.210:8081/v1/videos/sync";
 export const DEFAULT_VIDEO_API_KEY =
   "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
 export const DEFAULT_VIDEO_MODEL = "wan2.2-t2v-5b";

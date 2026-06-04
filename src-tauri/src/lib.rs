@@ -18,7 +18,7 @@ use assets::{create_project_asset, delete_project_asset, list_project_assets, up
 use db::login;
 use db_admin::{
     clear_database, clear_database_table, export_database, export_database_to_file,
-    get_database_overview, import_database,
+    get_database_overview, import_database, write_base64_file,
 };
 use llm::{llm_chat_completion, llm_log_inbound, llm_log_outbound};
 use novel::{
@@ -90,6 +90,7 @@ pub fn run() {
             get_database_overview,
             export_database,
             export_database_to_file,
+            write_base64_file,
             import_database,
             clear_database_table,
             clear_database,

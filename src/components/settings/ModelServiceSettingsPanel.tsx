@@ -10,6 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { AppConfig } from "../../types";
 import { useI18n, useTranslationMessages } from "../../contexts/I18nContext";
+import { formatDurationMs } from "../../utils/formatDuration";
 import { testConnection } from "../../services/chat";
 import { isImageSettingsValid, DEFAULT_IMAGE_COUNT, DEFAULT_IMAGE_SIZE, getFixedVideoSettings, isVideoSettingsValid } from "../../services/config";
 import { ImageTestResultModal } from "./ImageTestResultModal";
@@ -34,7 +35,7 @@ export function ModelServiceSettingsPanel({
   modelsStatus,
   modelsError,
 }: ModelServiceSettingsPanelProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const i18n = useTranslationMessages();
   const [showKey, setShowKey] = useState(false);
   const [showImageKey, setShowImageKey] = useState(false);
@@ -43,6 +44,7 @@ export function ModelServiceSettingsPanel({
     "idle" | "loading" | "ok" | "error"
   >("idle");
   const [testError, setTestError] = useState("");
+  const [testElapsedMs, setTestElapsedMs] = useState<number | null>(null);
   const [imageTestOpen, setImageTestOpen] = useState(false);
   const [videoTestOpen, setVideoTestOpen] = useState(false);
 
@@ -62,6 +64,7 @@ export function ModelServiceSettingsPanel({
   useEffect(() => {
     setTestStatus("idle");
     setTestError("");
+    setTestElapsedMs(null);
   }, [selectedModel]);
 
   const removeModel = (id: string) => {
@@ -79,10 +82,14 @@ export function ModelServiceSettingsPanel({
     if (!selectedModel) return;
     setTestStatus("loading");
     setTestError("");
+    setTestElapsedMs(null);
+    const startedAt = performance.now();
     try {
       await testConnection(draft, selectedModel);
+      setTestElapsedMs(Math.max(0, Math.round(performance.now() - startedAt)));
       setTestStatus("ok");
     } catch (error) {
+      setTestElapsedMs(Math.max(0, Math.round(performance.now() - startedAt)));
       setTestStatus("error");
       setTestError(error instanceof Error ? error.message : String(error));
     }
@@ -222,30 +229,48 @@ export function ModelServiceSettingsPanel({
       </div>
 
       <div className="space-y-2">
-        <button
-          type="button"
-          onClick={() => void runTest()}
-          disabled={testStatus === "loading" || !canTestConnection}
-          className="rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {testStatus === "loading"
-            ? i18n.settings.testing
-            : i18n.settings.testConnection}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void runTest()}
+            disabled={testStatus === "loading" || !canTestConnection}
+            className="shrink-0 rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {testStatus === "loading"
+              ? i18n.settings.testing
+              : i18n.settings.testConnection}
+          </button>
+          {testStatus === "ok" ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-2 text-sm text-accent">
+                <FontAwesomeIcon icon={faCircleCheck} />
+                {i18n.settings.connectionOk}
+              </span>
+              {testElapsedMs != null ? (
+                <span className="text-xs text-text-muted">
+                  {i18n.settings.testDurationLabel}：
+                  {formatDurationMs(testElapsedMs, locale)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+          {testStatus === "error" ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-start gap-2 text-sm text-red-400">
+                <FontAwesomeIcon icon={faCircleExclamation} className="mt-0.5 shrink-0" />
+                <span className="min-w-0 break-words">{testError}</span>
+              </span>
+              {testElapsedMs != null ? (
+                <span className="shrink-0 text-xs text-text-muted">
+                  {i18n.settings.testDurationLabel}：
+                  {formatDurationMs(testElapsedMs, locale)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
         {!selectedModel && draft.models.length > 0 ? (
           <p className="text-xs text-text-dim">{i18n.settings.selectModelFirst}</p>
-        ) : null}
-        {testStatus === "ok" ? (
-          <p className="flex items-center gap-2 text-sm text-accent">
-            <FontAwesomeIcon icon={faCircleCheck} />
-            {i18n.settings.connectionOk}
-          </p>
-        ) : null}
-        {testStatus === "error" ? (
-          <p className="flex items-start gap-2 text-sm text-red-400">
-            <FontAwesomeIcon icon={faCircleExclamation} className="mt-0.5" />
-            {testError}
-          </p>
         ) : null}
       </div>
 
@@ -318,7 +343,7 @@ export function ModelServiceSettingsPanel({
             disabled={imageTestOpen || !canTestImageConnection}
             className="rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {imageTestOpen ? i18n.settings.testing : i18n.settings.testConnection}
+            {i18n.settings.testConnection}
           </button>
         </div>
       </div>
@@ -380,7 +405,7 @@ export function ModelServiceSettingsPanel({
             disabled={videoTestOpen || !canTestVideoConnection}
             className="rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {videoTestOpen ? i18n.settings.testing : i18n.settings.testConnection}
+            {i18n.settings.testConnection}
           </button>
         </div>
       </div>

@@ -56,6 +56,7 @@ export type TranslationSchema = {
     testing: string;
     selectModelFirst: string;
     connectionOk: string;
+    testDurationLabel: string;
     imageSection: string;
     imageApiUrl: string;
     imageApiKey: string;
@@ -64,6 +65,15 @@ export type TranslationSchema = {
     imageCount: string;
     imageTestTitle: string;
     imageTestPromptLabel: string;
+    imageTestConfirm: string;
+    videoTestPromptLabel: string;
+    videoTestConfirm: string;
+    testEphemeralHint: string;
+    testAgain: string;
+    testClose: string;
+    download: string;
+    imageTestDownloadTitle: string;
+    videoTestDownloadTitle: string;
     videoSection: string;
     videoApiUrl: string;
     videoApiKey: string;
@@ -439,6 +449,7 @@ export const zh: TranslationSchema = {
     testing: "测试中…",
     selectModelFirst: "请先选择一个模型",
     connectionOk: "连接成功",
+    testDurationLabel: "耗时",
     imageSection: "图片生成 API",
     imageApiUrl: "图片 API 地址",
     imageApiKey: "图片 API 密钥",
@@ -447,6 +458,15 @@ export const zh: TranslationSchema = {
     imageCount: "生成数量 (n)",
     imageTestTitle: "图片连接测试",
     imageTestPromptLabel: "测试提示词",
+    imageTestConfirm: "开始测试",
+    videoTestPromptLabel: "测试提示词",
+    videoTestConfirm: "开始测试",
+    testEphemeralHint: "测试结果仅用于连通性验证，不会保存到本地，关闭弹窗后即清除。",
+    testAgain: "重新测试",
+    testClose: "关闭",
+    download: "下载",
+    imageTestDownloadTitle: "保存测试图片",
+    videoTestDownloadTitle: "保存测试视频",
     videoSection: "视频生成 API",
     videoApiUrl: "视频 API 地址",
     videoApiKey: "视频 API 密钥",
@@ -698,11 +718,11 @@ export const zh: TranslationSchema = {
       numFramesLabel: "帧数",
       fpsLabel: "帧率 (fps)",
       inferenceStepsLabel: "推理步数",
-      guidanceScaleLabel: "Guidance Scale",
-      guidanceScale2Label: "Guidance Scale 2",
-      boundaryRatioLabel: "Boundary Ratio",
-      flowShiftLabel: "Flow Shift",
-      seedLabel: "Seed",
+      guidanceScaleLabel: "引导强度",
+      guidanceScale2Label: "二阶段引导强度",
+      boundaryRatioLabel: "噪声边界比例",
+      flowShiftLabel: "流匹配偏移",
+      seedLabel: "随机种子",
       cancel: "取消",
       confirm: "开始生成",
       generating: "生成中…",
