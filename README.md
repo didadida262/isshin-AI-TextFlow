@@ -24,14 +24,41 @@
 
 ```bash
 npm install
-npm run tauri dev
+npm run desktop:dev
 ```
 
-## 构建
+## 桌面端打包（macOS / Windows）
+
+项目基于 **Tauri 2**，需在对应操作系统上分别打包（或使用下方 CI 在云端构建）。
+
+| 平台 | 命令 | 产出物 |
+|------|------|--------|
+| **macOS** | `npm run desktop:build:mac` | `.app`、`.dmg` |
+| **Windows** | `npm run desktop:build:win` | `.msi`、NSIS `.exe` |
+
+也可使用脚本（参数 `mac` 或 `win`）：
 
 ```bash
-npm run tauri build
+chmod +x scripts/build-desktop.sh
+./scripts/build-desktop.sh mac    # 仅在 macOS 上执行
+./scripts/build-desktop.sh win    # 仅在 Windows 上执行
 ```
+
+构建完成后，安装包位于：
+
+- macOS: `src-tauri/target/release/bundle/macos/`、`src-tauri/target/release/bundle/dmg/`
+- Windows: `src-tauri/target/release/bundle/msi/`、`src-tauri/target/release/bundle/nsis/`
+
+### 环境要求
+
+- **Node.js** 20+
+- **Rust** stable（[rustup](https://rustup.rs/)）
+- **macOS**：Xcode Command Line Tools
+- **Windows**：Visual Studio Build Tools（含 MSVC）、WebView2（Win10/11 通常已自带）
+
+### 云端双平台构建
+
+推送标签 `v*` 或在 GitHub Actions 中手动运行 **Build Desktop** 工作流，会分别在 `macos-latest` 与 `windows-latest` 上构建并上传产物。
 
 ## 使用流程
 
