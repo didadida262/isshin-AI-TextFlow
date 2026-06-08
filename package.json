@@ -10,7 +10,7 @@
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build:mac": "node scripts/ensure-desktop-platform.mjs mac && tauri build --bundles app,dmg",
-    "desktop:build:win": "node scripts/ensure-desktop-platform.mjs win && tauri build --bundles msi,nsis"
+    "desktop:build:win": "node scripts/ensure-desktop-platform.mjs win && tauri build --bundles nsis"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
