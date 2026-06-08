@@ -1,15 +1,25 @@
 import { type ReactNode } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
+import type { ProjectAssetRecord } from "../services/assets";
 import type { ScriptRecord } from "../services/script";
 import { SCRIPT_STATE_ERROR } from "../services/script";
 import { MarkdownContent } from "./MarkdownContent";
 import { ModalPortal } from "./ModalPortal";
 
+interface ScriptEpisodeDetailModalVideoLabels {
+  colVideo: string;
+  noVideo: string;
+  formatDuration: (ms: number) => string;
+}
+
 interface ScriptEpisodeDetailModalProps {
   script: ScriptRecord | null;
+  video?: ProjectAssetRecord | null;
+  videoLabels?: ScriptEpisodeDetailModalVideoLabels;
   onClose: () => void;
 }
 
@@ -33,6 +43,8 @@ function DetailField({
 
 export function ScriptEpisodeDetailModal({
   script,
+  video,
+  videoLabels,
   onClose,
 }: ScriptEpisodeDetailModalProps) {
   const i18n = useTranslationMessages();
@@ -97,6 +109,33 @@ export function ScriptEpisodeDetailModal({
                         ? s.statusSuccess
                         : s.statusPending}
                   </DetailField>
+                  {videoLabels ? (
+                    <DetailField label={videoLabels.colVideo}>
+                      {video?.imagePath ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center rounded-lg border border-white/10 bg-black/30 p-3">
+                            <video
+                              src={convertFileSrc(video.imagePath)}
+                              controls
+                              playsInline
+                              className="max-h-[min(40vh,360px)] w-auto max-w-full rounded-md object-contain"
+                            />
+                          </div>
+                          {video.generationDurationMs != null ? (
+                            <p className="text-xs text-text-muted">
+                              {videoLabels.formatDuration(
+                                video.generationDurationMs,
+                              )}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-text-muted">
+                          {videoLabels.noVideo}
+                        </span>
+                      )}
+                    </DetailField>
+                  ) : null}
                   {script.scriptState === SCRIPT_STATE_ERROR ? (
                     <DetailField label={s.colErrorReason}>
                       <p className="whitespace-pre-wrap break-words text-red-400">

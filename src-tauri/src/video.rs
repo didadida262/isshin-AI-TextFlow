@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 const DEFAULT_VIDEO_API_URL: &str = "http://27.159.92.210:8081/v1/videos/sync";
 const DEFAULT_VIDEO_API_KEY: &str = "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
 const DEFAULT_VIDEO_SIZE: &str = "832x480";
-const DEFAULT_NUM_FRAMES: u32 = 33;
+const DEFAULT_NUM_FRAMES: u32 = 80;
 const DEFAULT_FPS: u32 = 16;
 const DEFAULT_NUM_INFERENCE_STEPS: u32 = 40;
 const DEFAULT_GUIDANCE_SCALE: f64 = 4.0;

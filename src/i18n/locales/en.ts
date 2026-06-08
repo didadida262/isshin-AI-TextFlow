@@ -268,11 +268,30 @@ export const en: TranslationSchema = {
       chatRetryFailedComplete: "Failed episodes regenerated. Check the workspace.",
       chatRetryFailedNone: "No failed episodes to retry.",
     },
+    generateVideoStep: {
+      emptyHint:
+        "Complete episode scripts in Generate Script first, then generate videos from them here.",
+      colEpisode: "Ep.",
+      colName: "Title",
+      colStatus: "Script Status",
+      colContent: "Content",
+      colDuration: "Duration",
+      colActions: "Actions",
+      colVideo: "Video",
+      generateVideo: "Generate Video",
+      regenerateVideo: "Regenerate",
+      formatDuration: (ms: number) =>
+        ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`,
+      statusSuccess: "Done",
+      statusError: "Failed",
+      statusPending: "Pending",
+      noContent: "—",
+      noVideo: "No video yet",
+    },
     generateAssetsStep: {
       generateAsset: "Generate Asset",
-      textToVideo: "Text to Video",
       emptyHint:
-        'Click "Generate Asset" or "Text to Video" in the top-right corner, fill in the prompt, and the service will create and save the asset.',
+        'Click "Generate Asset" in the top-right corner, fill in the prompt, and the service will create and save the asset.',
       loading: "Loading assets…",
       colPreview: "Preview",
       colName: "Name",
@@ -333,7 +352,7 @@ export const en: TranslationSchema = {
       abortGenerating: "Cancel generation",
     },
     textToVideoModal: {
-      title: "Text to Video",
+      title: "Video Generation",
       nameLabel: "Video name",
       namePlaceholder: "e.g. Corgi running",
       promptLabel: "Prompt",

@@ -17,10 +17,6 @@ import {
   GenerateAssetModal,
   type GenerateAssetFormValues,
 } from "./GenerateAssetModal";
-import {
-  TextToVideoModal,
-  type TextToVideoFormValues,
-} from "./TextToVideoModal";
 
 const PAGE_SIZE = 10;
 
@@ -30,6 +26,7 @@ interface GenerateAssetsStepProps {
   config: AppConfig;
   initialAssets: ListProjectAssetsResult;
   onConfigError: (message: string | null) => void;
+  onWorkflowChange?: () => void;
 }
 
 export function GenerateAssetsStep({
@@ -38,13 +35,13 @@ export function GenerateAssetsStep({
   config,
   initialAssets,
   onConfigError,
+  onWorkflowChange,
 }: GenerateAssetsStepProps) {
   const s = useTranslationMessages().creation.generateAssetsStep;
   const [assets, setAssets] = useState(initialAssets);
   const [page, setPage] = useState(initialAssets.page);
   const [loading, setLoading] = useState(false);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
-  const [textToVideoModalOpen, setTextToVideoModalOpen] = useState(false);
   const [previewAsset, setPreviewAsset] = useState<ProjectAssetRecord | null>(
     null,
   );
@@ -93,29 +90,9 @@ export function GenerateAssetsStep({
 
       setPreviewAsset(saved);
       await loadPage(1);
+      onWorkflowChange?.();
     },
-    [loadPage, onConfigError, project.id],
-  );
-
-  const handleCreateVideoAsset = useCallback(
-    async (values: TextToVideoFormValues, videoB64: string) => {
-      onConfigError(null);
-      const saved = await createProjectAsset({
-        projectId: project.id,
-        name: values.name,
-        assetType: "video",
-        prompt: values.prompt,
-        model: values.model,
-        size: values.size,
-        videoB64,
-        generationDurationMs: values.generationDurationMs,
-        numInferenceSteps: values.numInferenceSteps,
-      });
-
-      setPreviewAsset(saved);
-      await loadPage(1);
-    },
-    [loadPage, onConfigError, project.id],
+    [loadPage, onConfigError, onWorkflowChange, project.id],
   );
 
   const handleUpdateAsset = useCallback(
@@ -154,6 +131,7 @@ export function GenerateAssetsStep({
         assets.items.length === 1 && page > 1 ? page - 1 : page;
       setDeleteTarget(null);
       await loadPage(nextPage);
+      onWorkflowChange?.();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       onConfigError(message);
@@ -166,6 +144,7 @@ export function GenerateAssetsStep({
     deleting,
     loadPage,
     onConfigError,
+    onWorkflowChange,
     page,
     project.id,
   ]);
@@ -201,22 +180,13 @@ export function GenerateAssetsStep({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-4">
         <h2 className="step-panel-title w-fit min-w-0 shrink self-start">{title}</h2>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setTextToVideoModalOpen(true)}
-            className="inline-flex shrink-0 items-center rounded-lg border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/20"
-          >
-            {s.textToVideo}
-          </button>
-          <button
-            type="button"
-            onClick={() => setGenerateModalOpen(true)}
-            className="inline-flex shrink-0 items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90"
-          >
-            {s.generateAsset}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setGenerateModalOpen(true)}
+          className="inline-flex shrink-0 items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90"
+        >
+          {s.generateAsset}
+        </button>
       </div>
 
       <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-surface/20">
@@ -270,12 +240,6 @@ export function GenerateAssetsStep({
         config={config}
         onClose={() => setGenerateModalOpen(false)}
         onSubmit={handleCreateAsset}
-      />
-
-      <TextToVideoModal
-        open={textToVideoModalOpen}
-        onClose={() => setTextToVideoModalOpen(false)}
-        onSubmit={handleCreateVideoAsset}
       />
 
       <AssetImagePreviewModal

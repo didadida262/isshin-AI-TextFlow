@@ -40,6 +40,8 @@ interface TextToVideoModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (values: TextToVideoFormValues, videoB64: string) => Promise<void>;
+  initialName?: string;
+  initialPrompt?: string;
 }
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
@@ -67,6 +69,8 @@ export function TextToVideoModal({
   open,
   onClose,
   onSubmit,
+  initialName = "",
+  initialPrompt = "",
 }: TextToVideoModalProps) {
   const m = useTranslationMessages().creation.textToVideoModal;
   const errors = useTranslationMessages().errors;
@@ -95,8 +99,8 @@ export function TextToVideoModal({
     if (!open) return;
     abortRef.current = false;
     requestIdRef.current += 1;
-    setName("");
-    setPrompt("");
+    setName(initialName.trim());
+    setPrompt(initialPrompt.trim());
     setSize(DEFAULT_VIDEO_SIZE);
     setNumFrames(DEFAULT_VIDEO_NUM_FRAMES);
     setFps(DEFAULT_VIDEO_FPS);
@@ -107,7 +111,7 @@ export function TextToVideoModal({
     setFlowShift(DEFAULT_VIDEO_FLOW_SHIFT);
     setSeed(DEFAULT_VIDEO_SEED);
     setError("");
-  }, [open]);
+  }, [initialName, initialPrompt, open]);
 
   const canSubmit = name.trim() && prompt.trim() && !submitting;
 
@@ -288,9 +292,9 @@ export function TextToVideoModal({
                           value={prompt}
                           onChange={(event) => setPrompt(event.target.value)}
                           placeholder={m.promptPlaceholder}
-                          rows={3}
+                          rows={6}
                           disabled={submitting}
-                          className="max-h-[120px] w-full resize-none overflow-y-auto rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-accent/50 disabled:opacity-50"
+                          className="min-h-[240px] max-h-[240px] w-full resize-none overflow-y-auto rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-accent/50 disabled:opacity-50"
                         />
                       </label>
 

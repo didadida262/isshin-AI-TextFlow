@@ -241,9 +241,26 @@ export type TranslationSchema = {
       chatRetryFailedComplete: string;
       chatRetryFailedNone: string;
     };
+    generateVideoStep: {
+      emptyHint: string;
+      colEpisode: string;
+      colName: string;
+      colStatus: string;
+      colContent: string;
+      colDuration: string;
+      colActions: string;
+      colVideo: string;
+      generateVideo: string;
+      regenerateVideo: string;
+      formatDuration: (ms: number) => string;
+      statusSuccess: string;
+      statusError: string;
+      statusPending: string;
+      noContent: string;
+      noVideo: string;
+    };
     generateAssetsStep: {
       generateAsset: string;
-      textToVideo: string;
       emptyHint: string;
       loading: string;
       colPreview: string;
@@ -658,10 +675,28 @@ export const zh: TranslationSchema = {
       chatRetryFailedComplete: "失败集已重新生成，请在右侧查看结果。",
       chatRetryFailedNone: "当前没有失败的集数。",
     },
+    generateVideoStep: {
+      emptyHint: "请先在「生成剧本」步骤完成逐集剧本，再在此根据剧本生成视频。",
+      colEpisode: "集数",
+      colName: "剧本名称",
+      colStatus: "剧本状态",
+      colContent: "内容",
+      colDuration: "生成耗时",
+      colActions: "操作",
+      colVideo: "视频",
+      generateVideo: "生成视频",
+      regenerateVideo: "重新生成",
+      formatDuration: (ms: number) =>
+        ms < 1000 ? `${ms} 毫秒` : `${(ms / 1000).toFixed(1)} 秒`,
+      statusSuccess: "已完成",
+      statusError: "失败",
+      statusPending: "待生成",
+      noContent: "—",
+      noVideo: "暂无视频",
+    },
     generateAssetsStep: {
       generateAsset: "资产生成",
-      textToVideo: "文生视频",
-      emptyHint: "点击右上角「资产生成」或「文生视频」，填写提示词后将调用服务生成并保存资产。",
+      emptyHint: "点击右上角「资产生成」，填写提示词后将调用服务生成并保存资产。",
       loading: "加载资产列表…",
       colPreview: "预览",
       colName: "名称",
@@ -721,7 +756,7 @@ export const zh: TranslationSchema = {
       abortGenerating: "中断生成",
     },
     textToVideoModal: {
-      title: "文生视频",
+      title: "视频生成",
       nameLabel: "视频名称",
       namePlaceholder: "例如：柯基奔跑",
       promptLabel: "提示词",

@@ -5,7 +5,7 @@ import type {
 } from "../types";
 import type { NovelChapterRecord, NovelSourceRecord } from "./novel";
 import type { ScriptRecord } from "./script";
-import type { ListProjectAssetsResult } from "./assets";
+import type { ListProjectAssetsResult, ProjectAssetRecord } from "./assets";
 
 export interface ExtractEventsNodeDetail {
   kind: "extractEvents";
@@ -37,10 +37,18 @@ export interface GenerateAssetsNodeDetail {
   assets: ListProjectAssetsResult;
 }
 
+export interface GenerateVideoNodeDetail {
+  kind: "generateVideo";
+  nodeId: ProjectWorkflowStepId;
+  scripts: ScriptRecord[];
+  videos: ProjectAssetRecord[];
+}
+
 export type WorkflowNodeDetail =
   | ExtractEventsNodeDetail
   | AiScriptNodeDetail
   | GenerateAssetsNodeDetail
+  | GenerateVideoNodeDetail
   | PlaceholderNodeDetail;
 
 const inflightRequests = new Map<string, Promise<unknown>>();

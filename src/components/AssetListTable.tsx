@@ -68,7 +68,7 @@ const colgroup = (
     <col className="w-36 sm:w-44" />
     <col className="w-20" />
     <col />
-    <col className="w-28" />
+    <col className="w-40 sm:w-48" />
     <col className="w-20" />
     <col className="w-24" />
     <col className="w-20" />

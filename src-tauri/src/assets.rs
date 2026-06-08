@@ -225,6 +225,71 @@ pub fn fetch_asset_by_id(
     .map_err(|e| e.to_string())
 }
 
+pub fn has_successful_assets(conn: &Connection, project_id: &str) -> Result<bool, String> {
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM project_assets WHERE project_id = ?1 AND asset_state = ?2",
+            params![project_id, ASSET_STATE_SUCCESS],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(count > 0)
+}
+
+fn sync_workflow_after_assets_change(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<(), String> {
+    let current: String = conn
+        .query_row(
+            "SELECT current_workflow_node FROM projects WHERE id = ?1",
+            params![project_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    let now = timestamp();
+    if has_successful_assets(conn, project_id)? {
+        if current == "generateAssets" || current == "storyboard" {
+            conn.execute(
+                "UPDATE projects SET current_workflow_node = 'generateVideo', updated_at = ?2 WHERE id = ?1",
+                params![project_id, now],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+    } else if current == "generateVideo" || current == "storyboard" {
+        conn.execute(
+            "UPDATE projects SET current_workflow_node = 'generateAssets', updated_at = ?2 WHERE id = ?1",
+            params![project_id, now],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+pub fn fetch_project_video_assets(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<Vec<ProjectAssetRecord>, String> {
+    let mut stmt = conn
+        .prepare(
+            &format!(
+                "{ASSET_SELECT}
+             WHERE project_id = ?1 AND asset_type = 'video'
+             ORDER BY created_at DESC, id DESC"
+            ),
+        )
+        .map_err(|e| e.to_string())?;
+
+    let items = stmt
+        .query_map(params![project_id], row_to_asset)
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    Ok(items)
+}
+
 pub fn list_project_assets_internal(
     conn: &Connection,
     project_id: &str,
@@ -357,7 +422,11 @@ pub fn create_project_asset(input: CreateProjectAssetInput) -> Result<ProjectAss
         .map_err(|e| e.to_string())?;
     }
 
-    fetch_asset_by_id(&conn, &input.project_id, asset_id)
+    let record = fetch_asset_by_id(&conn, &input.project_id, asset_id)?;
+    if record.asset_state == ASSET_STATE_SUCCESS {
+        sync_workflow_after_assets_change(&conn, &input.project_id)?;
+    }
+    Ok(record)
 }
 
 #[tauri::command]
@@ -412,6 +481,8 @@ pub fn delete_project_asset(input: DeleteProjectAssetInput) -> Result<(), String
     if let Some(path) = asset.image_path {
         let _ = remove_asset_image_file(&path);
     }
+
+    sync_workflow_after_assets_change(&conn, &input.project_id)?;
 
     Ok(())
 }

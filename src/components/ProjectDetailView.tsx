@@ -19,6 +19,7 @@ import { ProjectStepper, type WorkflowStepItem } from "./ProjectStepper";
 import { ExtractEventsStep } from "./ExtractEventsStep";
 import { AiScriptStep } from "./AiScriptStep";
 import { GenerateAssetsStep } from "./GenerateAssetsStep";
+import { GenerateVideoStep } from "./GenerateVideoStep";
 interface ProjectDetailViewProps {
   project: CreationProject;
   config: AppConfig;
@@ -46,6 +47,13 @@ const STEP_ORDER: ProjectWorkflowStepId[] = [
   "generateVideo",
   "editExport",
 ];
+
+/** 暂时隐藏的流程节点（恢复时从此数组移除） */
+const HIDDEN_WORKFLOW_STEPS: ProjectWorkflowStepId[] = ["storyboard"];
+
+const VISIBLE_STEP_ORDER = STEP_ORDER.filter(
+  (step) => !HIDDEN_WORKFLOW_STEPS.includes(step),
+);
 
 const stepTransition = {
   type: "tween" as const,
@@ -104,8 +112,20 @@ export function ProjectDetailView({
   const [stepDirection, setStepDirection] = useState(0);
   const [enableStepAnimation, setEnableStepAnimation] = useState(false);
 
+  useEffect(() => {
+    if (!HIDDEN_WORKFLOW_STEPS.includes(selectedStep)) return;
+    setSelectedStep("generateAssets");
+  }, [selectedStep]);
+
   const workflowNodes = useMemo(
-    () => mapWorkflowSteps(workflowNodesRaw, w),
+    () =>
+      mapWorkflowSteps(
+        workflowNodesRaw.filter(
+          (node) =>
+            !HIDDEN_WORKFLOW_STEPS.includes(node.id as ProjectWorkflowStepId),
+        ),
+        w,
+      ),
     [workflowNodesRaw, w],
   );
 
@@ -179,8 +199,8 @@ export function ProjectDetailView({
     (stepId: ProjectWorkflowStepId) => {
       if (stepId === selectedStep) return;
 
-      const prevIndex = STEP_ORDER.indexOf(selectedStep);
-      const nextIndex = STEP_ORDER.indexOf(stepId);
+      const prevIndex = VISIBLE_STEP_ORDER.indexOf(selectedStep);
+      const nextIndex = VISIBLE_STEP_ORDER.indexOf(stepId);
       setStepDirection(nextIndex >= prevIndex ? 1 : -1);
       setEnableStepAnimation(true);
       setSelectedStep(stepId);
@@ -206,6 +226,11 @@ export function ProjectDetailView({
 
   const generateAssetsDetail = useMemo(
     () => (nodeDetail?.kind === "generateAssets" ? nodeDetail : null),
+    [nodeDetail],
+  );
+
+  const generateVideoDetail = useMemo(
+    () => (nodeDetail?.kind === "generateVideo" ? nodeDetail : null),
     [nodeDetail],
   );
 
@@ -259,6 +284,21 @@ export function ProjectDetailView({
           config={config}
           initialAssets={generateAssetsDetail.assets}
           onConfigError={onConfigError}
+          onWorkflowChange={() => void refreshProjectWorkflow()}
+        />
+      );
+    }
+
+    if (selectedStep === "generateVideo" && generateVideoDetail) {
+      return (
+        <GenerateVideoStep
+          key={`${project.id}-generate-video-${generateVideoDetail.scripts.length}-${generateVideoDetail.videos.length}-${generateVideoDetail.videos[0]?.id ?? 0}`}
+          project={project}
+          title={activeLabel}
+          scripts={generateVideoDetail.scripts}
+          initialVideos={generateVideoDetail.videos}
+          onConfigError={onConfigError}
+          onVideosUpdated={() => void loadNodeDetail("generateVideo", { silent: true })}
         />
       );
     }
@@ -279,6 +319,7 @@ export function ProjectDetailView({
     config,
     extractEventsDetail,
     generateAssetsDetail,
+    generateVideoDetail,
     loadNodeDetail,
     onConfigError,
     project,

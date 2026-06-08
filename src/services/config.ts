@@ -16,7 +16,7 @@ export const DEFAULT_VIDEO_API_KEY =
   "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
 export const DEFAULT_VIDEO_MODEL = "wan2.2-t2v-5b";
 export const DEFAULT_VIDEO_SIZE = "832x480";
-export const DEFAULT_VIDEO_NUM_FRAMES = 33;
+export const DEFAULT_VIDEO_NUM_FRAMES = 80;
 export const DEFAULT_VIDEO_FPS = 16;
 export const DEFAULT_VIDEO_INFERENCE_STEPS = 40;
 export const DEFAULT_VIDEO_GUIDANCE_SCALE = 4.0;
