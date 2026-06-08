@@ -14,7 +14,7 @@ mod workflow;
 
 use assistant_context::query_assistant_context;
 use image::generate_image;
-use video::generate_video;
+use video::{generate_image_to_video, generate_video};
 use assets::{create_project_asset, delete_project_asset, list_project_assets, update_project_asset};
 use db::login;
 use db_admin::{
@@ -98,6 +98,7 @@ pub fn run() {
             delete_project_asset,
             generate_image,
             generate_video,
+            generate_image_to_video,
             get_database_overview,
             export_database,
             export_database_to_file,

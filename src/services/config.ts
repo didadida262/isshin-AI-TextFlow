@@ -13,10 +13,21 @@ export const DEFAULT_NUM_INFERENCE_STEPS = 25;
 export const DEFAULT_VIDEO_API_URL =
   "http://27.159.92.210:8081/v1/videos/sync";
 export const DEFAULT_VIDEO_API_KEY =
-  "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
+  "wan2.2-t2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
 export const DEFAULT_VIDEO_MODEL = "wan2.2-t2v-5b";
+
+export const DEFAULT_IMAGE_TO_VIDEO_API_URL =
+  "http://27.159.92.210:8081/v1/videos/sync";
+export const DEFAULT_IMAGE_TO_VIDEO_API_KEY =
+  "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
+export const DEFAULT_IMAGE_TO_VIDEO_MODEL = "wan2.2-ti2v-5b";
+export const DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE = 1.0;
+export const DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE_2 = 1.0;
+export const DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT = 12.0;
+export const DEFAULT_IMAGE_TO_VIDEO_NEGATIVE_PROMPT =
+  "low quality, blurry, static";
 export const DEFAULT_VIDEO_SIZE = "832x480";
-export const DEFAULT_VIDEO_NUM_FRAMES = 80;
+export const DEFAULT_VIDEO_NUM_FRAMES = 160;
 export const DEFAULT_VIDEO_FPS = 16;
 export const DEFAULT_VIDEO_INFERENCE_STEPS = 40;
 export const DEFAULT_VIDEO_GUIDANCE_SCALE = 4.0;
@@ -130,5 +141,28 @@ export function getFixedVideoSettings(): VideoGenerationSettings {
     videoApiUrl: DEFAULT_VIDEO_API_URL,
     videoApiKey: DEFAULT_VIDEO_API_KEY,
     videoModel: DEFAULT_VIDEO_MODEL,
+  };
+}
+
+export type ImageToVideoGenerationSettings = {
+  imageToVideoApiUrl: string;
+  imageToVideoApiKey: string;
+  imageToVideoModel: string;
+};
+
+export function isImageToVideoSettingsValid(
+  settings: ImageToVideoGenerationSettings,
+): boolean {
+  return Boolean(
+    settings.imageToVideoApiUrl.trim() &&
+      settings.imageToVideoApiKey.trim(),
+  );
+}
+
+export function getFixedImageToVideoSettings(): ImageToVideoGenerationSettings {
+  return {
+    imageToVideoApiUrl: DEFAULT_IMAGE_TO_VIDEO_API_URL,
+    imageToVideoApiKey: DEFAULT_IMAGE_TO_VIDEO_API_KEY,
+    imageToVideoModel: DEFAULT_IMAGE_TO_VIDEO_MODEL,
   };
 }

@@ -79,6 +79,17 @@ export type TranslationSchema = {
     videoApiKey: string;
     videoModel: string;
     videoTestTitle: string;
+    imageToVideoSection: string;
+    imageToVideoApiUrl: string;
+    imageToVideoApiKey: string;
+    imageToVideoModel: string;
+    imageToVideoTestTitle: string;
+    imageToVideoTestConfirm: string;
+    imageToVideoTestDownloadTitle: string;
+    imageToVideoReferenceLabel: string;
+    imageToVideoReferencePick: string;
+    imageToVideoReferenceEmpty: string;
+    imageToVideoNegativePromptLabel: string;
     tabModelService: string;
     tabDatabase: string;
     database: {
@@ -129,6 +140,8 @@ export type TranslationSchema = {
     modelsRequired: string;
     imageConfigRequired: string;
     videoConfigRequired: string;
+    imageToVideoConfigRequired: string;
+    imageToVideoReferenceRequired: string;
     requestFailed: string;
   };
   toolAgent: {
@@ -248,6 +261,7 @@ export type TranslationSchema = {
       colStatus: string;
       colContent: string;
       colDuration: string;
+      colVideoStatus: string;
       colActions: string;
       colVideo: string;
       generateVideo: string;
@@ -496,6 +510,17 @@ export const zh: TranslationSchema = {
     videoApiKey: "视频 API 密钥",
     videoModel: "视频模型",
     videoTestTitle: "视频连接测试",
+    imageToVideoSection: "图生视频 API",
+    imageToVideoApiUrl: "图生视频 API 地址",
+    imageToVideoApiKey: "图生视频 API 密钥",
+    imageToVideoModel: "图生视频模型",
+    imageToVideoTestTitle: "图生视频连接测试",
+    imageToVideoTestConfirm: "开始测试",
+    imageToVideoTestDownloadTitle: "保存测试视频",
+    imageToVideoReferenceLabel: "参考图片",
+    imageToVideoReferencePick: "选择图片",
+    imageToVideoReferenceEmpty: "未选择图片",
+    imageToVideoNegativePromptLabel: "负向提示词",
     tabModelService: "模型服务",
     tabDatabase: "数据库操作",
     database: {
@@ -548,6 +573,8 @@ export const zh: TranslationSchema = {
     modelsRequired: "请先在设置中同步模型列表",
     imageConfigRequired: "请先在设置中配置图片生成 API",
     videoConfigRequired: "请先在设置中配置视频生成 API",
+    imageToVideoConfigRequired: "请先在设置中配置图生视频 API",
+    imageToVideoReferenceRequired: "请先上传参考图片",
     requestFailed: "请求失败：{{error}}",
   },
   toolAgent: {
@@ -682,6 +709,7 @@ export const zh: TranslationSchema = {
       colStatus: "剧本状态",
       colContent: "内容",
       colDuration: "生成耗时",
+      colVideoStatus: "视频状态",
       colActions: "操作",
       colVideo: "视频",
       generateVideo: "生成视频",

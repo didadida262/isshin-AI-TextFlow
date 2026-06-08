@@ -2,7 +2,12 @@ import { type ReactNode } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCircleCheck,
+  faCircleExclamation,
+  faClock,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import type { ProjectAssetRecord } from "../services/assets";
 import type { ScriptRecord } from "../services/script";
@@ -38,6 +43,62 @@ function DetailField({
       <dt className="mb-1.5 text-xs font-medium text-text-muted">{label}</dt>
       <dd className="text-sm leading-relaxed text-white">{children}</dd>
     </div>
+  );
+}
+
+type ScriptStatusKind = "success" | "error" | "pending";
+
+function getScriptStatusKind(script: ScriptRecord): ScriptStatusKind {
+  if (script.scriptState === SCRIPT_STATE_ERROR) return "error";
+  if (script.content.trim()) return "success";
+  return "pending";
+}
+
+const statusBadgeClass: Record<ScriptStatusKind, string> = {
+  success:
+    "border-accent/35 bg-accent/10 text-accent shadow-[0_0_14px_rgba(0,255,102,0.2)]",
+  error: "border-red-500/35 bg-red-500/10 text-red-400",
+  pending: "border-amber-400/30 bg-amber-400/10 text-amber-300",
+};
+
+const statusIconClass: Record<ScriptStatusKind, string> = {
+  success: "text-accent",
+  error: "text-red-400",
+  pending: "text-amber-300",
+};
+
+function ScriptStatusBadge({
+  script,
+  labels,
+}: {
+  script: ScriptRecord;
+  labels: {
+    statusSuccess: string;
+    statusError: string;
+    statusPending: string;
+  };
+}) {
+  const kind = getScriptStatusKind(script);
+  const label =
+    kind === "error"
+      ? labels.statusError
+      : kind === "success"
+        ? labels.statusSuccess
+        : labels.statusPending;
+  const icon =
+    kind === "error"
+      ? faCircleExclamation
+      : kind === "success"
+        ? faCircleCheck
+        : faClock;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${statusBadgeClass[kind]}`}
+    >
+      <FontAwesomeIcon icon={icon} className={`text-base ${statusIconClass[kind]}`} />
+      {label}
+    </span>
   );
 }
 
@@ -103,11 +164,7 @@ export function ScriptEpisodeDetailModal({
                   </DetailField>
                   <DetailField label={s.colName}>{script.name}</DetailField>
                   <DetailField label={s.colStatus}>
-                    {script.scriptState === SCRIPT_STATE_ERROR
-                      ? s.statusError
-                      : script.content
-                        ? s.statusSuccess
-                        : s.statusPending}
+                    <ScriptStatusBadge script={script} labels={s} />
                   </DetailField>
                   {videoLabels ? (
                     <DetailField label={videoLabels.colVideo}>

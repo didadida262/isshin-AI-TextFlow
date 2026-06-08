@@ -85,6 +85,7 @@ commands.allow = [
   "delete_project_asset",
   "generate_image",
   "generate_video",
+  "generate_image_to_video",
 ]
 
 [[permission]]

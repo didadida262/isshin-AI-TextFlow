@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCircleCheck,
+  faCircleExclamation,
+  faClock,
+} from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
+  ASSET_STATE_ERROR,
   createProjectAsset,
   type ProjectAssetRecord,
 } from "../services/assets";
@@ -82,6 +89,58 @@ function scriptStatusClass(script: ScriptRecord): string {
   return "text-text-dim";
 }
 
+type VideoStatusKind = "success" | "error" | "pending";
+
+function getVideoStatusKind(
+  video: ProjectAssetRecord | undefined,
+): VideoStatusKind {
+  if (!video) return "pending";
+  if (video.assetState === ASSET_STATE_ERROR) return "error";
+  if (video.imagePath) return "success";
+  return "pending";
+}
+
+const videoStatusBadgeClass: Record<VideoStatusKind, string> = {
+  success:
+    "border-accent/35 bg-accent/10 text-accent shadow-[0_0_10px_rgba(0,255,102,0.15)]",
+  error: "border-red-500/35 bg-red-500/10 text-red-400",
+  pending: "border-amber-400/30 bg-amber-400/10 text-amber-300",
+};
+
+function VideoStatusBadge({
+  kind,
+  labels,
+}: {
+  kind: VideoStatusKind;
+  labels: {
+    statusSuccess: string;
+    statusError: string;
+    statusPending: string;
+  };
+}) {
+  const label =
+    kind === "error"
+      ? labels.statusError
+      : kind === "success"
+        ? labels.statusSuccess
+        : labels.statusPending;
+  const icon =
+    kind === "error"
+      ? faCircleExclamation
+      : kind === "success"
+        ? faCircleCheck
+        : faClock;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${videoStatusBadgeClass[kind]}`}
+    >
+      <FontAwesomeIcon icon={icon} className="text-sm" />
+      {label}
+    </span>
+  );
+}
+
 export function GenerateVideoStep({
   project,
   title,
@@ -158,6 +217,7 @@ export function GenerateVideoStep({
                 <col />
                 <col className="w-24" />
                 <col className="w-28 sm:w-32" />
+                <col className="w-28 sm:w-32" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm">
                 <tr className="border-b border-white/10 text-text-muted">
@@ -166,6 +226,7 @@ export function GenerateVideoStep({
                   <th className="px-3 py-2.5 font-medium">{s.colStatus}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colContent}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colDuration}</th>
+                  <th className="px-3 py-2.5 font-medium">{s.colVideoStatus}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colActions}</th>
                 </tr>
               </thead>
@@ -211,6 +272,12 @@ export function GenerateVideoStep({
                           : s.noContent}
                       </td>
                       <td className="px-3 py-2.5">
+                        <VideoStatusBadge
+                          kind={getVideoStatusKind(video)}
+                          labels={s}
+                        />
+                      </td>
+                      <td className="px-3 py-2.5">
                         <button
                           type="button"
                           disabled={!generateEnabled}
@@ -218,7 +285,7 @@ export function GenerateVideoStep({
                             event.stopPropagation();
                             openVideoModal(script);
                           }}
-                          className="rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent transition hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-text-dim"
+                          className="text-xs text-accent transition hover:underline disabled:cursor-not-allowed disabled:text-text-dim disabled:no-underline"
                         >
                           {hasVideo ? s.regenerateVideo : s.generateVideo}
                         </button>
