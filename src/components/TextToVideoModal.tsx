@@ -12,8 +12,9 @@ import {
   DEFAULT_VIDEO_INFERENCE_STEPS,
   DEFAULT_VIDEO_NUM_FRAMES,
   DEFAULT_VIDEO_SEED,
+  DEFAULT_VIDEO_MODEL,
   DEFAULT_VIDEO_SIZE,
-  getFixedVideoSettings,
+  loadConfig,
 } from "../services/config";
 import { generateVideoB64 } from "../services/videoGeneration";
 import { PaintbrushLoading } from "./PaintbrushLoading";
@@ -74,7 +75,7 @@ export function TextToVideoModal({
 }: TextToVideoModalProps) {
   const m = useTranslationMessages().creation.textToVideoModal;
   const errors = useTranslationMessages().errors;
-  const videoModel = getFixedVideoSettings().videoModel;
+  const [videoModel, setVideoModel] = useState(DEFAULT_VIDEO_MODEL);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState(DEFAULT_VIDEO_SIZE);
@@ -99,6 +100,9 @@ export function TextToVideoModal({
     if (!open) return;
     abortRef.current = false;
     requestIdRef.current += 1;
+    void loadConfig().then((config) => {
+      setVideoModel(config.videoModel.trim() || DEFAULT_VIDEO_MODEL);
+    });
     setName(initialName.trim());
     setPrompt(initialPrompt.trim());
     setSize(DEFAULT_VIDEO_SIZE);
@@ -123,8 +127,6 @@ export function TextToVideoModal({
       })),
     [],
   );
-
-  const videoSettings = useMemo(() => getFixedVideoSettings(), []);
 
   const handleClose = useCallback(() => {
     if (submitting) {
@@ -154,7 +156,6 @@ export function TextToVideoModal({
         boundaryRatio,
         flowShift,
         seed,
-        settings: videoSettings,
       });
       if (abortRef.current || requestId !== requestIdRef.current) return;
 
@@ -215,7 +216,6 @@ export function TextToVideoModal({
     seed,
     size,
     videoModel,
-    videoSettings,
   ]);
 
   return (

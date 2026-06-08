@@ -6,7 +6,7 @@ import type { ProjectAssetRecord } from "../services/assets";
 import { ASSET_STATE_ERROR, ASSET_STATE_SUCCESS } from "../services/assets";
 import { AssetRowActions } from "./AssetRowActions";
 import { AssetTypeTag } from "./AssetTypeTag";
-import { HoverFullText } from "./HoverFullText";
+import { VideoThumbnail } from "./VideoThumbnail";
 
 interface AssetListTableLabels {
   colPreview: string;
@@ -20,6 +20,7 @@ interface AssetListTableLabels {
   colStatus: string;
   colActions: string;
   edit: string;
+  download: string;
   delete: string;
   openActionsMenu: string;
   statusSuccess: string;
@@ -36,8 +37,10 @@ interface AssetListTableLabels {
 interface AssetListTableProps {
   items: ProjectAssetRecord[];
   labels: AssetListTableLabels;
+  onRowClick?: (asset: ProjectAssetRecord) => void;
   onViewImage?: (asset: ProjectAssetRecord) => void;
   onEdit?: (asset: ProjectAssetRecord) => void;
+  onDownload?: (asset: ProjectAssetRecord) => void;
   onDelete?: (asset: ProjectAssetRecord) => void;
 }
 
@@ -79,8 +82,10 @@ const colgroup = (
 export function AssetListTable({
   items,
   labels,
+  onRowClick,
   onViewImage,
   onEdit,
+  onDownload,
   onDelete,
 }: AssetListTableProps) {
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -108,20 +113,25 @@ export function AssetListTable({
           {items.map((asset) => (
             <tr
               key={asset.id}
-              className="border-b border-white/5 align-middle transition hover:bg-white/[0.02]"
+              onClick={() => onRowClick?.(asset)}
+              className={`border-b border-white/5 align-middle transition ${
+                onRowClick
+                  ? "cursor-pointer hover:bg-white/[0.04]"
+                  : "hover:bg-white/[0.02]"
+              }`}
             >
-              <td className="px-3 py-2.5">
+              <td className="px-3 py-2.5" onClick={(event) => event.stopPropagation()}>
                 {asset.imagePath ? (
                   isVideoAsset(asset) ? (
                     <button
                       type="button"
                       title={labels.viewVideo}
                       onClick={() => onViewImage?.(asset)}
-                      className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-md border border-sky-400/20 bg-sky-400/10 transition hover:border-accent/40 hover:ring-1 hover:ring-accent/30"
+                      className="block overflow-hidden rounded-md border border-sky-400/20 bg-sky-400/10 transition hover:border-accent/40 hover:ring-1 hover:ring-accent/30"
                     >
-                      <FontAwesomeIcon
-                        icon={faClapperboard}
-                        className="text-xl text-sky-300"
+                      <VideoThumbnail
+                        src={convertFileSrc(asset.imagePath)}
+                        alt={asset.name}
                       />
                     </button>
                   ) : (
@@ -152,16 +162,16 @@ export function AssetListTable({
                 )}
               </td>
               <td className="max-w-0 px-3 py-2.5 text-white">
-                <HoverFullText text={asset.name} lines={1} />
+                <p className="truncate">{asset.name}</p>
               </td>
               <td className="px-3 py-2.5">
                 <AssetTypeTag assetType={asset.assetType} labels={labels} />
               </td>
               <td className="max-w-0 px-3 py-2.5 text-text-muted">
-                <HoverFullText text={asset.prompt} lines={2} />
+                <p className="line-clamp-2 break-words">{asset.prompt}</p>
               </td>
               <td className="max-w-0 px-3 py-2.5 text-text-muted">
-                <HoverFullText text={asset.model} lines={1} />
+                <p className="truncate">{asset.model}</p>
               </td>
               <td className="px-3 py-2.5 text-text-muted">
                 {asset.numInferenceSteps ?? "—"}
@@ -173,20 +183,21 @@ export function AssetListTable({
               </td>
               <td className={`px-3 py-2.5 ${statusClass(asset)}`}>
                 {asset.assetState === ASSET_STATE_ERROR && asset.errorReason ? (
-                  <HoverFullText
-                    text={asset.errorReason}
-                    className="text-red-400/90"
-                    lines={1}
-                  />
+                  <p className="truncate text-red-400/90">{asset.errorReason}</p>
                 ) : (
                   statusLabel(asset, labels)
                 )}
               </td>
-              <td className="whitespace-nowrap px-3 py-2.5">
+              <td
+                className="whitespace-nowrap px-3 py-2.5"
+                onClick={(event) => event.stopPropagation()}
+              >
                 <AssetRowActions
                   openMenuLabel={labels.openActionsMenu}
                   editLabel={labels.edit}
+                  downloadLabel={labels.download}
                   deleteLabel={labels.delete}
+                  downloadDisabled={!asset.imagePath}
                   isOpen={openMenuId === asset.id}
                   onToggle={() =>
                     setOpenMenuId((current) =>
@@ -195,6 +206,7 @@ export function AssetListTable({
                   }
                   onClose={() => setOpenMenuId(null)}
                   onEdit={() => onEdit?.(asset)}
+                  onDownload={() => onDownload?.(asset)}
                   onDelete={() => onDelete?.(asset)}
                 />
               </td>

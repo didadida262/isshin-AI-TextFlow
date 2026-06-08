@@ -8,7 +8,9 @@ import {
   type ListProjectAssetsResult,
   type ProjectAssetRecord,
 } from "../services/assets";
+import { downloadAssetFile } from "../services/mediaDownload";
 import type { AppConfig, CreationProject } from "../types";
+import { AssetDetailModal } from "./AssetDetailModal";
 import { AssetImagePreviewModal } from "./AssetImagePreviewModal";
 import { AssetListTable } from "./AssetListTable";
 import { DeleteAssetConfirmModal } from "./DeleteAssetConfirmModal";
@@ -45,6 +47,9 @@ export function GenerateAssetsStep({
   const [previewAsset, setPreviewAsset] = useState<ProjectAssetRecord | null>(
     null,
   );
+  const [detailAsset, setDetailAsset] = useState<ProjectAssetRecord | null>(
+    null,
+  );
   const [editAsset, setEditAsset] = useState<ProjectAssetRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectAssetRecord | null>(
     null,
@@ -57,7 +62,9 @@ export function GenerateAssetsStep({
     async (nextPage: number) => {
       setLoading(true);
       try {
-        const result = await listProjectAssets(project.id, nextPage, PAGE_SIZE);
+        const result = await listProjectAssets(project.id, nextPage, PAGE_SIZE, {
+          excludeAssetTypes: ["video"],
+        });
         setAssets(result);
         setPage(result.page);
         return result;
@@ -116,6 +123,24 @@ export function GenerateAssetsStep({
     [],
   );
 
+  const handleDownloadAsset = useCallback(
+    async (asset: ProjectAssetRecord) => {
+      if (!asset.imagePath) {
+        onConfigError(s.downloadNoFile);
+        return;
+      }
+
+      onConfigError(null);
+      try {
+        await downloadAssetFile(asset, { dialogTitle: s.downloadDialogTitle });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        onConfigError(message);
+      }
+    },
+    [onConfigError, s.downloadDialogTitle, s.downloadNoFile],
+  );
+
   const handleConfirmDelete = useCallback(async () => {
     if (!deleteTarget || deleting) return;
 
@@ -161,6 +186,7 @@ export function GenerateAssetsStep({
     colStatus: s.colStatus,
     colActions: s.colActions,
     edit: s.edit,
+    download: s.download,
     delete: s.delete,
     openActionsMenu: s.openActionsMenu,
     statusSuccess: s.statusSuccess,
@@ -198,8 +224,10 @@ export function GenerateAssetsStep({
           <AssetListTable
             items={assets.items}
             labels={tableLabels}
+            onRowClick={setDetailAsset}
             onViewImage={setPreviewAsset}
             onEdit={setEditAsset}
+            onDownload={(asset) => void handleDownloadAsset(asset)}
             onDelete={(asset) => void handleDeleteAsset(asset)}
           />
         ) : (
@@ -245,6 +273,11 @@ export function GenerateAssetsStep({
       <AssetImagePreviewModal
         asset={previewAsset}
         onClose={() => setPreviewAsset(null)}
+      />
+
+      <AssetDetailModal
+        asset={detailAsset}
+        onClose={() => setDetailAsset(null)}
       />
 
       <EditAssetModal

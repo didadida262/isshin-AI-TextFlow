@@ -16,13 +16,16 @@ import {
   isImageSettingsValid,
   DEFAULT_IMAGE_COUNT,
   DEFAULT_IMAGE_SIZE,
-  getFixedImageToVideoSettings,
-  getFixedVideoSettings,
+  getImageToVideoSettingsFromConfig,
+  getPromptRefineSettingsFromConfig,
+  getVideoSettingsFromConfig,
   isImageToVideoSettingsValid,
+  isPromptRefineSettingsValid,
   isVideoSettingsValid,
 } from "../../services/config";
 import { ImageTestResultModal } from "./ImageTestResultModal";
 import { ImageToVideoTestResultModal } from "./ImageToVideoTestResultModal";
+import { PromptRefineTestResultModal } from "./PromptRefineTestResultModal";
 import { VideoTestResultModal } from "./VideoTestResultModal";
 
 interface ModelServiceSettingsPanelProps {
@@ -50,11 +53,13 @@ export function ModelServiceSettingsPanel({
   const [showImageKey, setShowImageKey] = useState(false);
   const [showVideoKey, setShowVideoKey] = useState(false);
   const [showImageToVideoKey, setShowImageToVideoKey] = useState(false);
+  const [showPromptRefineKey, setShowPromptRefineKey] = useState(false);
   const [testStatus, setTestStatus] = useState<
     "idle" | "loading" | "ok" | "error"
   >("idle");
   const [testError, setTestError] = useState("");
   const [testElapsedMs, setTestElapsedMs] = useState<number | null>(null);
+  const [promptRefineTestOpen, setPromptRefineTestOpen] = useState(false);
   const [imageTestOpen, setImageTestOpen] = useState(false);
   const [videoTestOpen, setVideoTestOpen] = useState(false);
   const [imageToVideoTestOpen, setImageToVideoTestOpen] = useState(false);
@@ -67,8 +72,9 @@ export function ModelServiceSettingsPanel({
     imageCount: DEFAULT_IMAGE_COUNT,
   };
 
-  const videoSettings = getFixedVideoSettings();
-  const imageToVideoSettings = getFixedImageToVideoSettings();
+  const videoSettings = getVideoSettingsFromConfig(draft);
+  const imageToVideoSettings = getImageToVideoSettingsFromConfig(draft);
+  const promptRefineSettings = getPromptRefineSettingsFromConfig(draft);
 
   const readOnlyFieldClass =
     "w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-text-muted outline-none read-only:cursor-default";
@@ -135,8 +141,21 @@ export function ModelServiceSettingsPanel({
     setImageToVideoTestOpen(true);
   };
 
+  const canTestPromptRefineConnection =
+    isPromptRefineSettingsValid(promptRefineSettings);
+
+  const runPromptRefineTest = () => {
+    if (!canTestPromptRefineConnection || promptRefineTestOpen) return;
+    setPromptRefineTestOpen(true);
+  };
+
   return (
     <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-white">
+          {i18n.settings.generalApiSection}
+        </h3>
+
       <label className="block space-y-2">
         <span className="text-sm text-text-muted">{i18n.settings.baseUrl}</span>
         <input
@@ -295,6 +314,89 @@ export function ModelServiceSettingsPanel({
           <p className="text-xs text-text-dim">{i18n.settings.selectModelFirst}</p>
         ) : null}
       </div>
+      </div>
+
+      <div className="h-px bg-white/10" />
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-white">
+          {i18n.settings.promptRefineSection}
+        </h3>
+
+        <label className="block space-y-2">
+          <span className="text-sm text-text-muted">
+            {i18n.settings.promptRefineApiUrl}
+          </span>
+          <input
+            type="url"
+            value={draft.promptRefineApiUrl}
+            onChange={(event) =>
+              onDraftChange((current) => ({
+                ...current,
+                promptRefineApiUrl: event.target.value,
+              }))
+            }
+            placeholder="http://27.159.92.215:8000/v1/chat/completions"
+            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
+          />
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-sm text-text-muted">
+            {i18n.settings.promptRefineApiKey}
+          </span>
+          <div className="relative">
+            <input
+              type={showPromptRefineKey ? "text" : "password"}
+              value={draft.promptRefineApiKey}
+              onChange={(event) =>
+                onDraftChange((current) => ({
+                  ...current,
+                  promptRefineApiKey: event.target.value,
+                }))
+              }
+              placeholder={i18n.settings.promptRefineApiKeyOptional}
+              className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 pr-10 text-sm outline-none focus:border-accent/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPromptRefineKey((value) => !value)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white"
+            >
+              <FontAwesomeIcon icon={showPromptRefineKey ? faEyeSlash : faEye} />
+            </button>
+          </div>
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-sm text-text-muted">
+            {i18n.settings.promptRefineModel}
+          </span>
+          <input
+            type="text"
+            value={draft.promptRefineModel}
+            onChange={(event) =>
+              onDraftChange((current) => ({
+                ...current,
+                promptRefineModel: event.target.value,
+              }))
+            }
+            placeholder="prompt-refine"
+            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
+          />
+        </label>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={runPromptRefineTest}
+            disabled={promptRefineTestOpen || !canTestPromptRefineConnection}
+            className="rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {i18n.settings.testConnection}
+          </button>
+        </div>
+      </div>
 
       <div className="h-px bg-white/10" />
 
@@ -385,9 +487,15 @@ export function ModelServiceSettingsPanel({
           <span className="text-sm text-text-muted">{i18n.settings.videoApiUrl}</span>
           <input
             type="url"
-            readOnly
-            value={videoSettings.videoApiUrl}
-            className={readOnlyFieldClass}
+            value={draft.videoApiUrl}
+            onChange={(event) =>
+              onDraftChange((current) => ({
+                ...current,
+                videoApiUrl: event.target.value,
+              }))
+            }
+            placeholder="http://27.159.92.210:8081/v1/videos/sync"
+            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
           />
         </label>
 
@@ -396,9 +504,15 @@ export function ModelServiceSettingsPanel({
           <div className="relative">
             <input
               type={showVideoKey ? "text" : "password"}
-              readOnly
-              value={videoSettings.videoApiKey}
-              className={`${readOnlyFieldClass} pr-10`}
+              value={draft.videoApiKey}
+              onChange={(event) =>
+                onDraftChange((current) => ({
+                  ...current,
+                  videoApiKey: event.target.value,
+                }))
+              }
+              placeholder="wan2.2-ti2v-5b@srd*..."
+              className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 pr-10 text-sm outline-none focus:border-accent/50"
             />
             <button
               type="button"
@@ -451,9 +565,15 @@ export function ModelServiceSettingsPanel({
           </span>
           <input
             type="url"
-            readOnly
-            value={imageToVideoSettings.imageToVideoApiUrl}
-            className={readOnlyFieldClass}
+            value={draft.imageToVideoApiUrl}
+            onChange={(event) =>
+              onDraftChange((current) => ({
+                ...current,
+                imageToVideoApiUrl: event.target.value,
+              }))
+            }
+            placeholder="http://27.159.92.210:8081/v1/videos/sync"
+            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
           />
         </label>
 
@@ -464,9 +584,15 @@ export function ModelServiceSettingsPanel({
           <div className="relative">
             <input
               type={showImageToVideoKey ? "text" : "password"}
-              readOnly
-              value={imageToVideoSettings.imageToVideoApiKey}
-              className={`${readOnlyFieldClass} pr-10`}
+              value={draft.imageToVideoApiKey}
+              onChange={(event) =>
+                onDraftChange((current) => ({
+                  ...current,
+                  imageToVideoApiKey: event.target.value,
+                }))
+              }
+              placeholder="wan2.2-ti2v-5b@srd*..."
+              className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 pr-10 text-sm outline-none focus:border-accent/50"
             />
             <button
               type="button"
@@ -506,6 +632,11 @@ export function ModelServiceSettingsPanel({
         open={imageToVideoTestOpen}
         settings={imageToVideoTestOpen ? imageToVideoSettings : null}
         onClose={() => setImageToVideoTestOpen(false)}
+      />
+      <PromptRefineTestResultModal
+        open={promptRefineTestOpen}
+        settings={promptRefineTestOpen ? promptRefineSettings : null}
+        onClose={() => setPromptRefineTestOpen(false)}
       />
     </div>
   );

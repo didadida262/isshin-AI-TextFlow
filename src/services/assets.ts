@@ -40,13 +40,23 @@ export interface CreateProjectAssetInput {
   numInferenceSteps?: number;
 }
 
+export interface ListProjectAssetsOptions {
+  excludeAssetTypes?: string[];
+}
+
 export async function listProjectAssets(
   projectId: string,
   page: number,
   pageSize: number,
+  options?: ListProjectAssetsOptions,
 ): Promise<ListProjectAssetsResult> {
   return invoke<ListProjectAssetsResult>("list_project_assets", {
-    input: { projectId, page, pageSize },
+    input: {
+      projectId,
+      page,
+      pageSize,
+      excludeAssetTypes: options?.excludeAssetTypes ?? [],
+    },
   });
 }
 

@@ -3,7 +3,7 @@ use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_VIDEO_API_URL: &str = "http://27.159.92.210:8081/v1/videos/sync";
-const DEFAULT_VIDEO_API_KEY: &str = "wan2.2-t2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
+const DEFAULT_VIDEO_API_KEY: &str = "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
 const DEFAULT_IMAGE_TO_VIDEO_API_URL: &str =
     "http://27.159.92.210:8081/v1/videos/sync";
 const DEFAULT_IMAGE_TO_VIDEO_API_KEY: &str =

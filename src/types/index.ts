@@ -57,6 +57,12 @@ export interface AppConfig {
   videoApiUrl: string;
   videoApiKey: string;
   videoModel: string;
+  imageToVideoApiUrl: string;
+  imageToVideoApiKey: string;
+  imageToVideoModel: string;
+  promptRefineApiUrl: string;
+  promptRefineApiKey: string;
+  promptRefineModel: string;
 }
 
 export type MessageRole = "user" | "assistant" | "tool-status";

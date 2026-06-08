@@ -96,6 +96,7 @@ commands.allow = [
   "get_database_overview",
   "export_database",
   "export_database_to_file",
+  "copy_file",
   "write_base64_file",
   "import_database",
   "clear_database_table",

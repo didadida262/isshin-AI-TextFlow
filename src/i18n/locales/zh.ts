@@ -57,7 +57,19 @@ export type TranslationSchema = {
     selectModelFirst: string;
     connectionOk: string;
     testDurationLabel: string;
+    generalApiSection: string;
     imageSection: string;
+    promptRefineSection: string;
+    promptRefineApiUrl: string;
+    promptRefineApiKey: string;
+    promptRefineApiKeyOptional: string;
+    promptRefineModel: string;
+    promptRefineTestTitle: string;
+    promptRefineTestPromptLabel: string;
+    promptRefineTestPlaceholder: string;
+    promptRefineTestConfirm: string;
+    promptRefineTestResultLabel: string;
+    promptRefineExpanding: string;
     imageApiUrl: string;
     imageApiKey: string;
     imageModel: string;
@@ -139,6 +151,9 @@ export type TranslationSchema = {
     configRequired: string;
     modelsRequired: string;
     imageConfigRequired: string;
+    promptRefineConfigRequired: string;
+    promptRequired: string;
+    promptRefineEmptyResponse: string;
     videoConfigRequired: string;
     imageToVideoConfigRequired: string;
     imageToVideoReferenceRequired: string;
@@ -309,8 +324,13 @@ export type TranslationSchema = {
       colDuration: string;
       formatDuration: (ms: number) => string;
       colStatus: string;
+      colErrorReason: string;
+      assetDetailTitle: string;
       colActions: string;
       edit: string;
+      download: string;
+      downloadDialogTitle: string;
+      downloadNoFile: string;
       delete: string;
       openActionsMenu: string;
       deleteConfirmTitle: string;
@@ -344,6 +364,8 @@ export type TranslationSchema = {
       typeVideo: string;
       promptLabel: string;
       promptPlaceholder: string;
+      expandPrompt: string;
+      expandingPrompt: string;
       modelLabel: string;
       modelEmpty: string;
       sizeLabel: string;
@@ -510,7 +532,19 @@ export const zh: TranslationSchema = {
     selectModelFirst: "请先选择一个模型",
     connectionOk: "连接成功",
     testDurationLabel: "耗时",
+    generalApiSection: "通用 API",
     imageSection: "图片生成 API",
+    promptRefineSection: "提示词扩充 API",
+    promptRefineApiUrl: "扩充 API 地址",
+    promptRefineApiKey: "扩充 API 密钥",
+    promptRefineApiKeyOptional: "可选，无鉴权可留空",
+    promptRefineModel: "扩充模型",
+    promptRefineTestTitle: "提示词扩充连接测试",
+    promptRefineTestPromptLabel: "测试提示词",
+    promptRefineTestPlaceholder: "输入要扩充的提示词，例如：生成一只小狗的图片",
+    promptRefineTestConfirm: "开始测试",
+    promptRefineTestResultLabel: "扩充结果",
+    promptRefineExpanding: "扩充中…",
     imageApiUrl: "图片 API 地址",
     imageApiKey: "图片 API 密钥",
     imageModel: "图片模型",
@@ -594,6 +628,9 @@ export const zh: TranslationSchema = {
     configRequired: "请先在设置中配置 Base URL 与 API Key",
     modelsRequired: "请先在设置中同步模型列表",
     imageConfigRequired: "请先在设置中配置图片生成 API",
+    promptRefineConfigRequired: "请先在设置中配置提示词扩充 API",
+    promptRequired: "请先输入提示词",
+    promptRefineEmptyResponse: "提示词扩充服务未返回有效内容",
     videoConfigRequired: "请先在设置中配置视频生成 API",
     imageToVideoConfigRequired: "请先在设置中配置图生视频 API",
     imageToVideoReferenceRequired: "请先上传参考图片",
@@ -781,8 +818,13 @@ export const zh: TranslationSchema = {
       formatDuration: (ms: number) =>
         ms < 1000 ? `${ms} 毫秒` : `${(ms / 1000).toFixed(1)} 秒`,
       colStatus: "状态",
+      colErrorReason: "失败原因",
+      assetDetailTitle: "资产详情",
       colActions: "操作",
       edit: "编辑",
+      download: "下载",
+      downloadDialogTitle: "保存资产",
+      downloadNoFile: "该资产暂无文件可下载",
       delete: "删除",
       openActionsMenu: "操作菜单",
       deleteConfirmTitle: "删除资产",
@@ -817,6 +859,8 @@ export const zh: TranslationSchema = {
       typeVideo: "视频",
       promptLabel: "提示词",
       promptPlaceholder: "描述你想生成的画面，例如：一只可爱的卡通熊猫在吃竹子，3D风格",
+      expandPrompt: "扩充提示词",
+      expandingPrompt: "扩充中…",
       modelLabel: "模型",
       modelEmpty: "未配置（请在项目设置中选择图片模型）",
       sizeLabel: "尺寸",

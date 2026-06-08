@@ -1,5 +1,6 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke, isTauri } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
+import type { ProjectAssetRecord } from "./assets";
 
 export type MediaDownloadKind = "image" | "video";
 
@@ -75,5 +76,60 @@ export async function downloadBase64Media(
   if (!path) return false;
 
   await invoke("write_base64_file", { path, base64: cleaned });
+  return true;
+}
+
+function sanitizeFilename(name: string): string {
+  const cleaned = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").trim();
+  return cleaned || "asset";
+}
+
+function extensionFromPath(path: string): string {
+  const lower = path.toLowerCase();
+  const dot = lower.lastIndexOf(".");
+  if (dot >= 0 && dot < lower.length - 1) {
+    return lower.slice(dot + 1);
+  }
+  return "";
+}
+
+export function buildAssetDownloadFilename(asset: ProjectAssetRecord): string {
+  const ext =
+    extensionFromPath(asset.imagePath ?? "") ||
+    (asset.assetType === "video" ? "mp4" : "png");
+  return `${sanitizeFilename(asset.name)}.${ext}`;
+}
+
+export async function downloadAssetFile(
+  asset: ProjectAssetRecord,
+  options?: { dialogTitle?: string },
+): Promise<boolean> {
+  const sourcePath = asset.imagePath?.trim();
+  if (!sourcePath) return false;
+
+  const defaultFilename = buildAssetDownloadFilename(asset);
+  const ext =
+    extensionFromPath(defaultFilename) ||
+    (asset.assetType === "video" ? "mp4" : "png");
+
+  if (!isTauri()) {
+    const response = await fetch(convertFileSrc(sourcePath));
+    if (!response.ok) {
+      throw new Error(`下载失败（HTTP ${response.status}）`);
+    }
+    const blob = await response.blob();
+    triggerBrowserDownload(blob, defaultFilename);
+    return true;
+  }
+
+  const path = await save({
+    title: options?.dialogTitle,
+    defaultPath: defaultFilename,
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+  });
+
+  if (!path) return false;
+
+  await invoke("copy_file", { source: sourcePath, destination: path });
   return true;
 }

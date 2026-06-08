@@ -120,7 +120,7 @@ fn is_node_completed(conn: &Connection, project_id: &str, node_id: &str) -> Resu
             let chapters = novel::fetch_novel_chapters(conn, project_id)?;
             script::is_ai_script_completed(conn, project_id, chapters.len() as i32)
         }
-        NODE_GENERATE_ASSETS => assets::has_successful_assets(conn, project_id),
+        NODE_GENERATE_ASSETS => assets::has_successful_non_video_assets(conn, project_id),
         NODE_GENERATE_VIDEO => assets::is_generate_video_completed(conn, project_id),
         _ => Ok(false),
     }
@@ -281,7 +281,13 @@ pub fn get_project_workflow_node_detail(
         NODE_GENERATE_ASSETS => Ok(WorkflowNodeDetail::GenerateAssets(
             GenerateAssetsNodeDetail {
                 node_id: input.node_id,
-                assets: assets::list_project_assets_internal(&conn, &input.project_id, 1, 10)?,
+                assets: assets::list_project_assets_internal(
+                    &conn,
+                    &input.project_id,
+                    1,
+                    10,
+                    &["video".to_string()],
+                )?,
             },
         )),
         NODE_GENERATE_VIDEO => Ok(WorkflowNodeDetail::GenerateVideo(GenerateVideoNodeDetail {

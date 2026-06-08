@@ -272,6 +272,32 @@ fn decode_base64_payload(base64: &str) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
+pub fn copy_file(source: String, destination: String) -> Result<(), String> {
+    let source = source.trim();
+    let destination = destination.trim();
+    if source.is_empty() {
+        return Err("源文件路径不能为空".to_string());
+    }
+    if destination.is_empty() {
+        return Err("请选择保存路径".to_string());
+    }
+
+    let source_path = Path::new(source);
+    if !source_path.is_file() {
+        return Err("源文件不存在".to_string());
+    }
+
+    if let Some(parent) = Path::new(destination).parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(|error| format!("创建目录失败: {error}"))?;
+        }
+    }
+
+    std::fs::copy(source_path, destination).map_err(|error| format!("复制文件失败: {error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn write_base64_file(path: String, base64: String) -> Result<(), String> {
     let path = path.trim();
     if path.is_empty() {

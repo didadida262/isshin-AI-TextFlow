@@ -42,6 +42,8 @@ pub struct ListProjectAssetsInput {
     pub project_id: String,
     pub page: i32,
     pub page_size: i32,
+    #[serde(default)]
+    pub exclude_asset_types: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -237,6 +239,21 @@ pub fn has_successful_assets(conn: &Connection, project_id: &str) -> Result<bool
     Ok(count > 0)
 }
 
+pub fn has_successful_non_video_assets(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<bool, String> {
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM project_assets
+             WHERE project_id = ?1 AND asset_state = ?2 AND asset_type != 'video'",
+            params![project_id, ASSET_STATE_SUCCESS],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    Ok(count > 0)
+}
+
 pub fn is_generate_video_completed(
     conn: &Connection,
     project_id: &str,
@@ -284,7 +301,7 @@ fn sync_workflow_after_assets_change(
         .map_err(|e| e.to_string())?;
 
     let now = timestamp();
-    let has_assets = has_successful_assets(conn, project_id)?;
+    let has_assets = has_successful_non_video_assets(conn, project_id)?;
     let videos_complete = is_generate_video_completed(conn, project_id)?;
 
     if videos_complete
@@ -349,34 +366,39 @@ pub fn fetch_project_video_assets(
     Ok(items)
 }
 
+fn exclude_asset_types_clause(exclude_asset_types: &[String]) -> String {
+    exclude_asset_types
+        .iter()
+        .map(|asset_type| format!(" AND asset_type != '{}'", asset_type.replace('\'', "''")))
+        .collect()
+}
+
 pub fn list_project_assets_internal(
     conn: &Connection,
     project_id: &str,
     page: i32,
     page_size: i32,
+    exclude_asset_types: &[String],
 ) -> Result<ListProjectAssetsResult, String> {
     let page = page.max(1);
     let page_size = page_size.clamp(1, 100);
     let offset = ((page - 1) * page_size) as i64;
+    let exclude_clause = exclude_asset_types_clause(exclude_asset_types);
 
+    let count_sql = format!(
+        "SELECT COUNT(*) FROM project_assets WHERE project_id = ?1{exclude_clause}"
+    );
     let total: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM project_assets WHERE project_id = ?1",
-            params![project_id],
-            |row| row.get(0),
-        )
+        .query_row(&count_sql, params![project_id], |row| row.get(0))
         .map_err(|e| e.to_string())?;
 
-    let mut stmt = conn
-        .prepare(
-            &format!(
-                "{ASSET_SELECT}
-             WHERE project_id = ?1
-             ORDER BY created_at DESC, id DESC
-             LIMIT ?2 OFFSET ?3"
-            ),
-        )
-        .map_err(|e| e.to_string())?;
+    let list_sql = format!(
+        "{ASSET_SELECT}
+         WHERE project_id = ?1{exclude_clause}
+         ORDER BY created_at DESC, id DESC
+         LIMIT ?2 OFFSET ?3"
+    );
+    let mut stmt = conn.prepare(&list_sql).map_err(|e| e.to_string())?;
 
     let items = stmt
         .query_map(params![project_id, page_size, offset], row_to_asset)
@@ -395,7 +417,13 @@ pub fn list_project_assets_internal(
 #[tauri::command]
 pub fn list_project_assets(input: ListProjectAssetsInput) -> Result<ListProjectAssetsResult, String> {
     let conn = init_db()?;
-    list_project_assets_internal(&conn, &input.project_id, input.page, input.page_size)
+    list_project_assets_internal(
+        &conn,
+        &input.project_id,
+        input.page,
+        input.page_size,
+        &input.exclude_asset_types,
+    )
 }
 
 #[tauri::command]
@@ -629,7 +657,7 @@ mod tests {
             .unwrap();
         }
 
-        let page = list_project_assets_internal(&conn, "p1", 1, 2).unwrap();
+        let page = list_project_assets_internal(&conn, "p1", 1, 2, &[]).unwrap();
         assert_eq!(page.total, 3);
         assert_eq!(page.items.len(), 2);
     }

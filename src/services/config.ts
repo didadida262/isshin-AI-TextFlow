@@ -13,7 +13,7 @@ export const DEFAULT_NUM_INFERENCE_STEPS = 25;
 export const DEFAULT_VIDEO_API_URL =
   "http://27.159.92.210:8081/v1/videos/sync";
 export const DEFAULT_VIDEO_API_KEY =
-  "wan2.2-t2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
+  "wan2.2-ti2v-5b@srd*OB6sgdessj8YTF8HBVGhIYTgd76sfR";
 export const DEFAULT_VIDEO_MODEL = "wan2.2-t2v-5b";
 
 export const DEFAULT_IMAGE_TO_VIDEO_API_URL =
@@ -36,6 +36,11 @@ export const DEFAULT_VIDEO_BOUNDARY_RATIO = 0.875;
 export const DEFAULT_VIDEO_FLOW_SHIFT = 5.0;
 export const DEFAULT_VIDEO_SEED = 42;
 
+export const DEFAULT_PROMPT_REFINE_API_URL =
+  "http://27.159.92.215:8000/v1/chat/completions";
+export const DEFAULT_PROMPT_REFINE_API_KEY = "";
+export const DEFAULT_PROMPT_REFINE_MODEL = "prompt-refine";
+
 const DEFAULT_CONFIG: AppConfig = {
   baseUrl: "https://aiplatform.njsrd.com/llm/v1",
   apiKey: "",
@@ -48,6 +53,12 @@ const DEFAULT_CONFIG: AppConfig = {
   videoApiUrl: DEFAULT_VIDEO_API_URL,
   videoApiKey: DEFAULT_VIDEO_API_KEY,
   videoModel: DEFAULT_VIDEO_MODEL,
+  imageToVideoApiUrl: DEFAULT_IMAGE_TO_VIDEO_API_URL,
+  imageToVideoApiKey: DEFAULT_IMAGE_TO_VIDEO_API_KEY,
+  imageToVideoModel: DEFAULT_IMAGE_TO_VIDEO_MODEL,
+  promptRefineApiUrl: DEFAULT_PROMPT_REFINE_API_URL,
+  promptRefineApiKey: DEFAULT_PROMPT_REFINE_API_KEY,
+  promptRefineModel: DEFAULT_PROMPT_REFINE_MODEL,
 };
 
 function mergeConfig(partial: Partial<AppConfig>): AppConfig {
@@ -67,9 +78,30 @@ function mergeConfig(partial: Partial<AppConfig>): AppConfig {
   if (!Number.isFinite(merged.imageCount) || merged.imageCount < 1) {
     merged.imageCount = DEFAULT_IMAGE_COUNT;
   }
-  merged.videoApiUrl = DEFAULT_VIDEO_API_URL;
-  merged.videoApiKey = DEFAULT_VIDEO_API_KEY;
-  merged.videoModel = DEFAULT_VIDEO_MODEL;
+  if (!merged.videoApiUrl.trim()) {
+    merged.videoApiUrl = DEFAULT_VIDEO_API_URL;
+  }
+  if (!merged.videoApiKey.trim()) {
+    merged.videoApiKey = DEFAULT_VIDEO_API_KEY;
+  }
+  if (!merged.videoModel.trim()) {
+    merged.videoModel = DEFAULT_VIDEO_MODEL;
+  }
+  if (!merged.imageToVideoApiUrl.trim()) {
+    merged.imageToVideoApiUrl = DEFAULT_IMAGE_TO_VIDEO_API_URL;
+  }
+  if (!merged.imageToVideoApiKey.trim()) {
+    merged.imageToVideoApiKey = DEFAULT_IMAGE_TO_VIDEO_API_KEY;
+  }
+  if (!merged.imageToVideoModel.trim()) {
+    merged.imageToVideoModel = DEFAULT_IMAGE_TO_VIDEO_MODEL;
+  }
+  if (!merged.promptRefineApiUrl.trim()) {
+    merged.promptRefineApiUrl = DEFAULT_PROMPT_REFINE_API_URL;
+  }
+  if (!merged.promptRefineModel.trim()) {
+    merged.promptRefineModel = DEFAULT_PROMPT_REFINE_MODEL;
+  }
   return merged;
 }
 
@@ -136,19 +168,24 @@ export type VideoGenerationSettings = Pick<
   "videoApiUrl" | "videoApiKey" | "videoModel"
 >;
 
-export function getFixedVideoSettings(): VideoGenerationSettings {
+export function getVideoSettingsFromConfig(
+  config: AppConfig,
+): VideoGenerationSettings {
   return {
-    videoApiUrl: DEFAULT_VIDEO_API_URL,
-    videoApiKey: DEFAULT_VIDEO_API_KEY,
-    videoModel: DEFAULT_VIDEO_MODEL,
+    videoApiUrl: config.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL,
+    videoApiKey: config.videoApiKey.trim() || DEFAULT_VIDEO_API_KEY,
+    videoModel: config.videoModel.trim() || DEFAULT_VIDEO_MODEL,
   };
 }
 
-export type ImageToVideoGenerationSettings = {
-  imageToVideoApiUrl: string;
-  imageToVideoApiKey: string;
-  imageToVideoModel: string;
-};
+export function getFixedVideoSettings(): VideoGenerationSettings {
+  return getVideoSettingsFromConfig(DEFAULT_CONFIG);
+}
+
+export type ImageToVideoGenerationSettings = Pick<
+  AppConfig,
+  "imageToVideoApiUrl" | "imageToVideoApiKey" | "imageToVideoModel"
+>;
 
 export function isImageToVideoSettingsValid(
   settings: ImageToVideoGenerationSettings,
@@ -159,10 +196,44 @@ export function isImageToVideoSettingsValid(
   );
 }
 
-export function getFixedImageToVideoSettings(): ImageToVideoGenerationSettings {
+export function getImageToVideoSettingsFromConfig(
+  config: AppConfig,
+): ImageToVideoGenerationSettings {
   return {
-    imageToVideoApiUrl: DEFAULT_IMAGE_TO_VIDEO_API_URL,
-    imageToVideoApiKey: DEFAULT_IMAGE_TO_VIDEO_API_KEY,
-    imageToVideoModel: DEFAULT_IMAGE_TO_VIDEO_MODEL,
+    imageToVideoApiUrl:
+      config.imageToVideoApiUrl.trim() || DEFAULT_IMAGE_TO_VIDEO_API_URL,
+    imageToVideoApiKey:
+      config.imageToVideoApiKey.trim() || DEFAULT_IMAGE_TO_VIDEO_API_KEY,
+    imageToVideoModel:
+      config.imageToVideoModel.trim() || DEFAULT_IMAGE_TO_VIDEO_MODEL,
+  };
+}
+
+export function getFixedImageToVideoSettings(): ImageToVideoGenerationSettings {
+  return getImageToVideoSettingsFromConfig(DEFAULT_CONFIG);
+}
+
+export type PromptRefineSettings = Pick<
+  AppConfig,
+  "promptRefineApiUrl" | "promptRefineApiKey" | "promptRefineModel"
+>;
+
+export function isPromptRefineSettingsValid(
+  settings: PromptRefineSettings,
+): boolean {
+  return Boolean(
+    settings.promptRefineApiUrl.trim() && settings.promptRefineModel.trim(),
+  );
+}
+
+export function getPromptRefineSettingsFromConfig(
+  config: AppConfig,
+): PromptRefineSettings {
+  return {
+    promptRefineApiUrl:
+      config.promptRefineApiUrl.trim() || DEFAULT_PROMPT_REFINE_API_URL,
+    promptRefineApiKey: config.promptRefineApiKey.trim(),
+    promptRefineModel:
+      config.promptRefineModel.trim() || DEFAULT_PROMPT_REFINE_MODEL,
   };
 }

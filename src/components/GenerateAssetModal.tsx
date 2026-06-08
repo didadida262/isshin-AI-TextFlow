@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   DEFAULT_IMAGE_COUNT,
   DEFAULT_IMAGE_SIZE,
   DEFAULT_NUM_INFERENCE_STEPS,
 } from "../services/config";
+import { getPromptRefineSettingsFromConfig } from "../services/config";
 import { generateImageB64 } from "../services/imageGeneration";
+import { expandPrompt } from "../services/promptRefine";
 import type { AppConfig } from "../types";
 import { PaintbrushLoading } from "./PaintbrushLoading";
 import { ModalPortal } from "./ModalPortal";
@@ -70,6 +72,7 @@ export function GenerateAssetModal({
     DEFAULT_NUM_INFERENCE_STEPS,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [expandingPrompt, setExpandingPrompt] = useState(false);
   const [error, setError] = useState("");
   const abortRef = useRef(false);
   const requestIdRef = useRef(0);
@@ -83,11 +86,21 @@ export function GenerateAssetModal({
     setPrompt("");
     setSize(defaultSize);
     setNumInferenceSteps(DEFAULT_NUM_INFERENCE_STEPS);
+    setExpandingPrompt(false);
     setError("");
   }, [config.imageModel, defaultSize, open]);
 
   const canSubmit =
-    name.trim() && prompt.trim() && imageModel && !submitting;
+    name.trim() && prompt.trim() && imageModel && !submitting && !expandingPrompt;
+
+  const showExpandPromptButton = Boolean(prompt.trim()) && !submitting;
+  const canExpandPrompt =
+    showExpandPromptButton && !expandingPrompt;
+
+  const promptRefineSettings = useMemo(
+    () => getPromptRefineSettingsFromConfig(config),
+    [config],
+  );
 
   const assetTypeOptions = useMemo(
     () => [
@@ -122,6 +135,44 @@ export function GenerateAssetModal({
     }
     onClose();
   }, [onClose, submitting]);
+
+  const handleExpandPrompt = useCallback(async () => {
+    if (!canExpandPrompt) return;
+
+    const requestId = ++requestIdRef.current;
+    setExpandingPrompt(true);
+    setError("");
+
+    try {
+      const expanded = await expandPrompt(prompt, promptRefineSettings);
+      if (requestId !== requestIdRef.current) return;
+      setPrompt(expanded);
+    } catch (expandError) {
+      if (requestId !== requestIdRef.current) return;
+      const message =
+        expandError instanceof Error ? expandError.message : String(expandError);
+      if (message === "PROMPT_REFINE_CONFIG_REQUIRED") {
+        setError(errors.promptRefineConfigRequired);
+      } else if (message === "PROMPT_REQUIRED") {
+        setError(errors.promptRequired);
+      } else if (message === "PROMPT_REFINE_EMPTY_RESPONSE") {
+        setError(errors.promptRefineEmptyResponse);
+      } else {
+        setError(message);
+      }
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setExpandingPrompt(false);
+      }
+    }
+  }, [
+    canExpandPrompt,
+    errors.promptRefineConfigRequired,
+    errors.promptRefineEmptyResponse,
+    errors.promptRequired,
+    prompt,
+    promptRefineSettings,
+  ]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
@@ -211,7 +262,7 @@ export function GenerateAssetModal({
             aria-modal="true"
             aria-labelledby="generate-asset-title"
             className={`relative z-10 flex max-h-[min(680px,calc(100dvh-4rem))] w-full max-w-lg flex-col overflow-hidden rounded-lg border bg-surface shadow-2xl ${
-              submitting
+              submitting || expandingPrompt
                 ? "modal-generating-border border-transparent"
                 : "border-white/10"
             }`}
@@ -262,17 +313,52 @@ export function GenerateAssetModal({
                   />
                 </div>
 
-                <label className="block space-y-1.5">
-                  <span className="text-xs text-text-muted">{m.promptLabel}</span>
-                  <textarea
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
-                    placeholder={m.promptPlaceholder}
-                    rows={3}
-                    disabled={submitting}
-                    className="max-h-[120px] w-full resize-none overflow-y-auto rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-accent/50 disabled:opacity-50"
-                  />
-                </label>
+                <div className="block space-y-1.5">
+                  <div className="flex min-h-7 items-center justify-between gap-3">
+                    <span className="text-xs text-text-muted">{m.promptLabel}</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleExpandPrompt()}
+                      disabled={!canExpandPrompt}
+                      aria-hidden={!showExpandPromptButton}
+                      tabIndex={showExpandPromptButton ? 0 : -1}
+                      className={`inline-flex min-w-[5.75rem] shrink-0 items-center justify-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs text-accent transition hover:border-accent/50 hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-70 ${
+                        showExpandPromptButton
+                          ? ""
+                          : "pointer-events-none invisible"
+                      }`}
+                    >
+                      {expandingPrompt ? (
+                        <>
+                          <FontAwesomeIcon icon={faSpinner} spin />
+                          {m.expandingPrompt}
+                        </>
+                      ) : (
+                        m.expandPrompt
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      value={prompt}
+                      onChange={(event) => setPrompt(event.target.value)}
+                      placeholder={m.promptPlaceholder}
+                      rows={6}
+                      disabled={submitting || expandingPrompt}
+                      className="max-h-[240px] w-full resize-none overflow-y-auto rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-accent/50 disabled:opacity-50"
+                    />
+                    {expandingPrompt ? (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center gap-2 rounded-lg bg-black/50 backdrop-blur-[1px]"
+                        aria-live="polite"
+                        aria-busy="true"
+                      >
+                        <FontAwesomeIcon icon={faSpinner} spin className="text-accent" />
+                        <span className="text-sm text-text-muted">{m.expandingPrompt}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
 
                 <label className="block space-y-1.5">
                   <span className="text-xs text-text-muted">{m.modelLabel}</span>

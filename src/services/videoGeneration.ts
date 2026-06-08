@@ -10,8 +10,9 @@ import {
   DEFAULT_VIDEO_NUM_FRAMES,
   DEFAULT_VIDEO_SEED,
   DEFAULT_VIDEO_SIZE,
-  getFixedVideoSettings,
+  getVideoSettingsFromConfig,
   isVideoSettingsValid,
+  loadConfig,
   type VideoGenerationSettings,
 } from "./config";
 
@@ -30,19 +31,22 @@ export interface GenerateVideoInput {
 }
 
 export async function resolveVideoGenerationSettings(
-  _settings?: VideoGenerationSettings,
+  settings?: VideoGenerationSettings,
 ): Promise<VideoGenerationSettings> {
-  return getFixedVideoSettings();
+  if (settings) return settings;
+  const config = await loadConfig();
+  return getVideoSettingsFromConfig(config);
 }
 
 export const VIDEO_TEST_PROMPT =
   "一只可爱的柯基犬在开满向日葵的田野里快乐地奔跑";
 
 export async function testVideoConnection(
-  settings: VideoGenerationSettings = getFixedVideoSettings(),
+  settings?: VideoGenerationSettings,
   prompt: string = VIDEO_TEST_PROMPT,
 ): Promise<string> {
-  if (!isVideoSettingsValid(settings)) {
+  const resolvedSettings = await resolveVideoGenerationSettings(settings);
+  if (!isVideoSettingsValid(resolvedSettings)) {
     throw new Error("VIDEO_CONFIG_REQUIRED");
   }
 
@@ -53,7 +57,7 @@ export async function testVideoConnection(
 
   return generateVideoB64({
     prompt: trimmedPrompt,
-    settings,
+    settings: resolvedSettings,
   });
 }
 

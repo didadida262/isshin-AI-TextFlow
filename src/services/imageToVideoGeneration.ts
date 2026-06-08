@@ -11,8 +11,9 @@ import {
   DEFAULT_VIDEO_NUM_FRAMES,
   DEFAULT_VIDEO_SEED,
   DEFAULT_VIDEO_SIZE,
-  getFixedImageToVideoSettings,
+  getImageToVideoSettingsFromConfig,
   isImageToVideoSettingsValid,
+  loadConfig,
   type ImageToVideoGenerationSettings,
 } from "./config";
 
@@ -37,9 +38,11 @@ export const IMAGE_TO_VIDEO_TEST_PROMPT =
   "一只可爱的柯基犬在开满向日葵的田野里快乐地奔跑";
 
 export async function resolveImageToVideoGenerationSettings(
-  _settings?: ImageToVideoGenerationSettings,
+  settings?: ImageToVideoGenerationSettings,
 ): Promise<ImageToVideoGenerationSettings> {
-  return getFixedImageToVideoSettings();
+  if (settings) return settings;
+  const config = await loadConfig();
+  return getImageToVideoSettingsFromConfig(config);
 }
 
 export async function generateImageToVideoB64(

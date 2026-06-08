@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleCheck,
@@ -18,6 +19,7 @@ import {
 } from "../services/script";
 import type { CreationProject } from "../types";
 import { ScriptEpisodeDetailModal } from "./ScriptEpisodeDetailModal";
+import { VideoThumbnail } from "./VideoThumbnail";
 import {
   TextToVideoModal,
   type TextToVideoFormValues,
@@ -215,6 +217,7 @@ export function GenerateVideoStep({
                 <col className="w-40 sm:w-48" />
                 <col className="w-20" />
                 <col />
+                <col className="w-[4.5rem]" />
                 <col className="w-24" />
                 <col className="w-28 sm:w-32" />
                 <col className="w-28 sm:w-32" />
@@ -225,6 +228,7 @@ export function GenerateVideoStep({
                   <th className="px-3 py-2.5 font-medium">{s.colName}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colStatus}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colContent}</th>
+                  <th className="px-3 py-2.5 font-medium">{s.colVideo}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colDuration}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colVideoStatus}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colActions}</th>
@@ -244,7 +248,7 @@ export function GenerateVideoStep({
                       onClick={() => {
                         if (detailEnabled) setDetailScript(script);
                       }}
-                      className={`border-b border-white/5 align-top transition ${
+                      className={`border-b border-white/5 align-middle transition ${
                         detailEnabled
                           ? "cursor-pointer hover:bg-white/[0.02]"
                           : ""
@@ -254,17 +258,25 @@ export function GenerateVideoStep({
                         {script.episodeIndex}
                       </td>
                       <td className="max-w-0 px-3 py-2.5 text-white">
-                        <p className="truncate" title={script.name}>
-                          {script.name}
-                        </p>
+                        <p className="truncate">{script.name}</p>
                       </td>
                       <td className={`px-3 py-2.5 ${scriptStatusClass(script)}`}>
                         {scriptStatusLabel(script, s)}
                       </td>
                       <td className="max-w-0 px-3 py-2.5 text-text-muted">
-                        <p className="truncate" title={contentPreview}>
-                          {contentPreview}
-                        </p>
+                        <p className="truncate">{contentPreview}</p>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {video?.imagePath ? (
+                          <span className="block overflow-hidden rounded-md border border-sky-400/20 bg-sky-400/10">
+                            <VideoThumbnail
+                              src={convertFileSrc(video.imagePath)}
+                              alt={script.name}
+                            />
+                          </span>
+                        ) : (
+                          <span className="text-text-dim">{s.noVideo}</span>
+                        )}
                       </td>
                       <td className="px-3 py-2.5 text-text-muted">
                         {video?.generationDurationMs != null

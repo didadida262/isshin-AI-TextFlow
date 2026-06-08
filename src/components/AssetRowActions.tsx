@@ -5,22 +5,28 @@ import { faEllipsisVertical } from "@fortawesome/free-solid-svg-icons";
 interface AssetRowActionsProps {
   openMenuLabel: string;
   editLabel: string;
+  downloadLabel: string;
   deleteLabel: string;
+  downloadDisabled?: boolean;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
   onEdit: () => void;
+  onDownload: () => void;
   onDelete: () => void;
 }
 
 export function AssetRowActions({
   openMenuLabel,
   editLabel,
+  downloadLabel,
   deleteLabel,
+  downloadDisabled = false,
   isOpen,
   onToggle,
   onClose,
   onEdit,
+  onDownload,
   onDelete,
 }: AssetRowActionsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +83,19 @@ export function AssetRowActions({
             className="block w-full px-3 py-1.5 text-left text-inherit text-text-muted transition hover:bg-white/5 hover:text-accent"
           >
             {editLabel}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={downloadDisabled}
+            onClick={() => {
+              if (downloadDisabled) return;
+              onClose();
+              onDownload();
+            }}
+            className="block w-full px-3 py-1.5 text-left text-inherit text-text-muted transition hover:bg-white/5 hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-text-muted"
+          >
+            {downloadLabel}
           </button>
           <button
             type="button"

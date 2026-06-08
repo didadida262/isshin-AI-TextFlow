@@ -115,13 +115,14 @@ pub async fn llm_chat_completion(
     log_send(&payload.body);
 
     let client = reqwest::Client::new();
-    let response = client
+    let mut request = client
         .post(&payload.url)
-        .header(
-            "Authorization",
-            format!("Bearer {}", payload.api_key.trim()),
-        )
-        .header("Content-Type", "application/json")
+        .header("Content-Type", "application/json");
+    let api_key = payload.api_key.trim();
+    if !api_key.is_empty() {
+        request = request.header("Authorization", format!("Bearer {api_key}"));
+    }
+    let response = request
         .json(&payload.body)
         .send()
         .await
