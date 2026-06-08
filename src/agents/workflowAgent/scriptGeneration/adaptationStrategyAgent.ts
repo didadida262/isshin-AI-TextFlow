@@ -45,7 +45,7 @@ export async function runAdaptationStrategyAgent(
           role: "user",
           content:
             baseUserContent +
-            buildMarkdownRetryHint(STRATEGY_SECTIONS, attempt),
+            buildMarkdownRetryHint("改编基调", STRATEGY_SECTIONS, attempt),
         },
       ],
       ctx.signal,

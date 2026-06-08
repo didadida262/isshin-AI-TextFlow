@@ -140,6 +140,10 @@ interface UseScriptAgentChatOptions {
     eventsRequired: string;
   };
   onConfigError: (message: string | null) => void;
+  onPartialUpdate?: (result: {
+    workData: ScriptWorkData;
+    scripts: ScriptRecord[];
+  }) => void;
   onComplete?: (result: {
     workData: ScriptWorkData;
     scripts: ScriptRecord[];
@@ -155,12 +159,15 @@ export function useScriptAgentChat({
   scripts,
   labels,
   onConfigError,
+  onPartialUpdate,
   onComplete,
 }: UseScriptAgentChatOptions) {
   const [messages, setMessages] = useState<ScriptChatMessage[]>(() =>
     buildInitialMessages(project.id, workData, scripts, labels),
   );
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] =
+    useState<ScriptGenerationProgress | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const progressMsgIdRef = useRef<string | null>(null);
 
@@ -263,6 +270,7 @@ export function useScriptAgentChat({
     const controller = new AbortController();
     abortRef.current = controller;
     setIsGenerating(true);
+    setGenerationProgress({ stage: "skeleton" });
     onConfigError(null);
 
     const progressId = appendMessage({
@@ -284,10 +292,14 @@ export function useScriptAgentChat({
         initialScripts: scripts,
         signal: controller.signal,
         onProgress: (progress) => {
+          setGenerationProgress(progress);
           patchMessage(progressId, {
             content: progressToAgentMessage(progress, labels),
             status: "streaming",
           });
+        },
+        onStageComplete: (partial) => {
+          onPartialUpdate?.(partial);
         },
       });
 
@@ -312,6 +324,7 @@ export function useScriptAgentChat({
       onConfigError(message);
     } finally {
       setIsGenerating(false);
+      setGenerationProgress(null);
       progressMsgIdRef.current = null;
       abortRef.current = null;
     }
@@ -323,6 +336,7 @@ export function useScriptAgentChat({
     model,
     onComplete,
     onConfigError,
+    onPartialUpdate,
     patchMessage,
     project,
     scripts,
@@ -359,6 +373,7 @@ export function useScriptAgentChat({
       const controller = new AbortController();
       abortRef.current = controller;
       setIsGenerating(true);
+      setGenerationProgress(null);
       onConfigError(null);
 
       const assistantId = appendMessage({
@@ -425,6 +440,7 @@ export function useScriptAgentChat({
         onConfigError(message);
       } finally {
         setIsGenerating(false);
+        setGenerationProgress(null);
         abortRef.current = null;
       }
     },
@@ -486,6 +502,11 @@ export function useScriptAgentChat({
     const controller = new AbortController();
     abortRef.current = controller;
     setIsGenerating(true);
+    setGenerationProgress({
+      stage: "scripts",
+      completed: 0,
+      total: failedCount,
+    });
     onConfigError(null);
 
     const progressId = appendMessage({
@@ -506,6 +527,7 @@ export function useScriptAgentChat({
         scripts,
         signal: controller.signal,
         onProgress: (progress) => {
+          setGenerationProgress(progress);
           if (progress.completed != null && progress.total != null) {
             patchMessage(progressId, {
               content: labels.retryFailedProgress(
@@ -515,6 +537,9 @@ export function useScriptAgentChat({
               status: "streaming",
             });
           }
+        },
+        onStageComplete: (partial) => {
+          onPartialUpdate?.(partial);
         },
       });
 
@@ -539,6 +564,7 @@ export function useScriptAgentChat({
       onConfigError(message);
     } finally {
       setIsGenerating(false);
+      setGenerationProgress(null);
       abortRef.current = null;
     }
   }, [
@@ -550,6 +576,7 @@ export function useScriptAgentChat({
     model,
     onComplete,
     onConfigError,
+    onPartialUpdate,
     patchMessage,
     project,
     scripts,
@@ -559,6 +586,7 @@ export function useScriptAgentChat({
   return {
     messages,
     isGenerating,
+    generationProgress,
     sendMessage,
     stopGeneration,
     runPipeline,

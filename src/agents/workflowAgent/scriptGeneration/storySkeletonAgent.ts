@@ -2,8 +2,8 @@ import { STORY_SKELETON_PROMPT } from "../../../prompts/workflowAgent/scriptGene
 import { chatCompletion } from "../../../services/chat";
 import { stripThink } from "../../../utils/stripThink";
 import {
-  buildXmlRetryHint,
-  parseTaggedAgentOutput,
+  buildMarkdownRetryHint,
+  parseStorySkeletonOutput,
 } from "../../../utils/xmlTags";
 import {
   buildProjectConfigBlock,
@@ -13,6 +13,9 @@ import type { ScriptAgentContext } from "./types";
 
 const MAX_ATTEMPTS = 3;
 const SCRIPT_MAX_TOKENS = 8192;
+
+const SKELETON_SECTIONS =
+  "故事核、隐线、三幕结构、分集决策、全局删减决策表、付费卡点设计";
 
 export async function runStorySkeletonAgent(
   ctx: ScriptAgentContext,
@@ -28,10 +31,10 @@ export async function runStorySkeletonAgent(
     `\n总章节数：${ctx.chapters.length}（默认 1 章 = 1 集）`,
     "\n## 章节事件表\n",
     eventsBlock,
-    "\n请基于以上事件表构建故事骨架，并按 XML 格式输出 <storySkeleton>。",
+    "\n请基于以上事件表构建故事骨架。先写 200-300 字思路阐述，再以 Markdown 输出正文（从 ## 故事核 开始）。",
   ].join("\n");
 
-  let lastError = "故事骨架 Agent 未返回有效的 <storySkeleton> 内容";
+  let lastError = "故事骨架 Agent 未返回有效的 Markdown 正文";
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     if (ctx.signal?.aborted) {
@@ -45,7 +48,9 @@ export async function runStorySkeletonAgent(
         { role: "system", content: STORY_SKELETON_PROMPT },
         {
           role: "user",
-          content: baseUserContent + buildXmlRetryHint("storySkeleton", attempt),
+          content:
+            baseUserContent +
+            buildMarkdownRetryHint("故事核", SKELETON_SECTIONS, attempt),
         },
       ],
       ctx.signal,
@@ -53,12 +58,12 @@ export async function runStorySkeletonAgent(
       { maxTokens: SCRIPT_MAX_TOKENS },
     );
 
-    const skeleton = parseTaggedAgentOutput(stripThink(raw), "storySkeleton");
+    const skeleton = parseStorySkeletonOutput(stripThink(raw));
     if (skeleton) {
       return skeleton;
     }
 
-    lastError = `故事骨架 Agent 未返回有效的 <storySkeleton> 内容（尝试 ${attempt + 1}/${MAX_ATTEMPTS}）`;
+    lastError = `故事骨架 Agent 未返回有效的 Markdown 正文（尝试 ${attempt + 1}/${MAX_ATTEMPTS}）`;
   }
 
   throw new Error(lastError);

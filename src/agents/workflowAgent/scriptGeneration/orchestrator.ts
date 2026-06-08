@@ -24,6 +24,7 @@ export interface RunScriptPipelineOptions {
   initialWorkData?: { storySkeleton: string; adaptationStrategy: string };
   initialScripts?: ScriptRecord[];
   onProgress?: (progress: ScriptGenerationProgress) => void;
+  onStageComplete?: (result: RunScriptPipelineResult) => void;
   signal?: AbortSignal;
 }
 
@@ -97,6 +98,7 @@ export interface RegenerateFailedEpisodesOptions {
   workData: { storySkeleton: string; adaptationStrategy: string };
   scripts: ScriptRecord[];
   onProgress?: (progress: ScriptGenerationProgress) => void;
+  onStageComplete?: (result: RunScriptPipelineResult) => void;
   signal?: AbortSignal;
 }
 
@@ -112,6 +114,7 @@ export async function regenerateFailedEpisodes(
     workData,
     scripts: initialScripts,
     onProgress,
+    onStageComplete,
     signal,
   } = options;
 
@@ -157,6 +160,7 @@ export async function regenerateFailedEpisodes(
     }
     const chapter = chaptersToRetry[index];
     await writeEpisodeScript(ctxBase, workData, scripts, chapter, project.id);
+    onStageComplete?.({ workData, scripts: [...scripts] });
     onProgress?.({
       stage: "scripts",
       completed: index + 1,
@@ -179,6 +183,7 @@ export async function runScriptPipeline(
     initialWorkData,
     initialScripts = [],
     onProgress,
+    onStageComplete,
     signal,
   } = options;
 
@@ -212,6 +217,7 @@ export async function runScriptPipeline(
     scripts,
   });
   workData = await setScriptWorkData(project.id, { storySkeleton });
+  onStageComplete?.({ workData, scripts: [...scripts] });
 
   onProgress?.({ stage: "adaptation" });
   const adaptationStrategy = await runAdaptationStrategyAgent({
@@ -220,6 +226,7 @@ export async function runScriptPipeline(
     scripts,
   });
   workData = await setScriptWorkData(project.id, { adaptationStrategy });
+  onStageComplete?.({ workData, scripts: [...scripts] });
 
   const sortedChapters = [...chapters].sort(
     (a, b) => a.chapterIndex - b.chapterIndex,
@@ -233,6 +240,7 @@ export async function runScriptPipeline(
 
     const chapter = sortedChapters[index];
     await writeEpisodeScript(ctxBase, workData, scripts, chapter, project.id);
+    onStageComplete?.({ workData, scripts: [...scripts] });
 
     onProgress?.({
       stage: "scripts",

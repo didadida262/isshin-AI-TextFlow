@@ -45,6 +45,14 @@ export function AiScriptStep({
     (item) => item.scriptState === SCRIPT_STATE_ERROR,
   );
 
+  const handlePartialUpdate = useCallback(
+    (result: { workData: ScriptWorkData; scripts: ScriptRecord[] }) => {
+      setWorkData(result.workData);
+      setScripts(result.scripts);
+    },
+    [],
+  );
+
   const handleComplete = useCallback(
     (result: { workData: ScriptWorkData; scripts: ScriptRecord[] }) => {
       setWorkData(result.workData);
@@ -58,6 +66,7 @@ export function AiScriptStep({
   const {
     messages,
     isGenerating,
+    generationProgress,
     sendMessage,
     stopGeneration,
     retryFailed,
@@ -90,6 +99,7 @@ export function AiScriptStep({
       eventsRequired: s.prerequisiteHint,
     },
     onConfigError,
+    onPartialUpdate: handlePartialUpdate,
     onComplete: handleComplete,
   });
 
@@ -120,6 +130,7 @@ export function AiScriptStep({
             scripts={scripts}
             hasFailedScripts={hasFailedScripts}
             isGenerating={isGenerating}
+            generationProgress={generationProgress}
             onRetryFailed={() => void retryFailed()}
           />
         </div>

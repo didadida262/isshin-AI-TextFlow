@@ -48,6 +48,7 @@ function MainApp({
   const [navDirection, setNavDirection] = useState(0);
   const [enableNavAnimation, setEnableNavAnimation] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [dataRevision, setDataRevision] = useState(0);
 
   const handleNavChange = useCallback((nav: AppNav) => {
     if (nav === activeNav) return;
@@ -150,6 +151,7 @@ function MainApp({
               <CreationView
                 config={config}
                 selectedModel={selectedModel}
+                dataRevision={dataRevision}
                 onConfigError={handleCreationConfigError}
                 onProjectDetailChange={setSidebarCollapsed}
               />
@@ -165,6 +167,7 @@ function MainApp({
         onSelectModel={setSelectedModel}
         onClose={() => setSettingsOpen(false)}
         onSave={handleSaveConfig}
+        onDatabaseChanged={() => setDataRevision((revision) => revision + 1)}
       />
     </div>
   );

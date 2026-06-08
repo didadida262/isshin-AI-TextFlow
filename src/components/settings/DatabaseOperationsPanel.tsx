@@ -85,7 +85,13 @@ function DatabaseActionRow({
   );
 }
 
-export function DatabaseOperationsPanel() {
+interface DatabaseOperationsPanelProps {
+  onDatabaseChanged?: () => void;
+}
+
+export function DatabaseOperationsPanel({
+  onDatabaseChanged,
+}: DatabaseOperationsPanelProps) {
   const { t } = useI18n();
   const db = useTranslationMessages().settings.database;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -176,6 +182,7 @@ export function DatabaseOperationsPanel() {
       setConfirmKind(null);
       setPendingImport("");
       await refreshTables();
+      onDatabaseChanged?.();
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : String(importError));
     } finally {
@@ -198,6 +205,7 @@ export function DatabaseOperationsPanel() {
       );
       setConfirmKind(null);
       await refreshTables();
+      onDatabaseChanged?.();
     } catch (clearError) {
       setError(clearError instanceof Error ? clearError.message : String(clearError));
     } finally {
@@ -214,6 +222,7 @@ export function DatabaseOperationsPanel() {
       setMessage(t("settings.database.clearAllSuccess", { count: deleted }));
       setConfirmKind(null);
       await refreshTables();
+      onDatabaseChanged?.();
     } catch (clearError) {
       setError(clearError instanceof Error ? clearError.message : String(clearError));
     } finally {

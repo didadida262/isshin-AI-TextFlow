@@ -24,6 +24,7 @@ import type { AppConfig, CreationProject } from "../types";
 interface CreationViewProps {
   config: AppConfig;
   selectedModel: string;
+  dataRevision?: number;
   onConfigError: (message: string | null) => void;
   onProjectDetailChange?: (inDetail: boolean) => void;
 }
@@ -39,6 +40,7 @@ function formatProjectDate(timestamp: number): string {
 export function CreationView({
   config,
   selectedModel,
+  dataRevision = 0,
   onConfigError,
   onProjectDetailChange,
 }: CreationViewProps) {
@@ -65,7 +67,15 @@ export function CreationView({
 
   useEffect(() => {
     void refreshProjects();
-  }, [refreshProjects]);
+  }, [dataRevision, refreshProjects]);
+
+  useEffect(() => {
+    if (loading || !activeProjectId) return;
+    if (!projects.some((project) => project.id === activeProjectId)) {
+      setActiveProjectId(null);
+      onProjectDetailChange?.(false);
+    }
+  }, [activeProjectId, loading, onProjectDetailChange, projects]);
 
   const activeProject =
     projects.find((project) => project.id === activeProjectId) ?? null;

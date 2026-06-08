@@ -35,11 +35,15 @@ function stripXmlDecorations(text: string): string {
     .trim();
 }
 
-export function buildMarkdownRetryHint(sectionList: string, attempt: number): string {
+export function buildMarkdownRetryHint(
+  firstHeading: string,
+  sectionList: string,
+  attempt: number,
+): string {
   if (attempt === 0) return "";
   return (
-    `\n\n【重要】上次输出格式无效。思路阐述之后必须用 Markdown 输出策略正文，` +
-    `以 \`## 改编基调\` 开头，依次包含：${sectionList}。` +
+    `\n\n【重要】上次输出格式无效。思路阐述之后必须用 Markdown 输出正文，` +
+    `以 \`## ${firstHeading}\` 开头，依次包含：${sectionList}。` +
     "禁止 XML/HTML 标签，禁止用 ``` 代码块包裹正文。"
   );
 }
@@ -85,19 +89,46 @@ export function parseAdaptationStrategyOutput(
   text: string,
   minLength = 200,
 ): string | null {
+  return parseMarkdownFirstTaggedOutput(
+    text,
+    "adaptationStrategy",
+    STRATEGY_MARKERS,
+    minLength,
+  );
+}
+
+/** Parse story skeleton: Markdown-first; legacy XML is stripped to plain text. */
+export function parseStorySkeletonOutput(
+  text: string,
+  minLength = 200,
+): string | null {
+  return parseMarkdownFirstTaggedOutput(
+    text,
+    "storySkeleton",
+    SKELETON_MARKERS,
+    minLength,
+  );
+}
+
+function parseMarkdownFirstTaggedOutput(
+  text: string,
+  tagName: string,
+  markerPattern: RegExp,
+  minLength: number,
+): string | null {
   const normalized = stripMarkdownCodeFences(text.trim());
 
-  const markdown = extractMarkdownFallback(normalized, STRATEGY_MARKERS, minLength);
+  const markdown = extractMarkdownFallback(normalized, markerPattern, minLength);
   if (markdown) {
     return stripXmlDecorations(markdown);
   }
 
-  const xml = extractXmlTag(normalized, "adaptationStrategy");
-  const unclosed = extractUnclosedXmlTag(normalized, "adaptationStrategy");
+  const xml = extractXmlTag(normalized, tagName);
+  const unclosed = extractUnclosedXmlTag(normalized, tagName);
   const legacyBody = xml ?? unclosed;
   if (legacyBody) {
     const stripped = stripXmlDecorations(legacyBody);
-    const fromLegacy = extractMarkdownFallback(stripped, STRATEGY_MARKERS, minLength);
+    const fromLegacy = extractMarkdownFallback(stripped, markerPattern, minLength);
     if (fromLegacy) return stripXmlDecorations(fromLegacy);
     if (stripped.length >= minLength) return stripped;
   }
@@ -105,12 +136,14 @@ export function parseAdaptationStrategyOutput(
   return null;
 }
 
-/** Normalize stored strategy for workspace display (handles older XML-shaped records). */
-export function formatAdaptationStrategyDisplay(stored: string): string {
+function formatTaggedAgentDisplay(
+  stored: string,
+  parse: (text: string, minLength: number) => string | null,
+): string {
   const trimmed = stored.trim();
   if (!trimmed) return trimmed;
 
-  const parsed = parseAdaptationStrategyOutput(trimmed, 50);
+  const parsed = parse(trimmed, 50);
   if (parsed) return parsed;
 
   if (/<[a-z][\w.-]*(\s|>)/i.test(trimmed)) {
@@ -118,6 +151,16 @@ export function formatAdaptationStrategyDisplay(stored: string): string {
   }
 
   return trimmed;
+}
+
+/** Normalize stored strategy for workspace display (handles older XML-shaped records). */
+export function formatAdaptationStrategyDisplay(stored: string): string {
+  return formatTaggedAgentDisplay(stored, parseAdaptationStrategyOutput);
+}
+
+/** Normalize stored skeleton for workspace display (handles older XML-shaped records). */
+export function formatStorySkeletonDisplay(stored: string): string {
+  return formatTaggedAgentDisplay(stored, parseStorySkeletonOutput);
 }
 
 export interface ScriptItemPayload {

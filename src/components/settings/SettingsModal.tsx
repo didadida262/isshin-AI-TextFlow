@@ -27,6 +27,7 @@ interface SettingsModalProps {
   onSelectModel: (model: string) => void;
   onClose: () => void;
   onSave: (config: AppConfig) => void;
+  onDatabaseChanged?: () => void;
 }
 
 const TABS: Array<{
@@ -44,6 +45,7 @@ export function SettingsModal({
   onSelectModel,
   onClose,
   onSave,
+  onDatabaseChanged,
 }: SettingsModalProps) {
   const i18n = useTranslationMessages();
   const [activeTab, setActiveTab] = useState<SettingsTab>("modelService");
@@ -191,7 +193,9 @@ export function SettingsModal({
                       modelsError={modelsError}
                     />
                   ) : (
-                    <DatabaseOperationsPanel />
+                    <DatabaseOperationsPanel
+                      onDatabaseChanged={onDatabaseChanged}
+                    />
                   )}
                 </div>
               </div>
