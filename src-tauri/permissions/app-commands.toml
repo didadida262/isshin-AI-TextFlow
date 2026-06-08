@@ -68,6 +68,7 @@ description = "Allows project workflow node queries"
 commands.allow = [
   "list_project_workflow_nodes",
   "get_project_workflow_node_detail",
+  "export_timeline",
 ]
 
 [[permission]]

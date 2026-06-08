@@ -44,11 +44,19 @@ export interface GenerateVideoNodeDetail {
   videos: ProjectAssetRecord[];
 }
 
+export interface EditExportNodeDetail {
+  kind: "editExport";
+  nodeId: ProjectWorkflowStepId;
+  scripts: ScriptRecord[];
+  videos: ProjectAssetRecord[];
+}
+
 export type WorkflowNodeDetail =
   | ExtractEventsNodeDetail
   | AiScriptNodeDetail
   | GenerateAssetsNodeDetail
   | GenerateVideoNodeDetail
+  | EditExportNodeDetail
   | PlaceholderNodeDetail;
 
 const inflightRequests = new Map<string, Promise<unknown>>();

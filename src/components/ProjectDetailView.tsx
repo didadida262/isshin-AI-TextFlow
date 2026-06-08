@@ -20,6 +20,7 @@ import { ExtractEventsStep } from "./ExtractEventsStep";
 import { AiScriptStep } from "./AiScriptStep";
 import { GenerateAssetsStep } from "./GenerateAssetsStep";
 import { GenerateVideoStep } from "./GenerateVideoStep";
+import { EditExportStep } from "./EditExportStep";
 interface ProjectDetailViewProps {
   project: CreationProject;
   config: AppConfig;
@@ -234,6 +235,11 @@ export function ProjectDetailView({
     [nodeDetail],
   );
 
+  const editExportDetail = useMemo(
+    () => (nodeDetail?.kind === "editExport" ? nodeDetail : null),
+    [nodeDetail],
+  );
+
   const isStepContentLoading =
     loadingDetail || loadedStep !== selectedStep;
 
@@ -298,7 +304,21 @@ export function ProjectDetailView({
           scripts={generateVideoDetail.scripts}
           initialVideos={generateVideoDetail.videos}
           onConfigError={onConfigError}
-          onVideosUpdated={() => void loadNodeDetail("generateVideo", { silent: true })}
+          onVideosUpdated={() => void refreshProjectWorkflow()}
+        />
+      );
+    }
+
+    if (selectedStep === "editExport" && editExportDetail) {
+      return (
+        <EditExportStep
+          key={`${project.id}-edit-export-${editExportDetail.scripts.length}-${editExportDetail.videos.length}-${editExportDetail.videos[0]?.id ?? 0}`}
+          projectId={project.id}
+          projectName={project.name}
+          title={activeLabel}
+          scripts={editExportDetail.scripts}
+          videos={editExportDetail.videos}
+          onConfigError={onConfigError}
         />
       );
     }
@@ -320,6 +340,7 @@ export function ProjectDetailView({
     extractEventsDetail,
     generateAssetsDetail,
     generateVideoDetail,
+    editExportDetail,
     loadNodeDetail,
     onConfigError,
     project,

@@ -73,6 +73,14 @@ pub struct GenerateVideoNodeDetail {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct EditExportNodeDetail {
+    pub node_id: String,
+    pub scripts: Vec<ScriptRecord>,
+    pub videos: Vec<assets::ProjectAssetRecord>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlaceholderNodeDetail {
     pub node_id: String,
 }
@@ -84,6 +92,7 @@ pub enum WorkflowNodeDetail {
     AiScript(AiScriptNodeDetail),
     GenerateAssets(GenerateAssetsNodeDetail),
     GenerateVideo(GenerateVideoNodeDetail),
+    EditExport(EditExportNodeDetail),
     Placeholder(PlaceholderNodeDetail),
 }
 
@@ -112,6 +121,7 @@ fn is_node_completed(conn: &Connection, project_id: &str, node_id: &str) -> Resu
             script::is_ai_script_completed(conn, project_id, chapters.len() as i32)
         }
         NODE_GENERATE_ASSETS => assets::has_successful_assets(conn, project_id),
+        NODE_GENERATE_VIDEO => assets::is_generate_video_completed(conn, project_id),
         _ => Ok(false),
     }
 }
@@ -149,9 +159,17 @@ fn sync_current_node(conn: &Connection, project_id: &str) -> Result<(), String> 
     {
         set_project_current_node(conn, project_id, NODE_GENERATE_VIDEO)?;
     } else if (current == NODE_GENERATE_VIDEO || current == NODE_STORYBOARD)
+        && is_node_completed(conn, project_id, NODE_GENERATE_VIDEO)?
+    {
+        set_project_current_node(conn, project_id, NODE_EDIT_EXPORT)?;
+    } else if (current == NODE_GENERATE_VIDEO || current == NODE_STORYBOARD)
         && !is_node_completed(conn, project_id, NODE_GENERATE_ASSETS)?
     {
         set_project_current_node(conn, project_id, NODE_GENERATE_ASSETS)?;
+    } else if current == NODE_EDIT_EXPORT
+        && !is_node_completed(conn, project_id, NODE_GENERATE_VIDEO)?
+    {
+        set_project_current_node(conn, project_id, NODE_GENERATE_VIDEO)?;
     }
     Ok(())
 }
@@ -271,6 +289,11 @@ pub fn get_project_workflow_node_detail(
             scripts: script::fetch_scripts(&conn, &input.project_id)?,
             videos: assets::fetch_project_video_assets(&conn, &input.project_id)?,
         })),
+        NODE_EDIT_EXPORT => Ok(WorkflowNodeDetail::EditExport(EditExportNodeDetail {
+            node_id: input.node_id,
+            scripts: script::fetch_scripts(&conn, &input.project_id)?,
+            videos: assets::fetch_project_video_assets(&conn, &input.project_id)?,
+        })),
         _ => Ok(WorkflowNodeDetail::Placeholder(PlaceholderNodeDetail {
             node_id: input.node_id,
         })),
@@ -281,7 +304,7 @@ pub fn get_project_workflow_node_detail(
 mod tests {
     use super::*;
     use crate::novel;
-    use rusqlite::Connection;
+    use rusqlite::{params, Connection};
 
     fn test_conn() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
@@ -331,6 +354,37 @@ mod tests {
         let nodes = build_workflow_nodes(&conn, "p1").unwrap();
         assert_eq!(nodes[2].status, WorkflowNodeStatus::Completed);
         assert_eq!(nodes[4].status, WorkflowNodeStatus::Current);
+    }
+
+    #[test]
+    fn advances_to_edit_export_when_all_scripts_have_videos() {
+        let conn = test_conn();
+        conn.execute(
+            "UPDATE projects SET current_workflow_node = 'generateVideo' WHERE id = 'p1'",
+            [],
+        )
+        .unwrap();
+        for (index, name) in ["EP01", "EP02"].iter().enumerate() {
+            conn.execute(
+                "INSERT INTO scripts (
+                    project_id, episode_index, name, content, script_state, error_reason, updated_at
+                ) VALUES ('p1', ?1, ?2, 'script', 1, NULL, 1)",
+                params![(index + 1) as i32, name],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO project_assets (
+                    project_id, name, asset_type, prompt, model, size, image_path,
+                    asset_state, error_reason, created_at, updated_at
+                 ) VALUES ('p1', ?1, 'video', 'prompt', 'wan', '832x480', '/tmp/v.mp4', 1, NULL, 1, 1)",
+                params![name],
+            )
+            .unwrap();
+        }
+
+        let nodes = build_workflow_nodes(&conn, "p1").unwrap();
+        assert_eq!(nodes[4].status, WorkflowNodeStatus::Completed);
+        assert_eq!(nodes[5].status, WorkflowNodeStatus::Current);
     }
 
     #[test]

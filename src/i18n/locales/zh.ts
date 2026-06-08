@@ -254,6 +254,28 @@ export type TranslationSchema = {
       chatRetryFailedComplete: string;
       chatRetryFailedNone: string;
     };
+    editExportStep: {
+      libraryTitle: string;
+      libraryHint: string;
+      libraryEmpty: string;
+      episodeLabel: (episode: number) => string;
+      previewTitle: string;
+      previewEmpty: string;
+      timelineTitle: string;
+      timelineHint: string;
+      videoTrack: string;
+      audioTrack: string;
+      play: string;
+      pause: string;
+      removeClip: string;
+      fillTimeline: string;
+      clearTimeline: string;
+      export: string;
+      exporting: string;
+      exportDialogTitle: string;
+      exportEmpty: string;
+      exportFailed: string;
+    };
     generateVideoStep: {
       emptyHint: string;
       colEpisode: string;
@@ -701,6 +723,28 @@ export const zh: TranslationSchema = {
         `正在重试失败集 ${completed}/${total}…`,
       chatRetryFailedComplete: "失败集已重新生成，请在右侧查看结果。",
       chatRetryFailedNone: "当前没有失败的集数。",
+    },
+    editExportStep: {
+      libraryTitle: "视频素材",
+      libraryHint: "拖拽到下方轨道进行拼接",
+      libraryEmpty: "请先在「生成视频」步骤完成各集视频。",
+      episodeLabel: (episode: number) => `第 ${episode} 集`,
+      previewTitle: "预览",
+      previewEmpty: "将素材拖入轨道后，在此预览时间线画面",
+      timelineTitle: "时间线",
+      timelineHint: "拖入视频轨；片段可拖动、裁切",
+      videoTrack: "视频",
+      audioTrack: "音频",
+      play: "播放",
+      pause: "暂停",
+      removeClip: "移除片段",
+      fillTimeline: "按集数排列",
+      clearTimeline: "清空轨道",
+      export: "导出视频",
+      exporting: "导出中…",
+      exportDialogTitle: "导出成片",
+      exportEmpty: "时间线为空，请先添加视频片段",
+      exportFailed: "导出失败，请确认已安装 ffmpeg",
     },
     generateVideoStep: {
       emptyHint: "请先在「生成剧本」步骤完成逐集剧本，再在此根据剧本生成视频。",

@@ -1,4 +1,5 @@
 use crate::db::init_db;
+use crate::script::{self, SCRIPT_STATE_SUCCESS};
 use rusqlite::{params, Connection, Row};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -236,6 +237,40 @@ pub fn has_successful_assets(conn: &Connection, project_id: &str) -> Result<bool
     Ok(count > 0)
 }
 
+pub fn is_generate_video_completed(
+    conn: &Connection,
+    project_id: &str,
+) -> Result<bool, String> {
+    let scripts = script::fetch_scripts(conn, project_id)?;
+    let generatable: Vec<_> = scripts
+        .iter()
+        .filter(|script| {
+            script.script_state == SCRIPT_STATE_SUCCESS && !script.content.trim().is_empty()
+        })
+        .collect();
+
+    if generatable.is_empty() {
+        return Ok(false);
+    }
+
+    let videos = fetch_project_video_assets(conn, project_id)?;
+    for script in generatable {
+        let has_video = videos.iter().any(|video| {
+            video.asset_state == ASSET_STATE_SUCCESS
+                && video
+                    .image_path
+                    .as_ref()
+                    .is_some_and(|path| !path.trim().is_empty())
+                && video.name == script.name
+        });
+        if !has_video {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
 fn sync_workflow_after_assets_change(
     conn: &Connection,
     project_id: &str,
@@ -249,17 +284,41 @@ fn sync_workflow_after_assets_change(
         .map_err(|e| e.to_string())?;
 
     let now = timestamp();
-    if has_successful_assets(conn, project_id)? {
-        if current == "generateAssets" || current == "storyboard" {
-            conn.execute(
-                "UPDATE projects SET current_workflow_node = 'generateVideo', updated_at = ?2 WHERE id = ?1",
-                params![project_id, now],
-            )
-            .map_err(|e| e.to_string())?;
-        }
-    } else if current == "generateVideo" || current == "storyboard" {
+    let has_assets = has_successful_assets(conn, project_id)?;
+    let videos_complete = is_generate_video_completed(conn, project_id)?;
+
+    if videos_complete
+        && (current == "generateVideo" || current == "storyboard")
+    {
+        conn.execute(
+            "UPDATE projects SET current_workflow_node = 'editExport', updated_at = ?2 WHERE id = ?1",
+            params![project_id, now],
+        )
+        .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    if has_assets && (current == "generateAssets" || current == "storyboard") {
+        conn.execute(
+            "UPDATE projects SET current_workflow_node = 'generateVideo', updated_at = ?2 WHERE id = ?1",
+            params![project_id, now],
+        )
+        .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    if !has_assets && (current == "generateVideo" || current == "storyboard") {
         conn.execute(
             "UPDATE projects SET current_workflow_node = 'generateAssets', updated_at = ?2 WHERE id = ?1",
+            params![project_id, now],
+        )
+        .map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    if !videos_complete && current == "editExport" {
+        conn.execute(
+            "UPDATE projects SET current_workflow_node = 'generateVideo', updated_at = ?2 WHERE id = ?1",
             params![project_id, now],
         )
         .map_err(|e| e.to_string())?;

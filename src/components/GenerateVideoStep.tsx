@@ -285,7 +285,7 @@ export function GenerateVideoStep({
                             event.stopPropagation();
                             openVideoModal(script);
                           }}
-                          className="text-xs text-accent transition hover:underline disabled:cursor-not-allowed disabled:text-text-dim disabled:no-underline"
+                          className="text-xs text-sky-300 transition hover:text-sky-200 hover:underline disabled:cursor-not-allowed disabled:text-text-dim disabled:no-underline"
                         >
                           {hasVideo ? s.regenerateVideo : s.generateVideo}
                         </button>

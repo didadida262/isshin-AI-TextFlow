@@ -1,3 +1,4 @@
+mod edit_export;
 mod image;
 mod video;
 mod assistant_context;
@@ -12,6 +13,7 @@ mod script;
 mod skills;
 mod workflow;
 
+use edit_export::export_timeline;
 use assistant_context::query_assistant_context;
 use image::generate_image;
 use video::{generate_image_to_video, generate_video};
@@ -99,6 +101,7 @@ pub fn run() {
             generate_image,
             generate_video,
             generate_image_to_video,
+            export_timeline,
             get_database_overview,
             export_database,
             export_database_to_file,
