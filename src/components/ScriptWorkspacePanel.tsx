@@ -52,6 +52,8 @@ export function ScriptWorkspacePanel({
     colName: s.colName,
     colStatus: s.colStatus,
     colContent: s.colContent,
+    colActions: s.colActions,
+    viewDetail: s.viewDetail,
     statusSuccess: s.statusSuccess,
     statusError: s.statusError,
     statusPending: s.statusPending,

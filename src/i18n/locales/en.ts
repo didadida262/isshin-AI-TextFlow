@@ -241,6 +241,11 @@ export const en: TranslationSchema = {
       colName: "Title",
       colStatus: "Status",
       colContent: "Content",
+      colActions: "Actions",
+      viewDetail: "Details",
+      colErrorReason: "Error",
+      scriptDetailTitle: (episodeIndex: number, name: string) =>
+        `EP ${episodeIndex} · ${name}`,
       statusSuccess: "Done",
       statusError: "Failed",
       statusPending: "Pending",

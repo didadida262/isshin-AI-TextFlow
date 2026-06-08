@@ -219,6 +219,10 @@ export type TranslationSchema = {
       colName: string;
       colStatus: string;
       colContent: string;
+      colActions: string;
+      viewDetail: string;
+      colErrorReason: string;
+      scriptDetailTitle: (episodeIndex: number, name: string) => string;
       statusSuccess: string;
       statusError: string;
       statusPending: string;
@@ -628,6 +632,11 @@ export const zh: TranslationSchema = {
       colName: "剧本名称",
       colStatus: "状态",
       colContent: "内容",
+      colActions: "操作",
+      viewDetail: "详情",
+      colErrorReason: "失败原因",
+      scriptDetailTitle: (episodeIndex: number, name: string) =>
+        `第 ${episodeIndex} 集 · ${name}`,
       statusSuccess: "已完成",
       statusError: "失败",
       statusPending: "待生成",
