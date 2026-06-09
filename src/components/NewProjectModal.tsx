@@ -241,7 +241,7 @@ export function NewProjectModal({
                       />
                     </label>
 
-                    <label className="block space-y-2">
+                    <div className="block space-y-2">
                       <span className="text-sm text-text-muted">
                         {m.aspectRatio}
                       </span>
@@ -252,9 +252,9 @@ export function NewProjectModal({
                           setDraft((d) => ({ ...d, aspectRatio }))
                         }
                       />
-                    </label>
+                    </div>
 
-                    <label className="block space-y-2">
+                    <div className="block space-y-2">
                       <span className="text-sm text-text-muted">
                         {m.directorManual}
                       </span>
@@ -266,7 +266,7 @@ export function NewProjectModal({
                         }
                         disabled={skillsLoading || directorManualOptions.length === 0}
                       />
-                    </label>
+                    </div>
 
                     <label className="block space-y-2">
                       <span className="text-sm text-text-muted">{m.intro}</span>

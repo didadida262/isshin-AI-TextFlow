@@ -35,16 +35,23 @@ export function Select({
   const display = selected?.label ?? placeholder ?? "";
   const showPlaceholder = !selected && Boolean(placeholder);
 
+  const close = () => setOpen(false);
+
+  const selectOption = (nextValue: string) => {
+    onChange(nextValue);
+    close();
+  };
+
   useEffect(() => {
     if (!open) return;
 
-    const handlePointerDown = (event: MouseEvent) => {
+    const handlePointerDown = (event: PointerEvent) => {
       if (containerRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
+      close();
     };
 
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [open]);
 
   return (
@@ -55,7 +62,10 @@ export function Select({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((v) => !v);
+        }}
         className={`${triggerClass} ${open ? "border-accent/50" : ""}`}
       >
         <span
@@ -81,9 +91,10 @@ export function Select({
                 type="button"
                 role="option"
                 aria-selected={opt.value === value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  selectOption(opt.value);
                 }}
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-white/5 ${
                   opt.value === value ? "text-accent" : "text-white"
