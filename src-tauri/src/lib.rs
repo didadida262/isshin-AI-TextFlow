@@ -30,7 +30,10 @@ use novel::{
     update_novel_chapter_event,
 };
 use projects::{create_project, delete_project, list_projects, update_project};
-use skills::{get_art_skill_detail, get_story_skill_detail, list_art_skills, list_story_skills};
+use skills::{
+    get_art_skill_detail, get_director_manual, get_story_skill_detail, list_art_skills,
+    list_director_manuals, list_story_skills,
+};
 use script::{
     get_script_work_data, list_scripts, set_script_work_data, upsert_script,
 };
@@ -75,8 +78,10 @@ pub fn run() {
             query_assistant_context,
             list_art_skills,
             list_story_skills,
+            list_director_manuals,
             get_art_skill_detail,
             get_story_skill_detail,
+            get_director_manual,
             llm_chat_completion,
             llm_log_outbound,
             llm_log_inbound,

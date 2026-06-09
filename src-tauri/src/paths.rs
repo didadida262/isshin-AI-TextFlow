@@ -7,7 +7,10 @@ use tauri::{AppHandle, Manager};
 pub struct AppPaths {
     pub sqlite_dir: PathBuf,
     pub assets_dir: PathBuf,
+    /// Legacy visual / story skill bundles (`data/skills_old`).
     pub skills_dir: PathBuf,
+    /// Director manual prompts (`data/skills`).
+    pub director_manuals_dir: PathBuf,
 }
 
 static APP_PATHS: OnceLock<AppPaths> = OnceLock::new();
@@ -29,16 +32,19 @@ fn resolve(handle: &AppHandle) -> Result<AppPaths, String> {
     if let Some(data) = find_dev_data_root() {
         let sqlite_dir = data.join("sqlite");
         let assets_dir = data.join("assets");
-        let skills_dir = data.join("skills");
+        let skills_dir = data.join("skills_old");
+        let director_manuals_dir = data.join("skills");
         std::fs::create_dir_all(&sqlite_dir).map_err(|e| e.to_string())?;
         std::fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
+        std::fs::create_dir_all(&director_manuals_dir).map_err(|e| e.to_string())?;
         if !skills_dir.is_dir() {
-            return Err(format!("未找到 skills 目录: {}", skills_dir.display()));
+            return Err(format!("未找到 skills_old 目录: {}", skills_dir.display()));
         }
         return Ok(AppPaths {
             sqlite_dir,
             assets_dir,
             skills_dir,
+            director_manuals_dir,
         });
     }
 
@@ -49,11 +55,13 @@ fn resolve(handle: &AppHandle) -> Result<AppPaths, String> {
     std::fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
 
     let skills_dir = resolve_bundled_skills(handle)?;
+    let director_manuals_dir = resolve_bundled_director_manuals(handle)?;
 
     Ok(AppPaths {
         sqlite_dir,
         assets_dir,
         skills_dir,
+        director_manuals_dir,
     })
 }
 
@@ -95,6 +103,24 @@ fn walk_up_for_data_dir(mut start: PathBuf) -> Option<PathBuf> {
 fn resolve_bundled_skills(handle: &AppHandle) -> Result<PathBuf, String> {
     let resource = handle.path().resource_dir().map_err(|e| e.to_string())?;
     for candidate in [
+        resource.join("_up_").join("data").join("skills_old"),
+        resource.join("data").join("skills_old"),
+        resource.join("skills_old"),
+    ] {
+        if candidate.is_dir() {
+            return Ok(candidate);
+        }
+    }
+
+    Err(format!(
+        "未找到内置 skills_old 资源（resource_dir: {}）",
+        resource.display()
+    ))
+}
+
+fn resolve_bundled_director_manuals(handle: &AppHandle) -> Result<PathBuf, String> {
+    let resource = handle.path().resource_dir().map_err(|e| e.to_string())?;
+    for candidate in [
         resource.join("_up_").join("data").join("skills"),
         resource.join("data").join("skills"),
         resource.join("skills"),
@@ -104,8 +130,7 @@ fn resolve_bundled_skills(handle: &AppHandle) -> Result<PathBuf, String> {
         }
     }
 
-    Err(format!(
-        "未找到内置 skills 资源（resource_dir: {}）",
-        resource.display()
-    ))
+    let fallback = resource.join("_up_").join("data").join("skills");
+    std::fs::create_dir_all(&fallback).map_err(|e| e.to_string())?;
+    Ok(fallback)
 }

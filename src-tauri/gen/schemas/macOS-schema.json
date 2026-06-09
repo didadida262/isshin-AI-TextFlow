@@ -351,6 +351,12 @@
           "markdownDescription": "Allows loading visual manual detail"
         },
         {
+          "description": "Allows loading director manual content",
+          "type": "string",
+          "const": "allow-get-director-manual",
+          "markdownDescription": "Allows loading director manual content"
+        },
+        {
           "description": "Allows loading director manual detail",
           "type": "string",
           "const": "allow-get-story-skill-detail",
@@ -361,6 +367,12 @@
           "type": "string",
           "const": "allow-list-art-skills",
           "markdownDescription": "Allows listing visual manual skills"
+        },
+        {
+          "description": "Allows listing director manuals from skills",
+          "type": "string",
+          "const": "allow-list-director-manuals",
+          "markdownDescription": "Allows listing director manuals from skills"
         },
         {
           "description": "Allows listing projects",

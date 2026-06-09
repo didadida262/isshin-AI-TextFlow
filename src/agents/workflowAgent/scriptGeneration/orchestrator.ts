@@ -2,7 +2,7 @@ import { runAdaptationStrategyAgent } from "./adaptationStrategyAgent";
 import { runEpisodeScriptAgent } from "./episodeScriptAgent";
 import { runStorySkeletonAgent } from "./storySkeletonAgent";
 import type { ScriptAgentContext, ScriptGenerationProgress } from "./types";
-import { loadStorySkillDetail } from "../../../services/skills";
+import { loadDirectorManualContent } from "../../../services/skills";
 import {
   isEventExtractionComplete,
   type NovelChapterRecord,
@@ -37,11 +37,8 @@ async function loadDirectorSkillContent(
   directorManual: string,
 ): Promise<string | undefined> {
   if (!directorManual.trim()) return undefined;
-  const detail = await loadStorySkillDetail(directorManual);
-  const tab = detail?.tabs.find(
-    (item) => item.value === "director_planning_narrative",
-  );
-  return tab?.content;
+  const content = await loadDirectorManualContent(directorManual);
+  return content?.trim() || undefined;
 }
 
 function upsertLocalScript(scripts: ScriptRecord[], saved: ScriptRecord): void {

@@ -98,3 +98,26 @@ export async function loadStorySkillDetail(id: string): Promise<SkillDetail | nu
     return null;
   }
 }
+
+export interface DirectorManualItem {
+  id: string;
+  name: string;
+}
+
+export async function loadDirectorManuals(): Promise<DirectorManualItem[]> {
+  try {
+    return await invoke<DirectorManualItem[]>("list_director_manuals");
+  } catch (error) {
+    console.error("[skills] loadDirectorManuals failed:", error);
+    return [];
+  }
+}
+
+export async function loadDirectorManualContent(id: string): Promise<string | null> {
+  try {
+    return await invoke<string>("get_director_manual", { id });
+  } catch (error) {
+    console.error("[skills] loadDirectorManualContent failed:", error);
+    return null;
+  }
+}

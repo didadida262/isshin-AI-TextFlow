@@ -3,7 +3,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import { loadArtSkills, loadStorySkills, type SkillManualItem } from "../services/skills";
+import {
+  loadArtSkills,
+  loadDirectorManuals,
+  type DirectorManualItem,
+  type SkillManualItem,
+} from "../services/skills";
 import { projectToDraft } from "../services/projects";
 import { SkillManualSection } from "./SkillManualSection";
 import { Select } from "./Select";
@@ -78,7 +83,7 @@ export function NewProjectModal({
   const i18n = useTranslationMessages();
   const m = i18n.creation.modal;
   const [artSkills, setArtSkills] = useState<SkillManualItem[]>([]);
-  const [storySkills, setStorySkills] = useState<SkillManualItem[]>([]);
+  const [directorManuals, setDirectorManuals] = useState<DirectorManualItem[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [draft, setDraft] = useState<NewProjectDraft>(() =>
@@ -96,12 +101,12 @@ export function NewProjectModal({
     let cancelled = false;
     setSkillsLoading(true);
 
-    void Promise.all([loadArtSkills(), loadStorySkills()]).then(
-      ([art, story]) => {
+    void Promise.all([loadArtSkills(), loadDirectorManuals()]).then(
+      ([art, manuals]) => {
         if (cancelled) return;
 
         setArtSkills(art);
-        setStorySkills(story);
+        setDirectorManuals(manuals);
         setSkillsLoading(false);
 
         if (mode === "edit" && editingProject) {
@@ -112,7 +117,7 @@ export function NewProjectModal({
               novelType: m.defaultNovelType,
               intro: m.defaultIntro,
               artStyle: art[0]?.id ?? "",
-              directorManual: story[0]?.id ?? "",
+              directorManual: manuals[0]?.id ?? "",
             }),
           );
         }
@@ -134,6 +139,11 @@ export function NewProjectModal({
   const aspectRatioOptions = ASPECT_RATIOS.map((ratio) => ({
     value: ratio,
     label: ratio,
+  }));
+
+  const directorManualOptions = directorManuals.map((item) => ({
+    value: item.id,
+    label: item.name,
   }));
 
   const handleConfirm = async () => {
@@ -245,6 +255,20 @@ export function NewProjectModal({
                     </label>
 
                     <label className="block space-y-2">
+                      <span className="text-sm text-text-muted">
+                        {m.directorManual}
+                      </span>
+                      <Select
+                        value={draft.directorManual}
+                        options={directorManualOptions}
+                        onChange={(directorManual) =>
+                          setDraft((d) => ({ ...d, directorManual }))
+                        }
+                        disabled={skillsLoading || directorManualOptions.length === 0}
+                      />
+                    </label>
+
+                    <label className="block space-y-2">
                       <span className="text-sm text-text-muted">{m.intro}</span>
                       <textarea
                         rows={4}
@@ -269,16 +293,6 @@ export function NewProjectModal({
                       setDraft((d) => ({ ...d, artStyle }))
                     }
                     variant="visual"
-                  />
-                  <SkillManualSection
-                    title={m.directorManual}
-                    items={storySkills}
-                    loading={skillsLoading}
-                    selectedId={draft.directorManual}
-                    onSelect={(directorManual) =>
-                      setDraft((d) => ({ ...d, directorManual }))
-                    }
-                    variant="director"
                   />
                 </aside>
               </div>

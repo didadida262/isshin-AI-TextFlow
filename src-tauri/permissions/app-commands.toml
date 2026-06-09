@@ -49,6 +49,16 @@ description = "Allows loading director manual detail"
 commands.allow = ["get_story_skill_detail"]
 
 [[permission]]
+identifier = "allow-list-director-manuals"
+description = "Allows listing director manuals from skills"
+commands.allow = ["list_director_manuals"]
+
+[[permission]]
+identifier = "allow-get-director-manual"
+description = "Allows loading director manual content"
+commands.allow = ["get_director_manual"]
+
+[[permission]]
 identifier = "allow-novel"
 description = "Allows novel import and chapter persistence"
 commands.allow = [
