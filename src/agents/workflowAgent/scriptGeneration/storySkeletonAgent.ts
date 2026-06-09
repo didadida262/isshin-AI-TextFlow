@@ -6,6 +6,8 @@ import {
   parseStorySkeletonOutput,
 } from "../../../utils/xmlTags";
 import {
+  buildDirectorManualTaskReminder,
+  buildDirectorSkillBlock,
   buildProjectConfigBlock,
   formatChapterEvents,
 } from "./tools";
@@ -21,17 +23,15 @@ export async function runStorySkeletonAgent(
   ctx: ScriptAgentContext,
 ): Promise<string> {
   const eventsBlock = formatChapterEvents(ctx.chapters);
-  const skillBlock = ctx.directorSkillContent
-    ? `\n## 导演叙事手册\n${ctx.directorSkillContent}`
-    : "";
 
   const baseUserContent = [
     buildProjectConfigBlock(ctx.project),
-    skillBlock,
+    buildDirectorSkillBlock(ctx.directorSkillContent),
     `\n总章节数：${ctx.chapters.length}（默认 1 章 = 1 集）`,
     "\n## 章节事件表\n",
     eventsBlock,
     "\n请基于以上事件表构建故事骨架。先写 200-300 字思路阐述，再以 Markdown 输出正文（从 ## 故事核 开始）。",
+    buildDirectorManualTaskReminder(ctx.directorSkillContent),
   ].join("\n");
 
   let lastError = "故事骨架 Agent 未返回有效的 Markdown 正文";

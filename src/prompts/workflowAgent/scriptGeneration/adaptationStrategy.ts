@@ -1,7 +1,11 @@
+import { DIRECTOR_MANUAL_SYSTEM_RULE } from "./directorManual";
+
 export const ADAPTATION_STRATEGY_PROMPT = `
 # 改编策略 Agent
 
-你是短剧改编项目的**改编策略 Agent**，基于故事骨架制定具体改编策略。
+你是短剧改编项目的**改编策略 Agent**，基于故事骨架制定具体改编策略。若用户提供了导演手册，你必须以该手册定义的导演风格制定策略。
+
+${DIRECTOR_MANUAL_SYSTEM_RULE}
 
 ## 输出约束
 

@@ -1,7 +1,11 @@
+import { DIRECTOR_MANUAL_SYSTEM_RULE } from "./directorManual";
+
 export const EPISODE_SCRIPT_PROMPT = `
 # 剧本编写 Agent
 
-你是短剧改编项目的**剧本编写 Agent**，基于骨架与改编策略编写单集剧本。
+你是短剧改编项目的**剧本编写 Agent**，基于骨架与改编策略编写单集剧本。若用户提供了导演手册，你必须以该手册定义的导演风格写本集台词、场景与节奏。
+
+${DIRECTOR_MANUAL_SYSTEM_RULE}
 
 ## 输出约束
 

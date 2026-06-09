@@ -13,6 +13,28 @@ export function buildProjectConfigBlock(project: CreationProject): string {
   ].join("\n");
 }
 
+export function buildDirectorSkillBlock(
+  directorSkillContent?: string,
+): string {
+  if (!directorSkillContent?.trim()) return "";
+  return [
+    "",
+    "## 导演手册（必须严格遵循）",
+    "",
+    "以下是本项目选定的导演风格与叙事准则，**优先级高于你的默认创作习惯**。",
+    "你必须以该手册定义的导演视角完成本阶段全部输出；故事核、节奏、情绪、分集钩子、删减取舍、台词与场景风格，均须与手册一致。",
+    "",
+    directorSkillContent.trim(),
+  ].join("\n");
+}
+
+export function buildDirectorManualTaskReminder(
+  directorSkillContent?: string,
+): string {
+  if (!directorSkillContent?.trim()) return "";
+  return " 创作时必须严格按上文「导演手册」的类型风格与叙事准则执行，不得偏离。";
+}
+
 export function formatChapterEvents(chapters: NovelChapterRecord[]): string {
   if (chapters.length === 0) return "（无章节事件）";
   return chapters

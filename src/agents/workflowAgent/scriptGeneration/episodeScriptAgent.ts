@@ -4,6 +4,8 @@ import type { NovelChapterRecord } from "../../../services/novel";
 import { stripThink } from "../../../utils/stripThink";
 import { parseEpisodeScriptOutput } from "../../../utils/xmlTags";
 import {
+  buildDirectorManualTaskReminder,
+  buildDirectorSkillBlock,
   buildProjectConfigBlock,
   episodeName,
   formatChapterEventsByIndexes,
@@ -42,6 +44,7 @@ export async function runEpisodeScriptAgent(
 
   const baseUserContent = [
     buildProjectConfigBlock(ctx.project),
+    buildDirectorSkillBlock(ctx.directorSkillContent),
     `\n当前任务：编写第 ${episodeIndex} 集剧本（对应第 ${episodeIndex} 章《${chapter.chapter}》）`,
     `\n剧本名称（name 属性）：${expectedName}`,
     "\n## 故事骨架\n",
@@ -56,6 +59,7 @@ export async function runEpisodeScriptAgent(
       ? `\n## 上一集剧本（衔接参考）\n${prevScript.content}`
       : "",
     `\n请编写本集完整剧本，使用 <scriptItem name="${expectedName}"> 包裹正文。`,
+    buildDirectorManualTaskReminder(ctx.directorSkillContent),
   ].join("\n");
 
   let lastError = `第 ${episodeIndex} 集剧本 Agent 未返回有效的 <scriptItem>`;

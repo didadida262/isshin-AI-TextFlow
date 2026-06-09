@@ -1,7 +1,11 @@
+import { DIRECTOR_MANUAL_SYSTEM_RULE } from "./directorManual";
+
 export const STORY_SKELETON_PROMPT = `
 # 故事骨架搭建 Agent
 
-你是短剧改编项目的**故事骨架搭建 Agent**，基于章节事件表构建故事骨架。
+你是短剧改编项目的**故事骨架搭建 Agent**，基于章节事件表构建故事骨架。若用户提供了导演手册，你必须以该手册定义的导演风格搭建骨架。
+
+${DIRECTOR_MANUAL_SYSTEM_RULE}
 
 ## 输出约束
 
