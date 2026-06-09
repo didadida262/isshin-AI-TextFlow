@@ -10,8 +10,6 @@ interface ScriptEpisodesTableProps {
     colName: string;
     colStatus: string;
     colContent: string;
-    colActions: string;
-    viewDetail: string;
     statusSuccess: string;
     statusError: string;
     statusPending: string;
@@ -44,20 +42,12 @@ function previewText(script: ScriptRecord, labels: ScriptEpisodesTableProps["lab
   return labels.noContent;
 }
 
-function canViewDetail(script: ScriptRecord): boolean {
-  return (
-    script.scriptState === SCRIPT_STATE_ERROR ||
-    Boolean(script.content.trim())
-  );
-}
-
 const colgroup = (
   <colgroup>
     <col className="w-14" />
     <col className="w-44 sm:w-52" />
     <col className="w-20" />
     <col />
-    <col className="w-20" />
   </colgroup>
 );
 
@@ -71,7 +61,7 @@ export function ScriptEpisodesTable({ scripts, labels }: ScriptEpisodesTableProp
   return (
     <>
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
+        <table className="w-full border-collapse text-left text-xs sm:text-sm">
           {colgroup}
           <thead className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm">
             <tr className="border-b border-white/10 text-text-muted">
@@ -79,18 +69,17 @@ export function ScriptEpisodesTable({ scripts, labels }: ScriptEpisodesTableProp
               <th className="px-3 py-2.5 font-medium">{labels.colName}</th>
               <th className="px-3 py-2.5 font-medium">{labels.colStatus}</th>
               <th className="px-3 py-2.5 font-medium">{labels.colContent}</th>
-              <th className="px-3 py-2.5 font-medium">{labels.colActions}</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((script) => {
-              const detailEnabled = canViewDetail(script);
               const contentPreview = previewText(script, labels);
 
               return (
                 <tr
                   key={script.id}
-                  className="border-b border-white/5 align-top transition hover:bg-white/[0.02]"
+                  className="border-b border-white/5 cursor-pointer align-top transition hover:bg-white/[0.02]"
+                  onClick={() => setDetailScript(script)}
                 >
                   <td className="px-3 py-2.5 text-text-muted">
                     {script.episodeIndex}
@@ -113,16 +102,6 @@ export function ScriptEpisodesTable({ scripts, labels }: ScriptEpisodesTableProp
                     >
                       {contentPreview}
                     </p>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <button
-                      type="button"
-                      disabled={!detailEnabled}
-                      onClick={() => setDetailScript(script)}
-                      className="rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent transition hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-text-dim"
-                    >
-                      {labels.viewDetail}
-                    </button>
                   </td>
                 </tr>
               );
