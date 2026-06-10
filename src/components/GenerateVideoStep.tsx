@@ -103,6 +103,18 @@ function scriptStatusLabel(
   return labels.statusPending;
 }
 
+function PromptLoadingCell({ label }: { label: string }) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2 text-text-muted">
+      <FontAwesomeIcon
+        icon={faSpinner}
+        className="shrink-0 text-xs text-accent animate-spin"
+      />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
 function scriptStatusClass(script: ScriptRecord): string {
   if (script.scriptState === SCRIPT_STATE_SUCCESS) return "text-accent";
   if (script.scriptState === SCRIPT_STATE_ERROR) return "text-red-400";
@@ -185,6 +197,9 @@ export function GenerateVideoStep({
     completed: number;
     total: number;
   } | null>(null);
+  const [promptGeneratingIds, setPromptGeneratingIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const { startVideoJob, navigationTarget, clearNavigationTarget } =
@@ -283,6 +298,7 @@ export function GenerateVideoStep({
     const model = selectedModel.trim() || config.models[0]?.trim() || "";
     setBatchGenerating(true);
     setPromptProgress(null);
+    setPromptGeneratingIds(new Set(successfulScripts.map((script) => script.id)));
     setActionError(null);
     setActionNotice(null);
     onConfigError(null);
@@ -299,6 +315,11 @@ export function GenerateVideoStep({
               item.id === saved.id ? { ...item, videoPrompt: saved.videoPrompt } : item,
             ),
           );
+          setPromptGeneratingIds((current) => {
+            const next = new Set(current);
+            next.delete(saved.id);
+            return next;
+          });
         },
       });
       setActionNotice(s.batchGeneratePromptsComplete);
@@ -311,6 +332,7 @@ export function GenerateVideoStep({
     } finally {
       setBatchGenerating(false);
       setPromptProgress(null);
+      setPromptGeneratingIds(new Set());
     }
   }, [
     batchGenerating,
@@ -485,6 +507,7 @@ export function GenerateVideoStep({
                   );
                   const generateVideoEnabled = generateEnabled && hasPrompt;
                   const detailEnabled = canViewDetail(script);
+                  const isPromptGenerating = promptGeneratingIds.has(script.id);
                   const promptPreview = episodePromptPreview(
                     script,
                     video,
@@ -513,9 +536,16 @@ export function GenerateVideoStep({
                         {scriptStatusLabel(script, s)}
                       </td>
                       <td className="max-w-0 px-3 py-2.5 text-text-muted">
-                        <p className="line-clamp-2 break-words" title={promptPreview}>
-                          {promptPreview}
-                        </p>
+                        {isPromptGenerating ? (
+                          <PromptLoadingCell label={s.generatingPrompt} />
+                        ) : (
+                          <p
+                            className="line-clamp-2 break-words"
+                            title={promptPreview}
+                          >
+                            {promptPreview}
+                          </p>
+                        )}
                       </td>
                       <td className="max-w-0 px-3 py-2.5">
                         {video?.imagePath ? (

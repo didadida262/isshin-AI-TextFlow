@@ -385,6 +385,7 @@ export const en: TranslationSchema = {
       savePromptFailed: "Failed to save prompt. Please try again.",
       noPromptToGenerate:
         "Generate or edit a prompt for this episode before generating video.",
+      generatingPrompt: "Generating…",
     },
     generateAssetsStep: {
       batchExtract: "Batch Extract Assets",

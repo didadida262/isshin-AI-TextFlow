@@ -349,6 +349,7 @@ export type TranslationSchema = {
       charsUnit: string;
       savePromptFailed: string;
       noPromptToGenerate: string;
+      generatingPrompt: string;
     };
     generateAssetsStep: {
       batchExtract: string;
@@ -910,6 +911,7 @@ export const zh: TranslationSchema = {
       charsUnit: "字符",
       savePromptFailed: "提示词保存失败，请重试",
       noPromptToGenerate: "请先生成或编辑提示词，再生成视频",
+      generatingPrompt: "生成中…",
     },
     generateAssetsStep: {
       batchExtract: "批量提取资产",
