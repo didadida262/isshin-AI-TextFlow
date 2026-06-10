@@ -403,8 +403,10 @@ export const en: TranslationSchema = {
       batchGenerating: "Batch generating…",
       batchGenerateComplete:
         "All assets generated. Click a thumbnail below for the full image, or click a row for details.",
+      batchGenerateBackground:
+        "Assets are generating in the background. You'll be notified when done. Reopen the draft list via the link above to check progress.",
       draftHint:
-        "AI-extracted character and scene drafts. Click a row to edit name and prompt, then click Batch Generate Assets. Batch Extract is disabled while extracting or generating.",
+        "AI-extracted character and scene drafts. Click a row to edit name and prompt, then click Batch Generate Assets. You may close this dialog while generating; jobs continue in the background and notify you when done. Batch Extract is disabled while extracting or generating.",
       noScriptsToExtract:
         "No successful scripts to extract from. Generate scripts first.",
       extractNoAssets:

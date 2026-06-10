@@ -365,6 +365,7 @@ export type TranslationSchema = {
       batchGenerate: string;
       batchGenerating: string;
       batchGenerateComplete: string;
+      batchGenerateBackground: string;
       draftHint: string;
       noScriptsToExtract: string;
       extractNoAssets: string;
@@ -929,8 +930,10 @@ export const zh: TranslationSchema = {
       batchGenerating: "批量生成中…",
       batchGenerateComplete:
         "全部资产生成完成，可在下方列表点击缩略图查看大图，或点击行查看详情。",
+      batchGenerateBackground:
+        "资产正在后台生成，完成后将通过通知提醒，可点击上方链接重新打开草稿列表查看进度。",
       draftHint:
-        "已由 AI 从剧本提取人物与场景草稿，点击行可编辑名称与提示词，确认后点击「批量生成资产」。提取或生成过程中「批量提取资产」将暂时不可用。",
+        "已由 AI 从剧本提取人物与场景草稿，点击行可编辑名称与提示词，确认后点击「批量生成资产」。生成过程中可关闭弹框，任务将在后台继续并在通知栏提醒。提取或生成过程中「批量提取资产」将暂时不可用。",
       noScriptsToExtract: "没有可提取的成功剧本，请先完成剧本生成",
       extractNoAssets: "未能从剧本中识别出人物或场景，请检查剧本格式",
       extractSuccess: (count: number) =>

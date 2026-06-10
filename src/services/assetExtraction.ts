@@ -1,3 +1,5 @@
+import type { GenerateAssetFormValues } from "../components/GenerateAssetModal";
+import type { AppConfig } from "../types";
 import {
   DEFAULT_IMAGE_COUNT,
   DEFAULT_IMAGE_SIZE,
@@ -12,7 +14,6 @@ import {
 } from "../agents/workflowAgent/assetExtraction";
 import type { ExtractedAsset } from "../utils/extractAssetsFromScript";
 import type { ScriptRecord } from "./script";
-import type { AppConfig } from "../types";
 
 export type DraftAssetStatus = "pending" | "generating" | "success" | "error";
 
@@ -92,6 +93,33 @@ export function resetGeneratingDraftItems(
       ? { ...item, status: "pending", errorReason: undefined }
       : item,
   );
+}
+
+export type DraftImageJobSubmitValues = Omit<
+  GenerateAssetFormValues,
+  "generationDurationMs"
+>;
+
+export function buildDraftImageJobValues(
+  item: DraftAssetItem,
+  config: AppConfig,
+): DraftImageJobSubmitValues {
+  const imageModel = config.imageModel.trim();
+  const defaultSize = config.imageDefaultSize.trim() || DEFAULT_IMAGE_SIZE;
+  const imageCount =
+    Number.isFinite(config.imageCount) && config.imageCount >= 1
+      ? config.imageCount
+      : DEFAULT_IMAGE_COUNT;
+
+  return {
+    name: item.name.trim(),
+    assetType: item.assetType,
+    prompt: item.prompt.trim(),
+    model: imageModel,
+    size: defaultSize,
+    n: imageCount,
+    numInferenceSteps: DEFAULT_NUM_INFERENCE_STEPS,
+  };
 }
 
 export function extractedToDraftItems(assets: ExtractedAsset[]): DraftAssetItem[] {

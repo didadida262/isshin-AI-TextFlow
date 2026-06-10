@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { useGenerationJobs } from "../contexts/GenerationJobsContext";
+import {
+  useGenerationJobs,
+  type ImageJobCompleteResult,
+} from "../contexts/GenerationJobsContext";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
-  batchGenerateDraftAssets,
+  buildDraftImageJobValues,
   extractAssetsFromScripts,
-  resetGeneratingDraftItems,
   type DraftAssetItem,
 } from "../services/assetExtraction";
 import {
@@ -17,9 +19,9 @@ import {
   type ListProjectAssetsResult,
   type ProjectAssetRecord,
 } from "../services/assets";
+import { DEFAULT_NUM_INFERENCE_STEPS } from "../services/config";
 import { downloadAssetFile } from "../services/mediaDownload";
 import { SCRIPT_STATE_SUCCESS, type ScriptRecord } from "../services/script";
-import { DEFAULT_NUM_INFERENCE_STEPS } from "../services/config";
 import type { AppConfig, CreationProject } from "../types";
 import { BatchExtractAssetsModal } from "./BatchExtractAssetsModal";
 import { AssetDetailModal } from "./AssetDetailModal";
@@ -81,7 +83,6 @@ export function GenerateAssetsStep({
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const batchAbortRef = useRef<AbortController | null>(null);
   const extractAbortRef = useRef<AbortController | null>(null);
   const { startImageJob, navigationTarget, clearNavigationTarget } =
     useGenerationJobs();
@@ -116,7 +117,6 @@ export function GenerateAssetsStep({
 
   useEffect(() => {
     return () => {
-      batchAbortRef.current?.abort();
       extractAbortRef.current?.abort();
     };
   }, []);
@@ -385,7 +385,56 @@ export function GenerateAssetsStep({
     [draftAssets],
   );
 
-  const handleBatchGenerate = useCallback(async () => {
+  const checkBatchFinalize = useCallback(
+    (drafts: DraftAssetItem[]) => {
+      const stillGenerating = drafts.some((item) => item.status === "generating");
+      if (stillGenerating) return;
+
+      setBatchGenerating(false);
+
+      const hasPendingOrError = drafts.some(
+        (item) => item.status === "pending" || item.status === "error",
+      );
+      if (!hasPendingOrError) {
+        setDraftAssets([]);
+        setSelectedDraftIds(new Set());
+        setExtractNotice(null);
+        setExtractModalOpen(false);
+        setActionNotice(s.batchGenerateComplete);
+        void loadPage(1).then(() => onWorkflowChange?.());
+      }
+    },
+    [loadPage, onWorkflowChange, s.batchGenerateComplete],
+  );
+
+  const handleDraftJobComplete = useCallback(
+    (draftId: string, result: ImageJobCompleteResult) => {
+      setDraftAssets((current) => {
+        const updated = current.map((item) => {
+          if (item.id !== draftId) return item;
+          if (result.success && result.asset) {
+            return {
+              ...item,
+              status: "success" as const,
+              savedAssetId: result.asset.id,
+              savedAsset: result.asset,
+              errorReason: undefined,
+            };
+          }
+          return {
+            ...item,
+            status: "error" as const,
+            errorReason: result.errorMessage ?? "Unknown error",
+          };
+        });
+        checkBatchFinalize(updated);
+        return updated;
+      });
+    },
+    [checkBatchFinalize],
+  );
+
+  const handleBatchGenerate = useCallback(() => {
     if (batchGenerating || draftAssets.length === 0) return;
 
     setExtractModalOpen(true);
@@ -413,88 +462,50 @@ export function GenerateAssetsStep({
       return;
     }
 
-    const controller = new AbortController();
-    batchAbortRef.current = controller;
+    const generatingIds = new Set(itemsToGenerate.map((item) => item.id));
+    setDraftAssets((current) =>
+      current.map((item) =>
+        generatingIds.has(item.id)
+          ? { ...item, status: "generating" as const, errorReason: undefined }
+          : item,
+      ),
+    );
+
     setBatchGenerating(true);
+    setActionNotice(null);
 
-    try {
-      const result = await batchGenerateDraftAssets({
+    for (const item of itemsToGenerate) {
+      startImageJob({
         projectId: project.id,
+        projectName: project.name,
         config,
-        items: itemsToGenerate,
-        signal: controller.signal,
-        onItemProgress: (itemId, patch) => {
-          setDraftAssets((current) =>
-            current.map((item) =>
-              item.id === itemId ? { ...item, ...patch } : item,
-            ),
-          );
-        },
+        values: buildDraftImageJobValues(item, config),
+        onWorkflowChange,
+        onComplete: (result) => handleDraftJobComplete(item.id, result),
       });
-
-      let mergedDrafts: DraftAssetItem[] = [];
-      setDraftAssets((current) => {
-        mergedDrafts = current.map((item) => {
-          const updated = result.items.find((draft) => draft.id === item.id);
-          return updated ?? item;
-        });
-        return mergedDrafts;
-      });
-
-      const hasPendingOrError = mergedDrafts.some(
-        (item) => item.status === "pending" || item.status === "error",
-      );
-      if (!hasPendingOrError) {
-        setDraftAssets([]);
-        setSelectedDraftIds(new Set());
-        setExtractNotice(null);
-        setExtractModalOpen(false);
-        setActionNotice(s.batchGenerateComplete);
-        await loadPage(1);
-        onWorkflowChange?.();
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const aborted =
-        message === "AbortError" ||
-        (error instanceof DOMException && error.name === "AbortError");
-      if (aborted) {
-        setDraftAssets((current) => resetGeneratingDraftItems(current));
-      } else if (message === "IMAGE_CONFIG_REQUIRED") {
-        onConfigError(errors.imageConfigRequired);
-      } else {
-        onConfigError(message);
-      }
-    } finally {
-      batchAbortRef.current = null;
-      setBatchGenerating(false);
     }
   }, [
     batchGenerating,
     config,
     draftAssets,
     errors.imageConfigRequired,
-    loadPage,
+    handleDraftJobComplete,
     onConfigError,
     onWorkflowChange,
     project.id,
-    s.batchGenerateComplete,
+    project.name,
     s.draftInvalid,
     s.noDraftSelected,
     selectedDraftIds,
+    startImageJob,
   ]);
 
   const handleCloseExtractModal = useCallback(() => {
-    const wasGenerating = batchGenerating;
-    batchAbortRef.current?.abort();
-    batchAbortRef.current = null;
-    setDraftAssets((current) => resetGeneratingDraftItems(current));
-    setBatchGenerating(false);
     setExtractModalOpen(false);
-    if (wasGenerating) {
-      void loadPage(page).then(() => onWorkflowChange?.());
+    if (batchGenerating) {
+      setActionNotice(s.batchGenerateBackground);
     }
-  }, [batchGenerating, loadPage, onWorkflowChange, page]);
+  }, [batchGenerating, s.batchGenerateBackground]);
 
   const tableLabels = {
     colPreview: s.colPreview,

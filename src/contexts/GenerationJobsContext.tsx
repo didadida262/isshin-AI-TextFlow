@@ -8,7 +8,7 @@ import {
 } from "react";
 import type { GenerateAssetFormValues } from "../components/GenerateAssetModal";
 import type { TextToVideoFormValues } from "../components/TextToVideoModal";
-import { createProjectAsset } from "../services/assets";
+import { createProjectAsset, type ProjectAssetRecord } from "../services/assets";
 import type { AppConfig } from "../types";
 import { generateImageB64 } from "../services/imageGeneration";
 import { generateVideoB64 } from "../services/videoGeneration";
@@ -42,12 +42,19 @@ export interface GenerationNavigationTarget {
   scriptName?: string;
 }
 
+export interface ImageJobCompleteResult {
+  success: boolean;
+  asset?: ProjectAssetRecord;
+  errorMessage?: string;
+}
+
 interface StartImageJobInput {
   projectId: string;
   projectName: string;
   values: Omit<GenerateAssetFormValues, "generationDurationMs">;
   config: AppConfig;
   onWorkflowChange?: () => void;
+  onComplete?: (result: ImageJobCompleteResult) => void;
 }
 
 interface StartVideoJobInput {
@@ -131,7 +138,8 @@ export function GenerationJobsProvider({
 
   const runImageJob = useCallback(
     async (jobId: string, input: StartImageJobInput) => {
-      const { projectId, values, config, onWorkflowChange } = input;
+      const { projectId, values, config, onWorkflowChange, onComplete } =
+        input;
       const { imageModel, defaultSize, imageCount, imageSettings } =
         getImageSettings(config);
       const startedAt = performance.now();
@@ -170,6 +178,7 @@ export function GenerationJobsProvider({
           read: false,
         });
         onWorkflowChange?.();
+        onComplete?.({ success: true, asset: saved });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         updateJob(jobId, {
@@ -178,6 +187,7 @@ export function GenerationJobsProvider({
           completedAt: Date.now(),
           read: false,
         });
+        onComplete?.({ success: false, errorMessage: message });
       }
     },
     [updateJob],

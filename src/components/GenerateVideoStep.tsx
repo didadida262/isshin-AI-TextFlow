@@ -477,13 +477,13 @@ export function GenerateVideoStep({
             <table className="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
               <colgroup>
                 <col className="w-14" />
-                <col className="w-40 sm:w-48" />
+                <col className="w-32 sm:w-36" />
                 <col className="w-20" />
-                <col />
+                <col className="w-48 sm:w-56" />
                 <col className="w-24" />
-                <col className="w-24" />
-                <col className="w-28 sm:w-32" />
-                <col className="w-28 sm:w-32" />
+                <col className="w-20" />
+                <col className="w-28" />
+                <col className="w-14" />
               </colgroup>
               <thead className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm">
                 <tr className="border-b border-white/10 text-text-muted">
@@ -494,7 +494,9 @@ export function GenerateVideoStep({
                   <th className="px-3 py-2.5 font-medium">{s.colVideo}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colDuration}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colVideoStatus}</th>
-                  <th className="px-3 py-2.5 font-medium">{s.colActions}</th>
+                  <th className="w-14 px-2 py-2.5 text-center font-medium">
+                    {s.colActions}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -572,25 +574,30 @@ export function GenerateVideoStep({
                           labels={s}
                         />
                       </td>
-                      <td className="px-3 py-2.5" onClick={(event) => event.stopPropagation()}>
-                        <VideoScriptRowActions
-                          openMenuLabel={s.openActionsMenu}
-                          editLabel={s.edit}
-                          generateLabel={
-                            hasVideo ? s.regenerateVideo : s.generateVideo
-                          }
-                          editDisabled={!generateEnabled}
-                          generateDisabled={!generateVideoEnabled}
-                          isOpen={openMenuScriptId === script.id}
-                          onToggle={() =>
-                            setOpenMenuScriptId((current) =>
-                              current === script.id ? null : script.id,
-                            )
-                          }
-                          onClose={() => setOpenMenuScriptId(null)}
-                          onEdit={() => setEditScript(script)}
-                          onGenerate={() => handleGenerateVideo(script)}
-                        />
+                      <td
+                        className="w-14 px-2 py-2.5"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <div className="flex justify-center">
+                          <VideoScriptRowActions
+                            openMenuLabel={s.openActionsMenu}
+                            editLabel={s.edit}
+                            generateLabel={
+                              hasVideo ? s.regenerateVideo : s.generateVideo
+                            }
+                            editDisabled={!generateEnabled}
+                            generateDisabled={!generateVideoEnabled}
+                            isOpen={openMenuScriptId === script.id}
+                            onToggle={() =>
+                              setOpenMenuScriptId((current) =>
+                                current === script.id ? null : script.id,
+                              )
+                            }
+                            onClose={() => setOpenMenuScriptId(null)}
+                            onEdit={() => setEditScript(script)}
+                            onGenerate={() => handleGenerateVideo(script)}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );
