@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useGenerationJobs } from "../contexts/GenerationJobsContext";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleCheck,
@@ -24,12 +23,11 @@ import {
   getVideoSettingsFromConfig,
   isVideoSettingsValid,
 } from "../services/config";
-import { buildDefaultVideoJobValues } from "../services/videoGeneration";
 import type { AppConfig, CreationProject } from "../types";
 import { ScriptEpisodeDetailModal } from "./ScriptEpisodeDetailModal";
+import { TextToVideoModal } from "./TextToVideoModal";
 import { VideoPromptEditModal } from "./VideoPromptEditModal";
 import { VideoScriptRowActions } from "./VideoScriptRowActions";
-import { VideoThumbnail } from "./VideoThumbnail";
 
 interface GenerateVideoStepProps {
   project: CreationProject;
@@ -190,6 +188,8 @@ export function GenerateVideoStep({
   const [videos, setVideos] = useState(initialVideos);
   const [detailScript, setDetailScript] = useState<ScriptRecord | null>(null);
   const [editScript, setEditScript] = useState<ScriptRecord | null>(null);
+  const [videoScript, setVideoScript] = useState<ScriptRecord | null>(null);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [openMenuScriptId, setOpenMenuScriptId] = useState<number | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
@@ -354,7 +354,7 @@ export function GenerateVideoStep({
     return null;
   }, [config, errors.videoConfigRequired]);
 
-  const handleGenerateVideo = useCallback(
+  const openVideoModal = useCallback(
     (script: ScriptRecord) => {
       const video = videoMap.get(script.name);
       const prompt = resolveEpisodeVideoPrompt(script, video);
@@ -375,25 +375,24 @@ export function GenerateVideoStep({
       setActionError(null);
       setActionNotice(null);
       onConfigError(null);
-
-      startVideoJob({
-        projectId: project.id,
-        projectName: project.name,
-        values: buildDefaultVideoJobValues(script.name, prompt, config),
-        onWorkflowChange: onVideosUpdated,
-      });
+      setVideoScript(script);
+      setVideoModalOpen(true);
     },
-    [
-      config,
-      onConfigError,
-      onVideosUpdated,
-      project.id,
-      project.name,
-      s.noPromptToGenerate,
-      startVideoJob,
-      validateVideoConfig,
-      videoMap,
-    ],
+    [onConfigError, s.noPromptToGenerate, validateVideoConfig, videoMap],
+  );
+
+  const closeVideoModal = useCallback(() => {
+    setVideoModalOpen(false);
+    setVideoScript(null);
+  }, []);
+
+  const resolveVideoModalPrompt = useCallback(
+    (script: ScriptRecord | null): string => {
+      if (!script) return "";
+      const video = videoMap.get(script.name);
+      return resolveEpisodeVideoPrompt(script, video);
+    },
+    [videoMap],
   );
 
   const handleSaveVideoPrompt = useCallback(
@@ -480,7 +479,6 @@ export function GenerateVideoStep({
                 <col className="w-32 sm:w-36" />
                 <col className="w-20" />
                 <col className="w-48 sm:w-56" />
-                <col className="w-24" />
                 <col className="w-20" />
                 <col className="w-28" />
                 <col className="w-14" />
@@ -491,7 +489,6 @@ export function GenerateVideoStep({
                   <th className="px-3 py-2.5 font-medium">{s.colName}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colStatus}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colPrompt}</th>
-                  <th className="px-3 py-2.5 font-medium">{s.colVideo}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colDuration}</th>
                   <th className="px-3 py-2.5 font-medium">{s.colVideoStatus}</th>
                   <th className="w-14 px-2 py-2.5 text-center font-medium">
@@ -549,20 +546,6 @@ export function GenerateVideoStep({
                           </p>
                         )}
                       </td>
-                      <td className="max-w-0 px-3 py-2.5">
-                        {video?.imagePath ? (
-                          <span className="block overflow-hidden rounded-md border border-sky-400/20 bg-sky-400/10">
-                            <VideoThumbnail
-                              src={convertFileSrc(video.imagePath)}
-                              alt={script.name}
-                            />
-                          </span>
-                        ) : (
-                          <span className="block truncate whitespace-nowrap text-text-dim">
-                            {s.noVideo}
-                          </span>
-                        )}
-                      </td>
                       <td className="px-3 py-2.5 text-text-muted">
                         {video?.generationDurationMs != null
                           ? s.formatDuration(video.generationDurationMs)
@@ -595,7 +578,7 @@ export function GenerateVideoStep({
                             }
                             onClose={() => setOpenMenuScriptId(null)}
                             onEdit={() => setEditScript(script)}
-                            onGenerate={() => handleGenerateVideo(script)}
+                            onGenerate={() => openVideoModal(script)}
                           />
                         </div>
                       </td>
@@ -613,6 +596,23 @@ export function GenerateVideoStep({
           </div>
         )}
       </div>
+
+      <TextToVideoModal
+        open={videoModalOpen}
+        allowBackground
+        startImmediately
+        initialName={videoScript?.name ?? ""}
+        initialPrompt={resolveVideoModalPrompt(videoScript)}
+        onClose={closeVideoModal}
+        onBackgroundSubmit={(values) =>
+          startVideoJob({
+            projectId: project.id,
+            projectName: project.name,
+            values,
+            onWorkflowChange: onVideosUpdated,
+          })
+        }
+      />
 
       <ScriptEpisodeDetailModal
         script={detailScript}

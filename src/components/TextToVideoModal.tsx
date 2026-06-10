@@ -41,11 +41,34 @@ export interface TextToVideoFormValues {
 
 type TextToVideoSubmitValues = Omit<TextToVideoFormValues, "generationDurationMs">;
 
+function buildDefaultSubmitValues(
+  name: string,
+  prompt: string,
+  videoModel: string,
+): TextToVideoSubmitValues {
+  return {
+    name: name.trim(),
+    prompt: prompt.trim(),
+    model: videoModel.trim() || DEFAULT_VIDEO_MODEL,
+    size: DEFAULT_VIDEO_SIZE,
+    numFrames: DEFAULT_VIDEO_NUM_FRAMES,
+    fps: DEFAULT_VIDEO_FPS,
+    numInferenceSteps: DEFAULT_VIDEO_INFERENCE_STEPS,
+    guidanceScale: DEFAULT_VIDEO_GUIDANCE_SCALE,
+    guidanceScale2: DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+    boundaryRatio: DEFAULT_VIDEO_BOUNDARY_RATIO,
+    flowShift: DEFAULT_VIDEO_FLOW_SHIFT,
+    seed: DEFAULT_VIDEO_SEED,
+  };
+}
+
 interface TextToVideoModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit?: (values: TextToVideoFormValues, videoB64: string) => Promise<void>;
   allowBackground?: boolean;
+  /** Skip the parameter form and show the paintbrush progress view immediately. */
+  startImmediately?: boolean;
   onBackgroundSubmit?: (values: TextToVideoSubmitValues) => string;
   initialName?: string;
   initialPrompt?: string;
@@ -67,6 +90,7 @@ export function TextToVideoModal({
   onClose,
   onSubmit,
   allowBackground = false,
+  startImmediately = false,
   onBackgroundSubmit,
   initialName = "",
   initialPrompt = "",
@@ -98,6 +122,7 @@ export function TextToVideoModal({
   const [error, setError] = useState("");
   const abortRef = useRef(false);
   const requestIdRef = useRef(0);
+  const autoStartedRef = useRef(false);
   const { jobs } = useGenerationJobs();
 
   const backgroundJob = useMemo(
@@ -110,12 +135,12 @@ export function TextToVideoModal({
   const isBackgroundGenerating = backgroundJobId != null;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      autoStartedRef.current = false;
+      return;
+    }
     abortRef.current = false;
     requestIdRef.current += 1;
-    void loadConfig().then((config) => {
-      setVideoModel(config.videoModel.trim() || DEFAULT_VIDEO_MODEL);
-    });
     setName(initialName.trim());
     setPrompt(initialPrompt.trim());
     setSize(DEFAULT_VIDEO_SIZE);
@@ -127,10 +152,51 @@ export function TextToVideoModal({
     setBoundaryRatio(String(DEFAULT_VIDEO_BOUNDARY_RATIO));
     setFlowShift(String(DEFAULT_VIDEO_FLOW_SHIFT));
     setSeed(String(DEFAULT_VIDEO_SEED));
-    setSubmitting(false);
     setBackgroundJobId(null);
     setError("");
-  }, [initialName, initialPrompt, open]);
+    setSubmitting(startImmediately);
+
+    void loadConfig().then((config) => {
+      const model = config.videoModel.trim() || DEFAULT_VIDEO_MODEL;
+      setVideoModel(model);
+
+      if (
+        !startImmediately ||
+        !allowBackground ||
+        !onBackgroundSubmit ||
+        autoStartedRef.current
+      ) {
+        if (!startImmediately) {
+          setSubmitting(false);
+        }
+        return;
+      }
+
+      const trimmedName = initialName.trim();
+      const trimmedPrompt = initialPrompt.trim();
+      if (!trimmedName || !trimmedPrompt) {
+        setSubmitting(false);
+        setError(m.promptPlaceholder);
+        return;
+      }
+
+      autoStartedRef.current = true;
+      const jobId = onBackgroundSubmit(
+        buildDefaultSubmitValues(trimmedName, trimmedPrompt, model),
+      );
+      setBackgroundJobId(jobId);
+      setSubmitting(true);
+      setError("");
+    });
+  }, [
+    allowBackground,
+    initialName,
+    m.promptPlaceholder,
+    initialPrompt,
+    onBackgroundSubmit,
+    open,
+    startImmediately,
+  ]);
 
   useEffect(() => {
     if (!backgroundJob || backgroundJob.status === "running") return;
@@ -149,6 +215,8 @@ export function TextToVideoModal({
   }, [backgroundJob, errors.videoConfigRequired, onClose]);
 
   const canSubmit = name.trim() && prompt.trim() && !submitting;
+  const showForm = !startImmediately && !submitting;
+  const showGeneratingView = startImmediately || submitting;
 
   const sizeOptions = useMemo(
     () =>
@@ -330,7 +398,7 @@ export function TextToVideoModal({
               aria-modal="true"
               aria-labelledby="text-to-video-title"
               className={`relative z-10 flex max-h-[min(760px,calc(100dvh-4rem))] w-full max-w-lg flex-col overflow-hidden rounded-lg border bg-surface shadow-2xl ${
-                submitting
+                showGeneratingView
                   ? "modal-generating-border border-transparent"
                   : "border-white/10"
               }`}
@@ -346,13 +414,19 @@ export function TextToVideoModal({
                 >
                   {m.title}
                 </h3>
-                {!submitting || isBackgroundGenerating ? (
+                {!submitting || isBackgroundGenerating || startImmediately ? (
                   <button
                     type="button"
                     onClick={handleClose}
-                    title={isBackgroundGenerating ? m.closeWhileGenerating : m.cancel}
+                    title={
+                      isBackgroundGenerating || startImmediately
+                        ? m.closeWhileGenerating
+                        : m.cancel
+                    }
                     aria-label={
-                      isBackgroundGenerating ? m.closeWhileGenerating : m.cancel
+                      isBackgroundGenerating || startImmediately
+                        ? m.closeWhileGenerating
+                        : m.cancel
                     }
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white"
                   >
@@ -363,7 +437,7 @@ export function TextToVideoModal({
 
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
                 <div className="space-y-4">
-                  {!submitting ? (
+                  {showForm ? (
                     <>
                       <label className="block space-y-1.5">
                         <span className="text-xs text-text-muted">{m.nameLabel}</span>
@@ -532,22 +606,30 @@ export function TextToVideoModal({
                         </p>
                       ) : null}
                     </>
-                  ) : (
+                  ) : showGeneratingView ? (
                     <div
                       className="flex min-h-[280px] items-center justify-center rounded-lg border border-white/10 bg-black/30 p-6"
                       aria-live="polite"
-                      aria-busy="true"
+                      aria-busy={!error}
                     >
                       <div className="flex flex-col items-center gap-3">
-                        <PaintbrushLoading label={m.generating} />
-                        {isBackgroundGenerating ? (
-                          <p className="max-w-xs text-center text-xs text-text-muted">
-                            {m.backgroundGeneratingHint}
+                        {error ? (
+                          <p className="max-w-sm text-center text-sm text-red-300">
+                            {error}
                           </p>
-                        ) : null}
+                        ) : (
+                          <>
+                            <PaintbrushLoading label={m.generating} />
+                            {isBackgroundGenerating || startImmediately ? (
+                              <p className="max-w-xs text-center text-xs text-text-muted">
+                                {m.backgroundGeneratingHint}
+                              </p>
+                            ) : null}
+                          </>
+                        )}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -557,20 +639,22 @@ export function TextToVideoModal({
                   onClick={handleClose}
                   className="rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white"
                 >
-                  {submitting
-                    ? isBackgroundGenerating
+                  {showGeneratingView
+                    ? isBackgroundGenerating || startImmediately
                       ? m.closeWhileGenerating
                       : m.abortGenerating
                     : m.cancel}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void handleSubmit()}
-                  disabled={!canSubmit}
-                  className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {submitting ? m.generating : m.confirm}
-                </button>
+                {!startImmediately ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleSubmit()}
+                    disabled={!canSubmit}
+                    className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {submitting ? m.generating : m.confirm}
+                  </button>
+                ) : null}
               </div>
             </motion.div>
           </motion.div>
