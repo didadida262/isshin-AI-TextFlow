@@ -25,7 +25,10 @@ const MAX_CHAPTER_CHARS = 18_000;
 export const DEFAULT_EVENT_EXTRACTION_CONCURRENCY = 6;
 
 function isChapterEventExtracted(chapter: NovelChapterRecord): boolean {
-  return chapter.eventState === EVENT_STATE_SUCCESS;
+  return (
+    chapter.eventState === EVENT_STATE_SUCCESS &&
+    Boolean(chapter.event?.trim())
+  );
 }
 
 function buildUserMessage(chapter: NovelChapterRecord, chapterData: string): string {
@@ -80,6 +83,51 @@ function parseEventFields(event: string): string[] | null {
   return parts.length === 7 ? parts : null;
 }
 
+function findEventLine(text: string): string {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    if (parseEventFields(line)) return line;
+  }
+
+  const pipeMatches = text.match(/\|[^|\n]+(?:\|[^|\n]+){6}\|/g);
+  if (pipeMatches?.length) {
+    for (let index = pipeMatches.length - 1; index >= 0; index -= 1) {
+      const candidate = pipeMatches[index].trim();
+      if (parseEventFields(candidate)) return candidate;
+    }
+  }
+
+  return "";
+}
+
+function normalizeEventResponse(raw: string): string {
+  const fromRaw = findEventLine(raw);
+  if (fromRaw) return fromRaw;
+
+  const stripped = stripThink(raw).trim();
+  if (!stripped) return "";
+
+  if (parseEventFields(stripped)) return stripped;
+
+  return findEventLine(stripped) || stripped;
+}
+
+function assertValidEvent(event: string): string {
+  const normalized = event.trim();
+  if (!normalized) {
+    throw new Error("模型未返回事件内容，请重试");
+  }
+  if (!parseEventFields(normalized)) {
+    throw new Error("模型返回的事件格式无效，请重试");
+  }
+  return normalized;
+}
+
 function mergeEventRows(events: string[]): string {
   const parsed = events
     .map(parseEventFields)
@@ -132,7 +180,7 @@ async function requestChapterEvent(
     signal,
     "event-extraction",
   );
-  return stripThink(raw);
+  return normalizeEventResponse(raw);
 }
 
 async function extractChapterEvent(
@@ -149,7 +197,7 @@ async function extractChapterEvent(
         await requestChapterEvent(config, model, chapter, chunk, signal),
       );
     }
-    const event = mergeEventRows(events);
+    const event = assertValidEvent(mergeEventRows(events));
     await updateNovelChapterEvent(
       chapter.id,
       event,

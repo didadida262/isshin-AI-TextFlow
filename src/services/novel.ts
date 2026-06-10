@@ -35,7 +35,11 @@ export function isEventExtractionComplete(
 ): boolean {
   return (
     chapters.length > 0 &&
-    chapters.every((chapter) => chapter.eventState === EVENT_STATE_SUCCESS)
+    chapters.every(
+      (chapter) =>
+        chapter.eventState === EVENT_STATE_SUCCESS &&
+        Boolean(chapter.event?.trim()),
+    )
   );
 }
 

@@ -396,7 +396,14 @@ pub(crate) fn fetch_novel_chapters(
 }
 
 pub(crate) fn is_extract_events_completed(chapters: &[NovelChapterRecord]) -> bool {
-    !chapters.is_empty() && chapters.iter().all(|chapter| chapter.event_state == 1)
+    !chapters.is_empty()
+        && chapters.iter().all(|chapter| {
+            chapter.event_state == 1
+                && chapter
+                    .event
+                    .as_ref()
+                    .is_some_and(|value| !value.trim().is_empty())
+        })
 }
 
 pub(crate) fn is_event_extraction_in_progress(
