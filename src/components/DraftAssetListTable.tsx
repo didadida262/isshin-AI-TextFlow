@@ -65,13 +65,13 @@ function DraftAssetStatusBadge({
   item: DraftAssetItem;
   labels: DraftAssetListTableLabels;
 }) {
-  if (item.status === "error" && item.errorReason) {
+  if (item.status === "error") {
     return (
       <span
-        className={`${statusBadgeBaseClass} max-w-full border-red-400/40 bg-red-400/15 text-red-300`}
-        title={item.errorReason}
+        className={`${statusBadgeBaseClass} border-red-400/40 bg-red-400/15 text-red-300`}
+        title={item.errorReason ?? labels.statusError}
       >
-        <span className="truncate">{item.errorReason}</span>
+        {labels.statusError}
       </span>
     );
   }

@@ -465,14 +465,6 @@ export function GenerateAssetsStep({
   };
 
   const canBatchExtract = !batchGenerating;
-  const canBatchGenerate =
-    hasDrafts &&
-    !batchGenerating &&
-    draftAssets.some(
-      (item) =>
-        selectedDraftIds.has(item.id) &&
-        (item.status === "pending" || item.status === "error"),
-    );
 
   const handleOpenDraftModal = useCallback(() => {
     if (batchGenerating || !hasDrafts) return;
@@ -491,14 +483,6 @@ export function GenerateAssetsStep({
             className="inline-flex items-center rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             {s.batchExtract}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleBatchGenerate()}
-            disabled={!canBatchGenerate}
-            className="inline-flex items-center rounded-lg border border-accent/40 px-4 py-2 text-sm text-accent transition hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {batchGenerating ? s.batchGenerating : s.batchGenerate}
           </button>
           <button
             type="button"

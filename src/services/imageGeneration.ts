@@ -41,7 +41,7 @@ export async function generateImageB64(
 
   const result = await invoke<{ b64Json: string }>("generate_image", {
     input: {
-      prompt: input.prompt.trim(),
+      prompt: truncateImagePrompt(input.prompt),
       size: input.size ?? settings.imageDefaultSize ?? DEFAULT_IMAGE_SIZE,
       apiUrl: settings.imageApiUrl,
       apiKey: settings.imageApiKey,
@@ -56,6 +56,29 @@ export async function generateImageB64(
 }
 
 export const IMAGE_TEST_PROMPT = "一只可爱的卡通熊猫在吃竹子，3D风格";
+
+/** qwen-image 等接口对 prompt 长度有限制；场景合并后易超长。 */
+export const MAX_IMAGE_PROMPT_CHARS = 1500;
+
+export function truncateImagePrompt(
+  prompt: string,
+  maxChars = MAX_IMAGE_PROMPT_CHARS,
+): string {
+  const trimmed = prompt.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+
+  const slice = trimmed.slice(0, maxChars);
+  const breakAt = Math.max(
+    slice.lastIndexOf("。"),
+    slice.lastIndexOf("，"),
+    slice.lastIndexOf("；"),
+    slice.lastIndexOf(" "),
+  );
+  if (breakAt > maxChars * 0.6) {
+    return slice.slice(0, breakAt + 1).trim();
+  }
+  return slice.trim();
+}
 
 export async function testImageConnection(
   settings: ImageGenerationSettings,
