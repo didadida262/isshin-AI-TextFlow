@@ -318,10 +318,13 @@ export type TranslationSchema = {
       colName: string;
       colStatus: string;
       colContent: string;
+      colPrompt: string;
       colDuration: string;
       colVideoStatus: string;
       colActions: string;
       colVideo: string;
+      openActionsMenu: string;
+      edit: string;
       generateVideo: string;
       regenerateVideo: string;
       formatDuration: (ms: number) => string;
@@ -329,10 +332,28 @@ export type TranslationSchema = {
       statusError: string;
       statusPending: string;
       noContent: string;
+      noPrompt: string;
       noVideo: string;
+      batchGeneratePrompts: string;
+      batchGeneratingPrompts: string;
+      batchGeneratingPromptsProgress: (completed: number, total: number) => string;
+      batchGeneratePromptsComplete: string;
+      noScriptsToGeneratePrompts: string;
+      configRequired: string;
+      modelRequired: string;
+      promptEditTitle: string;
+      promptEditPlaceholder: string;
+      save: string;
+      cancel: string;
+      saving: string;
+      charsUnit: string;
+      savePromptFailed: string;
+      noPromptToGenerate: string;
     };
     generateAssetsStep: {
       batchExtract: string;
+      batchExtracting: string;
+      batchExtractingProgress: (completed: number, total: number) => string;
       batchExtractModalTitle: string;
       draftEditTitle: string;
       save: string;
@@ -856,10 +877,13 @@ export const zh: TranslationSchema = {
       colName: "剧本名称",
       colStatus: "剧本状态",
       colContent: "内容",
+      colPrompt: "提示词",
       colDuration: "生成耗时",
       colVideoStatus: "视频状态",
       colActions: "操作",
       colVideo: "视频",
+      openActionsMenu: "操作菜单",
+      edit: "编辑",
       generateVideo: "生成视频",
       regenerateVideo: "重新生成",
       formatDuration: (ms: number) =>
@@ -868,10 +892,30 @@ export const zh: TranslationSchema = {
       statusError: "失败",
       statusPending: "待生成",
       noContent: "—",
+      noPrompt: "—",
       noVideo: "暂无视频",
+      batchGeneratePrompts: "批量生成提示词",
+      batchGeneratingPrompts: "AI 生成提示词中…",
+      batchGeneratingPromptsProgress: (completed, total) =>
+        `AI 生成提示词中 ${completed}/${total}…`,
+      batchGeneratePromptsComplete: "全部提示词已生成，可在列表中查看或继续生成视频。",
+      noScriptsToGeneratePrompts: "没有可生成提示词的成功剧本，请先完成剧本生成",
+      configRequired: "请先在设置中配置 API 地址与密钥",
+      modelRequired: "请先在设置中选择文本模型",
+      promptEditTitle: "编辑视频提示词",
+      promptEditPlaceholder: "输入 Seedance 文生视频提示词…",
+      save: "保存",
+      cancel: "取消",
+      saving: "保存中…",
+      charsUnit: "字符",
+      savePromptFailed: "提示词保存失败，请重试",
+      noPromptToGenerate: "请先生成或编辑提示词，再生成视频",
     },
     generateAssetsStep: {
       batchExtract: "批量提取资产",
+      batchExtracting: "AI 提取资产中…",
+      batchExtractingProgress: (completed, total) =>
+        `AI 提取资产中 ${completed}/${total}…`,
       batchExtractModalTitle: "提取资产草稿",
       draftEditTitle: "编辑资产草稿",
       save: "保存",
@@ -884,7 +928,7 @@ export const zh: TranslationSchema = {
       batchGenerateComplete:
         "全部资产生成完成，可在下方列表点击缩略图查看大图，或点击行查看详情。",
       draftHint:
-        "已从剧本提取资产草稿，点击行可编辑名称与提示词，确认后点击「批量生成资产」。生成过程中「批量提取资产」将暂时不可用。",
+        "已由 AI 从剧本提取人物与场景草稿，点击行可编辑名称与提示词，确认后点击「批量生成资产」。提取或生成过程中「批量提取资产」将暂时不可用。",
       noScriptsToExtract: "没有可提取的成功剧本，请先完成剧本生成",
       extractNoAssets: "未能从剧本中识别出人物或场景，请检查剧本格式",
       extractSuccess: (count: number) =>

@@ -296,6 +296,7 @@ export function ProjectDetailView({
           project={project}
           title={activeLabel}
           config={config}
+          selectedModel={selectedModel}
           scripts={generateAssetsDetail.scripts}
           initialAssets={generateAssetsDetail.assets}
           onConfigError={onConfigError}
@@ -310,10 +311,13 @@ export function ProjectDetailView({
           key={`${project.id}-generate-video-${generateVideoDetail.scripts.length}-${generateVideoDetail.videos.length}-${generateVideoDetail.videos[0]?.id ?? 0}`}
           project={project}
           title={activeLabel}
+          config={config}
+          selectedModel={selectedModel}
           scripts={generateVideoDetail.scripts}
           initialVideos={generateVideoDetail.videos}
           onConfigError={onConfigError}
           onVideosUpdated={() => void refreshProjectWorkflow()}
+          onScriptsUpdated={() => void loadNodeDetail("generateVideo", { silent: true })}
         />
       );
     }

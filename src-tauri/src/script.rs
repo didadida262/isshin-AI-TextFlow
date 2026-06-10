@@ -21,6 +21,7 @@ pub struct ScriptRecord {
     pub episode_index: i32,
     pub name: String,
     pub content: String,
+    pub video_prompt: String,
     pub script_state: i32,
     pub error_reason: Option<String>,
     pub updated_at: i64,
@@ -45,6 +46,14 @@ pub struct SetScriptWorkDataInput {
     pub adaptation_strategy: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetScriptVideoPromptInput {
+    pub project_id: String,
+    pub episode_index: i32,
+    pub video_prompt: String,
+}
+
 fn row_to_script(row: &Row<'_>) -> rusqlite::Result<ScriptRecord> {
     Ok(ScriptRecord {
         id: row.get(0)?,
@@ -52,9 +61,10 @@ fn row_to_script(row: &Row<'_>) -> rusqlite::Result<ScriptRecord> {
         episode_index: row.get(2)?,
         name: row.get(3)?,
         content: row.get(4)?,
-        script_state: row.get(5)?,
-        error_reason: row.get(6)?,
-        updated_at: row.get(7)?,
+        video_prompt: row.get(5)?,
+        script_state: row.get(6)?,
+        error_reason: row.get(7)?,
+        updated_at: row.get(8)?,
     })
 }
 
@@ -95,6 +105,29 @@ pub fn init_schema(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
 
+    migrate_script_schema(conn)?;
+
+    Ok(())
+}
+
+fn migrate_script_schema(conn: &Connection) -> Result<(), String> {
+    let mut stmt = conn
+        .prepare("PRAGMA table_info(scripts)")
+        .map_err(|e| e.to_string())?;
+    let columns = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    if !columns.iter().any(|name| name == "video_prompt") {
+        conn.execute(
+            "ALTER TABLE scripts ADD COLUMN video_prompt TEXT NOT NULL DEFAULT ''",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
     Ok(())
 }
 
@@ -129,7 +162,7 @@ pub fn fetch_script_work_data(conn: &Connection, project_id: &str) -> ScriptWork
 pub fn fetch_scripts(conn: &Connection, project_id: &str) -> Result<Vec<ScriptRecord>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT id, project_id, episode_index, name, content, script_state, error_reason, updated_at
+            "SELECT id, project_id, episode_index, name, content, video_prompt, script_state, error_reason, updated_at
              FROM scripts WHERE project_id = ?1 ORDER BY episode_index ASC",
         )
         .map_err(|e| e.to_string())?;
@@ -147,7 +180,7 @@ pub fn fetch_script_by_episode(
     episode_index: i32,
 ) -> Result<Option<ScriptRecord>, String> {
     conn.query_row(
-        "SELECT id, project_id, episode_index, name, content, script_state, error_reason, updated_at
+        "SELECT id, project_id, episode_index, name, content, video_prompt, script_state, error_reason, updated_at
          FROM scripts WHERE project_id = ?1 AND episode_index = ?2",
         params![project_id, episode_index],
         row_to_script,
@@ -258,16 +291,50 @@ pub fn upsert_script(input: UpsertScriptInput) -> Result<ScriptRecord, String> {
 
     crate::workflow::maybe_advance_after_script(&conn, &input.project_id)?;
 
+    let video_prompt: String = conn
+        .query_row(
+            "SELECT video_prompt FROM scripts WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
     Ok(ScriptRecord {
         id,
         project_id: input.project_id,
         episode_index: input.episode_index,
         name: input.name,
         content: input.content,
+        video_prompt,
         script_state: input.script_state,
         error_reason: input.error_reason,
         updated_at: now,
     })
+}
+
+#[tauri::command]
+pub fn set_script_video_prompt(input: SetScriptVideoPromptInput) -> Result<ScriptRecord, String> {
+    let conn = init_db()?;
+    let now = chrono_timestamp();
+
+    let updated = conn.execute(
+        "UPDATE scripts SET video_prompt = ?1, updated_at = ?2
+         WHERE project_id = ?3 AND episode_index = ?4",
+        params![
+            input.video_prompt,
+            now,
+            input.project_id,
+            input.episode_index
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    if updated == 0 {
+        return Err("SCRIPT_NOT_FOUND".to_string());
+    }
+
+    fetch_script_by_episode(&conn, &input.project_id, input.episode_index)?
+        .ok_or_else(|| "SCRIPT_NOT_FOUND".to_string())
 }
 
 fn chrono_timestamp() -> i64 {

@@ -38,7 +38,8 @@ use skills::{
     list_director_manuals, list_story_skills,
 };
 use script::{
-    get_script_work_data, list_scripts, set_script_work_data, upsert_script,
+    get_script_work_data, list_scripts, set_script_video_prompt, set_script_work_data,
+    upsert_script,
 };
 use workflow::{
     get_project_workflow_node_detail, list_project_workflow_nodes,
@@ -100,6 +101,7 @@ pub fn run() {
             set_script_work_data,
             list_scripts,
             upsert_script,
+            set_script_video_prompt,
             list_project_workflow_nodes,
             get_project_workflow_node_detail,
             list_project_assets,

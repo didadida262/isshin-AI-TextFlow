@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
@@ -33,6 +35,7 @@ interface GenerateAssetsStepProps {
   project: CreationProject;
   title: string;
   config: AppConfig;
+  selectedModel: string;
   scripts: ScriptRecord[];
   initialAssets: ListProjectAssetsResult;
   onConfigError: (message: string | null) => void;
@@ -43,6 +46,7 @@ export function GenerateAssetsStep({
   project,
   title,
   config,
+  selectedModel,
   scripts,
   initialAssets,
   onConfigError,
@@ -56,6 +60,11 @@ export function GenerateAssetsStep({
   const [draftAssets, setDraftAssets] = useState<DraftAssetItem[]>([]);
   const [selectedDraftIds, setSelectedDraftIds] = useState<Set<string>>(new Set());
   const [batchGenerating, setBatchGenerating] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [extractProgress, setExtractProgress] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [extractModalOpen, setExtractModalOpen] = useState(false);
   const [extractNotice, setExtractNotice] = useState<string | null>(null);
@@ -73,6 +82,7 @@ export function GenerateAssetsStep({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const batchAbortRef = useRef<AbortController | null>(null);
+  const extractAbortRef = useRef<AbortController | null>(null);
   const { startImageJob, navigationTarget, clearNavigationTarget } =
     useGenerationJobs();
 
@@ -107,8 +117,27 @@ export function GenerateAssetsStep({
   useEffect(() => {
     return () => {
       batchAbortRef.current?.abort();
+      extractAbortRef.current?.abort();
     };
   }, []);
+
+  const validateExtractConfig = useCallback((): string | null => {
+    if (!config.baseUrl.trim() || !config.apiKey.trim()) {
+      return errors.configRequired;
+    }
+    const model = selectedModel.trim() || config.models[0]?.trim() || "";
+    if (!model) {
+      return errors.modelsRequired;
+    }
+    return null;
+  }, [
+    config.apiKey,
+    config.baseUrl,
+    config.models,
+    errors.configRequired,
+    errors.modelsRequired,
+    selectedModel,
+  ]);
 
   useEffect(() => {
     if (
@@ -243,37 +272,83 @@ export function GenerateAssetsStep({
     project.id,
   ]);
 
-  const handleBatchExtract = useCallback(() => {
-    if (batchGenerating) return;
+  const handleBatchExtract = useCallback(async () => {
+    if (batchGenerating || extracting) return;
 
     setActionNotice(null);
     setActionError(null);
     onConfigError(null);
+
+    const configError = validateExtractConfig();
+    if (configError) {
+      setActionError(configError);
+      onConfigError(configError);
+      return;
+    }
+
     if (successfulScripts.length === 0) {
       setActionError(s.noScriptsToExtract);
       onConfigError(s.noScriptsToExtract);
       return;
     }
 
-    const extracted = extractAssetsFromScripts(scripts);
-    if (extracted.length === 0) {
-      setActionError(s.extractNoAssets);
-      onConfigError(s.extractNoAssets);
-      return;
-    }
+    const model = selectedModel.trim() || config.models[0]?.trim() || "";
+    extractAbortRef.current?.abort();
+    const controller = new AbortController();
+    extractAbortRef.current = controller;
 
-    setDraftAssets(extracted);
-    setSelectedDraftIds(new Set(extracted.map((item) => item.id)));
-    setExtractNotice(s.extractSuccess(extracted.length));
-    setExtractModalOpen(true);
+    setExtracting(true);
+    setExtractProgress(null);
+
+    try {
+      const extracted = await extractAssetsFromScripts({
+        config,
+        model,
+        scripts,
+        signal: controller.signal,
+        onProgress: setExtractProgress,
+      });
+
+      if (extracted.length === 0) {
+        setActionError(s.extractNoAssets);
+        onConfigError(s.extractNoAssets);
+        return;
+      }
+
+      setDraftAssets(extracted);
+      setSelectedDraftIds(new Set(extracted.map((item) => item.id)));
+      setExtractNotice(s.extractSuccess(extracted.length));
+      setExtractModalOpen(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const aborted =
+        message === "AbortError" ||
+        (error instanceof DOMException && error.name === "AbortError");
+      if (aborted) return;
+      if (message === "MODEL_REQUIRED") {
+        setActionError(errors.modelsRequired);
+        onConfigError(errors.modelsRequired);
+        return;
+      }
+      setActionError(message);
+      onConfigError(message);
+    } finally {
+      setExtracting(false);
+      setExtractProgress(null);
+    }
   }, [
     batchGenerating,
+    config,
+    errors.modelsRequired,
+    extracting,
     onConfigError,
     s.extractNoAssets,
     s.extractSuccess,
     s.noScriptsToExtract,
     scripts,
+    selectedModel,
     successfulScripts.length,
+    validateExtractConfig,
   ]);
 
   const handleDraftSave = useCallback((id: string, name: string, prompt: string) => {
@@ -464,7 +539,7 @@ export function GenerateAssetsStep({
     statusError: s.statusError,
   };
 
-  const canBatchExtract = !batchGenerating;
+  const canBatchExtract = !batchGenerating && !extracting;
 
   const handleOpenDraftModal = useCallback(() => {
     if (batchGenerating || !hasDrafts) return;
@@ -478,11 +553,23 @@ export function GenerateAssetsStep({
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={handleBatchExtract}
+            onClick={() => void handleBatchExtract()}
             disabled={!canBatchExtract}
-            className="inline-flex items-center rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {s.batchExtract}
+            {extracting ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin className="text-xs" />
+                {extractProgress
+                  ? s.batchExtractingProgress(
+                      extractProgress.completed,
+                      extractProgress.total,
+                    )
+                  : s.batchExtracting}
+              </>
+            ) : (
+              s.batchExtract
+            )}
           </button>
           <button
             type="button"

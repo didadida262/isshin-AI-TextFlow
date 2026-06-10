@@ -121,4 +121,5 @@ commands.allow = [
   "set_script_work_data",
   "list_scripts",
   "upsert_script",
+  "set_script_video_prompt",
 ]

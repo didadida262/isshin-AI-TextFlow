@@ -11,6 +11,7 @@ export interface ScriptRecord {
   episodeIndex: number;
   name: string;
   content: string;
+  videoPrompt: string;
   scriptState: number;
   errorReason: string | null;
   updatedAt: number;
@@ -67,4 +68,16 @@ export async function upsertScript(
   input: UpsertScriptInput,
 ): Promise<ScriptRecord> {
   return invoke<ScriptRecord>("upsert_script", { input });
+}
+
+export interface SetScriptVideoPromptInput {
+  projectId: string;
+  episodeIndex: number;
+  videoPrompt: string;
+}
+
+export async function setScriptVideoPrompt(
+  input: SetScriptVideoPromptInput,
+): Promise<ScriptRecord> {
+  return invoke<ScriptRecord>("set_script_video_prompt", { input });
 }

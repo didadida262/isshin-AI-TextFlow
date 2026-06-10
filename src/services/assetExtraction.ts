@@ -7,14 +7,11 @@ import { generateImageB64 } from "./imageGeneration";
 import { createProjectAsset } from "./assets";
 import type { ProjectAssetRecord } from "./assets";
 import {
-  extractAssetsFromScript,
-  mergeExtractedAssets,
-  type ExtractedAsset,
-} from "../utils/extractAssetsFromScript";
-import {
-  SCRIPT_STATE_SUCCESS,
-  type ScriptRecord,
-} from "./script";
+  extractAssetsFromScriptsWithAgent,
+  type ExtractAssetsProgress,
+} from "../agents/workflowAgent/assetExtraction";
+import type { ExtractedAsset } from "../utils/extractAssetsFromScript";
+import type { ScriptRecord } from "./script";
 import type { AppConfig } from "../types";
 
 export type DraftAssetStatus = "pending" | "generating" | "success" | "error";
@@ -107,17 +104,22 @@ export function extractedToDraftItems(assets: ExtractedAsset[]): DraftAssetItem[
   }));
 }
 
-/** Extract and merge character/scene assets from all successful episode scripts. */
-export function extractAssetsFromScripts(scripts: ScriptRecord[]): DraftAssetItem[] {
-  const successful = scripts
-    .filter((script) => script.scriptState === SCRIPT_STATE_SUCCESS && script.content.trim())
-    .sort((a, b) => a.episodeIndex - b.episodeIndex);
+export type { ExtractAssetsProgress };
 
-  const extracted = successful.flatMap((script) =>
-    extractAssetsFromScript(script.content, script.episodeIndex),
-  );
+export interface ExtractAssetsFromScriptsOptions {
+  config: AppConfig;
+  model: string;
+  scripts: ScriptRecord[];
+  onProgress?: (progress: ExtractAssetsProgress) => void;
+  signal?: AbortSignal;
+}
 
-  return extractedToDraftItems(mergeExtractedAssets(extracted));
+/** Extract character/scene drafts from scripts via LLM asset-extraction agent. */
+export async function extractAssetsFromScripts(
+  options: ExtractAssetsFromScriptsOptions,
+): Promise<DraftAssetItem[]> {
+  const extracted = await extractAssetsFromScriptsWithAgent(options);
+  return extractedToDraftItems(extracted);
 }
 
 function getImageSettings(config: AppConfig) {

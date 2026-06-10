@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { AppConfig } from "../types";
 import {
   DEFAULT_VIDEO_API_URL,
   DEFAULT_VIDEO_BOUNDARY_RATIO,
@@ -7,6 +8,7 @@ import {
   DEFAULT_VIDEO_GUIDANCE_SCALE,
   DEFAULT_VIDEO_GUIDANCE_SCALE_2,
   DEFAULT_VIDEO_INFERENCE_STEPS,
+  DEFAULT_VIDEO_MODEL,
   DEFAULT_VIDEO_NUM_FRAMES,
   DEFAULT_VIDEO_SEED,
   DEFAULT_VIDEO_SIZE,
@@ -19,6 +21,43 @@ import {
   type KuaiziVideoParams,
   type VideoGenerationSettings,
 } from "./config";
+
+export interface VideoJobSubmitValues {
+  name: string;
+  prompt: string;
+  model: string;
+  size: string;
+  numFrames: number;
+  fps: number;
+  numInferenceSteps: number;
+  guidanceScale: number;
+  guidanceScale2: number;
+  boundaryRatio: number;
+  flowShift: number;
+  seed: number;
+}
+
+/** Default generation params for background video jobs from the workflow table. */
+export function buildDefaultVideoJobValues(
+  name: string,
+  prompt: string,
+  config: AppConfig,
+): VideoJobSubmitValues {
+  return {
+    name: name.trim(),
+    prompt: prompt.trim(),
+    model: config.videoModel.trim() || DEFAULT_VIDEO_MODEL,
+    size: DEFAULT_VIDEO_SIZE,
+    numFrames: DEFAULT_VIDEO_NUM_FRAMES,
+    fps: DEFAULT_VIDEO_FPS,
+    numInferenceSteps: DEFAULT_VIDEO_INFERENCE_STEPS,
+    guidanceScale: DEFAULT_VIDEO_GUIDANCE_SCALE,
+    guidanceScale2: DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+    boundaryRatio: DEFAULT_VIDEO_BOUNDARY_RATIO,
+    flowShift: DEFAULT_VIDEO_FLOW_SHIFT,
+    seed: DEFAULT_VIDEO_SEED,
+  };
+}
 
 export interface GenerateVideoInput {
   prompt: string;

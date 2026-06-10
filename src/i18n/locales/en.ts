@@ -349,10 +349,13 @@ export const en: TranslationSchema = {
       colName: "Title",
       colStatus: "Script Status",
       colContent: "Content",
+      colPrompt: "Prompt",
       colDuration: "Duration",
       colVideoStatus: "Video Status",
       colActions: "Actions",
       colVideo: "Video",
+      openActionsMenu: "Actions menu",
+      edit: "Edit",
       generateVideo: "Generate Video",
       regenerateVideo: "Regenerate",
       formatDuration: (ms: number) =>
@@ -361,10 +364,33 @@ export const en: TranslationSchema = {
       statusError: "Failed",
       statusPending: "Pending",
       noContent: "—",
+      noPrompt: "—",
       noVideo: "No video yet",
+      batchGeneratePrompts: "Batch Generate Prompts",
+      batchGeneratingPrompts: "Generating prompts with AI…",
+      batchGeneratingPromptsProgress: (completed, total) =>
+        `Generating prompts ${completed}/${total}…`,
+      batchGeneratePromptsComplete:
+        "All prompts generated. Review them in the table or proceed to generate videos.",
+      noScriptsToGeneratePrompts:
+        "No successful scripts to generate prompts from. Generate scripts first.",
+      configRequired: "Configure API URL and key in Settings first",
+      modelRequired: "Select a text model in Settings first",
+      promptEditTitle: "Edit Video Prompt",
+      promptEditPlaceholder: "Enter a Seedance text-to-video prompt…",
+      save: "Save",
+      cancel: "Cancel",
+      saving: "Saving…",
+      charsUnit: "characters",
+      savePromptFailed: "Failed to save prompt. Please try again.",
+      noPromptToGenerate:
+        "Generate or edit a prompt for this episode before generating video.",
     },
     generateAssetsStep: {
       batchExtract: "Batch Extract Assets",
+      batchExtracting: "Extracting assets with AI…",
+      batchExtractingProgress: (completed, total) =>
+        `Extracting assets ${completed}/${total}…`,
       batchExtractModalTitle: "Extracted Asset Drafts",
       draftEditTitle: "Edit Asset Draft",
       save: "Save",
@@ -377,7 +403,7 @@ export const en: TranslationSchema = {
       batchGenerateComplete:
         "All assets generated. Click a thumbnail below for the full image, or click a row for details.",
       draftHint:
-        "Draft assets extracted from scripts. Click a row to edit name and prompt, then click Batch Generate Assets. Batch Extract is disabled while generating.",
+        "AI-extracted character and scene drafts. Click a row to edit name and prompt, then click Batch Generate Assets. Batch Extract is disabled while extracting or generating.",
       noScriptsToExtract:
         "No successful scripts to extract from. Generate scripts first.",
       extractNoAssets:
