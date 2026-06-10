@@ -231,6 +231,49 @@ select:disabled {
   word-break: break-word;
 }
 
+.draft-asset-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border-radius: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background-color: rgba(0, 0, 0, 0.4);
+  transition:
+    border-color 0.15s,
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.draft-asset-checkbox:checked {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3E%3Cpath d='M12.207 4.793a1 1 0 0 1 0 1.414l-5 5a1 1 0 0 1-1.414 0l-2.5-2.5a1 1 0 0 1 1.414-1.414L6.5 9.086l4.293-4.293a1 1 0 0 1 1.414 0z'/%3E%3C/svg%3E");
+  background-size: 0.75rem;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.draft-asset-checkbox:indeterminate {
+  background-color: rgba(0, 255, 102, 0.25);
+  border-color: var(--color-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2300ff66'%3E%3Crect x='3' y='7' width='10' height='2' rx='1'/%3E%3C/svg%3E");
+  background-size: 0.625rem;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.draft-asset-checkbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 255, 102, 0.35);
+}
+
+.draft-asset-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .paintbrush-loading-canvas {
   fill: rgba(255, 255, 255, 0.03);
   stroke: rgba(255, 255, 255, 0.08);

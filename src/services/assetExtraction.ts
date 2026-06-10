@@ -47,6 +47,56 @@ function createDraftId(): string {
   return `draft-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function isAbortError(error: unknown): boolean {
+  return (
+    error instanceof DOMException &&
+    (error.name === "AbortError" || error.message === "AbortError")
+  );
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+}
+
+function waitForAbort(signal: AbortSignal): Promise<never> {
+  return new Promise((_, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    signal.addEventListener(
+      "abort",
+      () => {
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+}
+
+async function generateImageB64WithAbort(
+  input: Parameters<typeof generateImageB64>[0],
+  signal?: AbortSignal,
+): Promise<string> {
+  throwIfAborted(signal);
+  if (!signal) {
+    return generateImageB64(input);
+  }
+  return Promise.race([generateImageB64(input), waitForAbort(signal)]);
+}
+
+export function resetGeneratingDraftItems(
+  items: DraftAssetItem[],
+): DraftAssetItem[] {
+  return items.map((item) =>
+    item.status === "generating"
+      ? { ...item, status: "pending", errorReason: undefined }
+      : item,
+  );
+}
+
 export function extractedToDraftItems(assets: ExtractedAsset[]): DraftAssetItem[] {
   return assets.map((asset) => ({
     id: createDraftId(),
@@ -123,18 +173,19 @@ export async function batchGenerateDraftAssets(
 
     const startedAt = performance.now();
     try {
-      const imageB64 = await generateImageB64({
-        prompt: item.prompt,
-        size: defaultSize,
-        model: imageModel,
-        n: imageCount,
-        numInferenceSteps: DEFAULT_NUM_INFERENCE_STEPS,
-        settings: imageSettings,
-      });
+      const imageB64 = await generateImageB64WithAbort(
+        {
+          prompt: item.prompt,
+          size: defaultSize,
+          model: imageModel,
+          n: imageCount,
+          numInferenceSteps: DEFAULT_NUM_INFERENCE_STEPS,
+          settings: imageSettings,
+        },
+        signal,
+      );
 
-      if (signal?.aborted) {
-        throw new DOMException("Aborted", "AbortError");
-      }
+      throwIfAborted(signal);
 
       const generationDurationMs = Math.max(
         0,
@@ -160,6 +211,9 @@ export async function batchGenerateDraftAssets(
         savedAsset: record,
       });
     } catch (error) {
+      if (isAbortError(error) || signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
       const message = error instanceof Error ? error.message : String(error);
       patch({ status: "error", errorReason: message });
     }

@@ -20,8 +20,10 @@ import {
   getPromptRefineSettingsFromConfig,
   getVideoSettingsFromConfig,
   isImageToVideoSettingsValid,
+  isKuaiziVideoApi,
   isPromptRefineSettingsValid,
   isVideoSettingsValid,
+  KUAIZI_VIDEO_API_URL,
 } from "../../services/config";
 import { ImageTestResultModal } from "./ImageTestResultModal";
 import { ImageToVideoTestResultModal } from "./ImageToVideoTestResultModal";
@@ -494,7 +496,11 @@ export function ModelServiceSettingsPanel({
                 videoApiUrl: event.target.value,
               }))
             }
-            placeholder="http://27.159.92.210:8081/v1/videos/sync"
+            placeholder={
+              isKuaiziVideoApi(draft.videoApiUrl)
+                ? KUAIZI_VIDEO_API_URL
+                : "http://27.159.92.210:8081/v1/videos/sync"
+            }
             className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
           />
         </label>
@@ -528,9 +534,15 @@ export function ModelServiceSettingsPanel({
           <span className="text-sm text-text-muted">{i18n.settings.videoModel}</span>
           <input
             type="text"
-            readOnly
-            value={videoSettings.videoModel}
-            className={readOnlyFieldClass}
+            value={draft.videoModel}
+            onChange={(event) =>
+              onDraftChange((current) => ({
+                ...current,
+                videoModel: event.target.value,
+              }))
+            }
+            placeholder="wan2.2-t2v-5b"
+            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
           />
         </label>
 

@@ -91,6 +91,12 @@ export type TranslationSchema = {
     videoApiKey: string;
     videoModel: string;
     videoTestTitle: string;
+    kuaiziVideoModeLabel: string;
+    kuaiziVideoResolutionLabel: string;
+    kuaiziVideoRatioLabel: string;
+    kuaiziVideoDurationLabel: string;
+    kuaiziVideoGenerationTypeLabel: string;
+    kuaiziVideoModelNotUsed: string;
     imageToVideoSection: string;
     imageToVideoApiUrl: string;
     imageToVideoApiKey: string;
@@ -312,6 +318,13 @@ export type TranslationSchema = {
     };
     generateAssetsStep: {
       batchExtract: string;
+      batchExtractModalTitle: string;
+      draftEditTitle: string;
+      save: string;
+      charsUnit: string;
+      colSelect: string;
+      selectAll: string;
+      noDraftSelected: string;
       batchGenerate: string;
       batchGenerating: string;
       batchGenerateComplete: string;
@@ -575,11 +588,17 @@ export const zh: TranslationSchema = {
     download: "下载",
     imageTestDownloadTitle: "保存测试图片",
     videoTestDownloadTitle: "保存测试视频",
-    videoSection: "视频生成 API",
-    videoApiUrl: "视频 API 地址",
-    videoApiKey: "视频 API 密钥",
-    videoModel: "视频模型",
-    videoTestTitle: "视频连接测试",
+    videoSection: "文生视频 API",
+    videoApiUrl: "文生视频 API 地址",
+    videoApiKey: "文生视频 API 密钥",
+    videoModel: "文生视频模型",
+    videoTestTitle: "文生视频连接测试",
+    kuaiziVideoModeLabel: "模式 (mode)",
+    kuaiziVideoResolutionLabel: "分辨率 (resolution)",
+    kuaiziVideoRatioLabel: "比例 (ratio)",
+    kuaiziVideoDurationLabel: "时长 (duration)",
+    kuaiziVideoGenerationTypeLabel: "生成类型 (generation_type)",
+    kuaiziVideoModelNotUsed: "此接口无需 model 参数",
     imageToVideoSection: "图生视频 API",
     imageToVideoApiUrl: "图生视频 API 地址",
     imageToVideoApiKey: "图生视频 API 密钥",
@@ -645,7 +664,7 @@ export const zh: TranslationSchema = {
     promptRefineConfigRequired: "请先在设置中配置提示词扩充 API",
     promptRequired: "请先输入提示词",
     promptRefineEmptyResponse: "提示词扩充服务未返回有效内容",
-    videoConfigRequired: "请先在设置中配置视频生成 API",
+    videoConfigRequired: "请先在设置中配置文生视频 API",
     imageToVideoConfigRequired: "请先在设置中配置图生视频 API",
     imageToVideoReferenceRequired: "请先上传参考图片",
     requestFailed: "请求失败：{{error}}",
@@ -819,12 +838,19 @@ export const zh: TranslationSchema = {
     },
     generateAssetsStep: {
       batchExtract: "批量提取资产",
+      batchExtractModalTitle: "提取资产草稿",
+      draftEditTitle: "编辑资产草稿",
+      save: "保存",
+      charsUnit: "字符",
+      colSelect: "选择",
+      selectAll: "全选",
+      noDraftSelected: "请至少勾选一条待生成的资产",
       batchGenerate: "批量生成资产",
       batchGenerating: "批量生成中…",
       batchGenerateComplete:
         "全部资产生成完成，可在下方列表点击缩略图查看大图，或点击行查看详情。",
       draftHint:
-        "已从剧本提取资产草稿，可编辑名称与提示词后点击「批量生成资产」。生成过程中「批量提取资产」将暂时不可用。",
+        "已从剧本提取资产草稿，点击行可编辑名称与提示词，确认后点击「批量生成资产」。生成过程中「批量提取资产」将暂时不可用。",
       noScriptsToExtract: "没有可提取的成功剧本，请先完成剧本生成",
       extractNoAssets: "未能从剧本中识别出人物或场景，请检查剧本格式",
       extractSuccess: (count: number) =>

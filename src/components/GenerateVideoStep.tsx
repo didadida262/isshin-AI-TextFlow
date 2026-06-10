@@ -217,7 +217,7 @@ export function GenerateVideoStep({
                 <col className="w-40 sm:w-48" />
                 <col className="w-20" />
                 <col />
-                <col className="w-[4.5rem]" />
+                <col className="w-24" />
                 <col className="w-24" />
                 <col className="w-28 sm:w-32" />
                 <col className="w-28 sm:w-32" />
@@ -266,7 +266,7 @@ export function GenerateVideoStep({
                       <td className="max-w-0 px-3 py-2.5 text-text-muted">
                         <p className="truncate">{contentPreview}</p>
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className="max-w-0 px-3 py-2.5">
                         {video?.imagePath ? (
                           <span className="block overflow-hidden rounded-md border border-sky-400/20 bg-sky-400/10">
                             <VideoThumbnail
@@ -275,7 +275,9 @@ export function GenerateVideoStep({
                             />
                           </span>
                         ) : (
-                          <span className="text-text-dim">{s.noVideo}</span>
+                          <span className="block truncate whitespace-nowrap text-text-dim">
+                            {s.noVideo}
+                          </span>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-text-muted">

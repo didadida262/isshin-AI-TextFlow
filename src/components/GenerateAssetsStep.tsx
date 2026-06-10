@@ -3,6 +3,7 @@ import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   batchGenerateDraftAssets,
   extractAssetsFromScripts,
+  resetGeneratingDraftItems,
   type DraftAssetItem,
 } from "../services/assetExtraction";
 import {
@@ -18,11 +19,11 @@ import { downloadAssetFile } from "../services/mediaDownload";
 import { SCRIPT_STATE_SUCCESS, type ScriptRecord } from "../services/script";
 import { DEFAULT_NUM_INFERENCE_STEPS } from "../services/config";
 import type { AppConfig, CreationProject } from "../types";
+import { BatchExtractAssetsModal } from "./BatchExtractAssetsModal";
 import { AssetDetailModal } from "./AssetDetailModal";
 import { AssetImagePreviewModal } from "./AssetImagePreviewModal";
 import { AssetListTable } from "./AssetListTable";
 import { DeleteAssetConfirmModal } from "./DeleteAssetConfirmModal";
-import { DraftAssetListTable } from "./DraftAssetListTable";
 import { EditAssetModal } from "./EditAssetModal";
 import {
   GenerateAssetModal,
@@ -56,8 +57,11 @@ export function GenerateAssetsStep({
   const [page, setPage] = useState(initialAssets.page);
   const [loading, setLoading] = useState(false);
   const [draftAssets, setDraftAssets] = useState<DraftAssetItem[]>([]);
+  const [selectedDraftIds, setSelectedDraftIds] = useState<Set<string>>(new Set());
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
+  const [extractModalOpen, setExtractModalOpen] = useState(false);
+  const [extractNotice, setExtractNotice] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<ProjectAssetRecord | null>(
     null,
   );
@@ -245,7 +249,9 @@ export function GenerateAssetsStep({
     }
 
     setDraftAssets(extracted);
-    setActionNotice(s.extractSuccess(extracted.length));
+    setSelectedDraftIds(new Set(extracted.map((item) => item.id)));
+    setExtractNotice(s.extractSuccess(extracted.length));
+    setExtractModalOpen(true);
   }, [
     batchGenerating,
     onConfigError,
@@ -256,28 +262,61 @@ export function GenerateAssetsStep({
     successfulScripts.length,
   ]);
 
-  const handleDraftNameChange = useCallback((id: string, name: string) => {
+  const handleDraftSave = useCallback((id: string, name: string, prompt: string) => {
     setDraftAssets((current) =>
-      current.map((item) => (item.id === id ? { ...item, name } : item)),
+      current.map((item) =>
+        item.id === id ? { ...item, name, prompt } : item,
+      ),
     );
   }, []);
 
-  const handleDraftPromptChange = useCallback((id: string, prompt: string) => {
-    setDraftAssets((current) =>
-      current.map((item) => (item.id === id ? { ...item, prompt } : item)),
-    );
+  const handleDraftSelectionChange = useCallback((id: string, selected: boolean) => {
+    setSelectedDraftIds((current) => {
+      const next = new Set(current);
+      if (selected) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
   }, []);
+
+  const handleDraftSelectAll = useCallback(
+    (selected: boolean) => {
+      setSelectedDraftIds(() => {
+        if (!selected) return new Set();
+        return new Set(
+          draftAssets
+            .filter((item) => item.status === "pending" || item.status === "error")
+            .map((item) => item.id),
+        );
+      });
+    },
+    [draftAssets],
+  );
 
   const handleBatchGenerate = useCallback(async () => {
     if (batchGenerating || draftAssets.length === 0) return;
 
+    setExtractModalOpen(true);
     onConfigError(null);
     if (!config.imageModel.trim()) {
       onConfigError(errors.imageConfigRequired);
       return;
     }
 
-    const invalidDraft = draftAssets.find(
+    const itemsToGenerate = draftAssets.filter(
+      (item) =>
+        selectedDraftIds.has(item.id) &&
+        (item.status === "pending" || item.status === "error"),
+    );
+    if (itemsToGenerate.length === 0) {
+      onConfigError(s.noDraftSelected);
+      return;
+    }
+
+    const invalidDraft = itemsToGenerate.find(
       (item) => !item.name.trim() || !item.prompt.trim(),
     );
     if (invalidDraft) {
@@ -293,7 +332,7 @@ export function GenerateAssetsStep({
       const result = await batchGenerateDraftAssets({
         projectId: project.id,
         config,
-        items: draftAssets,
+        items: itemsToGenerate,
         signal: controller.signal,
         onItemProgress: (itemId, patch) => {
           setDraftAssets((current) =>
@@ -304,23 +343,38 @@ export function GenerateAssetsStep({
         },
       });
 
-      setDraftAssets(result.items);
+      let mergedDrafts: DraftAssetItem[] = [];
+      setDraftAssets((current) => {
+        mergedDrafts = current.map((item) => {
+          const updated = result.items.find((draft) => draft.id === item.id);
+          return updated ?? item;
+        });
+        return mergedDrafts;
+      });
 
-      const allSucceeded = result.items.every((item) => item.status === "success");
-      if (allSucceeded) {
+      const hasPendingOrError = mergedDrafts.some(
+        (item) => item.status === "pending" || item.status === "error",
+      );
+      if (!hasPendingOrError) {
         setDraftAssets([]);
+        setSelectedDraftIds(new Set());
+        setExtractNotice(null);
+        setExtractModalOpen(false);
         setActionNotice(s.batchGenerateComplete);
         await loadPage(1);
         onWorkflowChange?.();
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (message !== "AbortError") {
-        if (message === "IMAGE_CONFIG_REQUIRED") {
-          onConfigError(errors.imageConfigRequired);
-        } else {
-          onConfigError(message);
-        }
+      const aborted =
+        message === "AbortError" ||
+        (error instanceof DOMException && error.name === "AbortError");
+      if (aborted) {
+        setDraftAssets((current) => resetGeneratingDraftItems(current));
+      } else if (message === "IMAGE_CONFIG_REQUIRED") {
+        onConfigError(errors.imageConfigRequired);
+      } else {
+        onConfigError(message);
       }
     } finally {
       batchAbortRef.current = null;
@@ -337,82 +391,21 @@ export function GenerateAssetsStep({
     project.id,
     s.batchGenerateComplete,
     s.draftInvalid,
+    s.noDraftSelected,
+    selectedDraftIds,
   ]);
 
-  const handleViewDraftItem = useCallback(
-    (itemId: string) => {
-      const target = draftAssets.find((item) => item.id === itemId);
-      if (target?.savedAsset) {
-        setPreviewAsset(target.savedAsset);
-      }
-    },
-    [draftAssets],
-  );
-
-  const handleRegenerateDraftItem = useCallback(
-    async (itemId: string) => {
-      if (batchGenerating) return;
-
-      const target = draftAssets.find((item) => item.id === itemId);
-      if (!target || !target.name.trim() || !target.prompt.trim()) return;
-
-      onConfigError(null);
-      if (!config.imageModel.trim()) {
-        onConfigError(errors.imageConfigRequired);
-        return;
-      }
-
-      const controller = new AbortController();
-      batchAbortRef.current = controller;
-      setBatchGenerating(true);
-
-      try {
-        const result = await batchGenerateDraftAssets({
-          projectId: project.id,
-          config,
-          items: [target],
-          signal: controller.signal,
-          onItemProgress: (id, patch) => {
-            if (id !== itemId) return;
-            setDraftAssets((current) =>
-              current.map((item) =>
-                item.id === itemId ? { ...item, ...patch } : item,
-              ),
-            );
-          },
-        });
-
-        const updated = result.items[0];
-        if (updated?.status === "success") {
-          setDraftAssets((current) => current.filter((item) => item.id !== itemId));
-          await loadPage(1);
-          onWorkflowChange?.();
-        } else if (updated) {
-          setDraftAssets((current) =>
-            current.map((item) => (item.id === itemId ? updated : item)),
-          );
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message !== "AbortError") {
-          onConfigError(message);
-        }
-      } finally {
-        batchAbortRef.current = null;
-        setBatchGenerating(false);
-      }
-    },
-    [
-      batchGenerating,
-      config,
-      draftAssets,
-      errors.imageConfigRequired,
-      loadPage,
-      onConfigError,
-      onWorkflowChange,
-      project.id,
-    ],
-  );
+  const handleCloseExtractModal = useCallback(() => {
+    const wasGenerating = batchGenerating;
+    batchAbortRef.current?.abort();
+    batchAbortRef.current = null;
+    setDraftAssets((current) => resetGeneratingDraftItems(current));
+    setBatchGenerating(false);
+    setExtractModalOpen(false);
+    if (wasGenerating) {
+      void loadPage(page).then(() => onWorkflowChange?.());
+    }
+  }, [batchGenerating, loadPage, onWorkflowChange, page]);
 
   const tableLabels = {
     colPreview: s.colPreview,
@@ -441,11 +434,12 @@ export function GenerateAssetsStep({
   };
 
   const draftTableLabels = {
+    colSelect: s.colSelect,
+    selectAll: s.selectAll,
     colName: s.colName,
     colType: s.colType,
     colPrompt: s.colPrompt,
     colStatus: s.colStatus,
-    colActions: s.colActions,
     typeCharacter: s.typeCharacter,
     typeScene: s.typeScene,
     typeProp: s.typeProp,
@@ -454,15 +448,22 @@ export function GenerateAssetsStep({
     statusGenerating: s.statusGenerating,
     statusSuccess: s.statusSuccess,
     statusError: s.statusError,
-    regenerate: s.regenerate,
-    viewImage: s.viewImage,
   };
 
   const canBatchExtract = !batchGenerating;
   const canBatchGenerate =
     hasDrafts &&
     !batchGenerating &&
-    draftAssets.some((item) => item.status === "pending" || item.status === "error");
+    draftAssets.some(
+      (item) =>
+        selectedDraftIds.has(item.id) &&
+        (item.status === "pending" || item.status === "error"),
+    );
+
+  const handleOpenDraftModal = useCallback(() => {
+    if (batchGenerating || !hasDrafts) return;
+    setExtractModalOpen(true);
+  }, [batchGenerating, hasDrafts]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -503,22 +504,18 @@ export function GenerateAssetsStep({
         <p className="mt-3 shrink-0 rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-sm text-accent">
           {actionNotice}
         </p>
-      ) : hasDrafts ? (
-        <p className="mt-3 shrink-0 text-xs text-text-muted">{s.draftHint}</p>
+      ) : hasDrafts && !extractModalOpen ? (
+        <button
+          type="button"
+          onClick={handleOpenDraftModal}
+          className="mt-3 shrink-0 text-left text-xs text-accent transition hover:text-accent/80"
+        >
+          {s.extractSuccess(draftAssets.length)}
+        </button>
       ) : null}
 
       <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-surface/20">
-        {hasDrafts ? (
-          <DraftAssetListTable
-            items={draftAssets}
-            labels={draftTableLabels}
-            disabled={batchGenerating}
-            onNameChange={handleDraftNameChange}
-            onPromptChange={handleDraftPromptChange}
-            onRegenerateItem={(id) => void handleRegenerateDraftItem(id)}
-            onViewItem={handleViewDraftItem}
-          />
-        ) : loading ? (
+        {loading ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-sm text-text-muted">{s.loading}</p>
           </div>
@@ -540,7 +537,7 @@ export function GenerateAssetsStep({
           </div>
         )}
 
-        {!hasDrafts && hasSavedItems ? (
+        {hasSavedItems ? (
           <div className="flex shrink-0 items-center justify-between border-t border-white/10 px-4 py-3 text-xs text-text-muted">
             <span>{s.pageInfo(page, totalPages, assets.total)}</span>
             <div className="flex items-center gap-2">
@@ -564,6 +561,20 @@ export function GenerateAssetsStep({
           </div>
         ) : null}
       </div>
+
+      <BatchExtractAssetsModal
+        open={extractModalOpen}
+        items={draftAssets}
+        selectedIds={selectedDraftIds}
+        batchGenerating={batchGenerating}
+        notice={extractNotice}
+        labels={draftTableLabels}
+        onClose={handleCloseExtractModal}
+        onBatchGenerate={() => void handleBatchGenerate()}
+        onDraftSave={handleDraftSave}
+        onSelectionChange={handleDraftSelectionChange}
+        onSelectAll={handleDraftSelectAll}
+      />
 
       <GenerateAssetModal
         open={generateModalOpen}

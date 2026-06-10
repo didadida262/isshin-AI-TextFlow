@@ -10,9 +10,12 @@ import {
   DEFAULT_VIDEO_NUM_FRAMES,
   DEFAULT_VIDEO_SEED,
   DEFAULT_VIDEO_SIZE,
+  getDefaultKuaiziVideoParams,
   getVideoSettingsFromConfig,
+  isKuaiziVideoApi,
   isVideoSettingsValid,
   loadConfig,
+  type KuaiziVideoParams,
   type VideoGenerationSettings,
 } from "./config";
 
@@ -27,6 +30,7 @@ export interface GenerateVideoInput {
   boundaryRatio?: number;
   flowShift?: number;
   seed?: number;
+  kuaizi?: KuaiziVideoParams;
   settings?: VideoGenerationSettings;
 }
 
@@ -44,6 +48,7 @@ export const VIDEO_TEST_PROMPT =
 export async function testVideoConnection(
   settings?: VideoGenerationSettings,
   prompt: string = VIDEO_TEST_PROMPT,
+  kuaizi?: KuaiziVideoParams,
 ): Promise<string> {
   const resolvedSettings = await resolveVideoGenerationSettings(settings);
   if (!isVideoSettingsValid(resolvedSettings)) {
@@ -58,6 +63,9 @@ export async function testVideoConnection(
   return generateVideoB64({
     prompt: trimmedPrompt,
     settings: resolvedSettings,
+    kuaizi: isKuaiziVideoApi(resolvedSettings.videoApiUrl)
+      ? (kuaizi ?? getDefaultKuaiziVideoParams())
+      : undefined,
   });
 }
 
@@ -69,22 +77,39 @@ export async function generateVideoB64(
     throw new Error("VIDEO_CONFIG_REQUIRED");
   }
 
+  const useKuaizi = isKuaiziVideoApi(settings.videoApiUrl);
+  const kuaiziParams = useKuaizi
+    ? (input.kuaizi ?? getDefaultKuaiziVideoParams())
+    : undefined;
+
   const result = await invoke<{ videoB64: string }>("generate_video", {
-    input: {
-      prompt: input.prompt.trim(),
-      apiUrl: settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL,
-      apiKey: settings.videoApiKey.trim(),
-      size: input.size ?? DEFAULT_VIDEO_SIZE,
-      numFrames: input.numFrames ?? DEFAULT_VIDEO_NUM_FRAMES,
-      fps: input.fps ?? DEFAULT_VIDEO_FPS,
-      numInferenceSteps:
-        input.numInferenceSteps ?? DEFAULT_VIDEO_INFERENCE_STEPS,
-      guidanceScale: input.guidanceScale ?? DEFAULT_VIDEO_GUIDANCE_SCALE,
-      guidanceScale2: input.guidanceScale2 ?? DEFAULT_VIDEO_GUIDANCE_SCALE_2,
-      boundaryRatio: input.boundaryRatio ?? DEFAULT_VIDEO_BOUNDARY_RATIO,
-      flowShift: input.flowShift ?? DEFAULT_VIDEO_FLOW_SHIFT,
-      seed: input.seed ?? DEFAULT_VIDEO_SEED,
-    },
+    input: useKuaizi
+      ? {
+          prompt: input.prompt.trim(),
+          apiUrl: settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL,
+          apiKey: settings.videoApiKey.trim(),
+          mode: kuaiziParams?.mode,
+          resolution: kuaiziParams?.resolution,
+          ratio: kuaiziParams?.ratio,
+          duration: kuaiziParams?.duration,
+          generationType: kuaiziParams?.generationType,
+        }
+      : {
+          prompt: input.prompt.trim(),
+          apiUrl: settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL,
+          apiKey: settings.videoApiKey.trim(),
+          size: input.size ?? DEFAULT_VIDEO_SIZE,
+          numFrames: input.numFrames ?? DEFAULT_VIDEO_NUM_FRAMES,
+          fps: input.fps ?? DEFAULT_VIDEO_FPS,
+          numInferenceSteps:
+            input.numInferenceSteps ?? DEFAULT_VIDEO_INFERENCE_STEPS,
+          guidanceScale: input.guidanceScale ?? DEFAULT_VIDEO_GUIDANCE_SCALE,
+          guidanceScale2:
+            input.guidanceScale2 ?? DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+          boundaryRatio: input.boundaryRatio ?? DEFAULT_VIDEO_BOUNDARY_RATIO,
+          flowShift: input.flowShift ?? DEFAULT_VIDEO_FLOW_SHIFT,
+          seed: input.seed ?? DEFAULT_VIDEO_SEED,
+        },
   });
 
   return result.videoB64;

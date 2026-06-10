@@ -10,6 +10,44 @@ export const DEFAULT_IMAGE_SIZE = "1024x1024";
 export const DEFAULT_IMAGE_COUNT = 1;
 export const DEFAULT_NUM_INFERENCE_STEPS = 25;
 
+export const KUAIZI_VIDEO_API_URL =
+  "https://aiopenapi.kuaizi.cn/ai-open-platform-api/v1/lz/video/task/create";
+
+export const KUAIZI_VIDEO_API_ORIGIN = "https://aiopenapi.kuaizi.cn";
+
+export function isKuaiziVideoApi(url: string): boolean {
+  const trimmed = url.trim();
+  return (
+    trimmed.startsWith(KUAIZI_VIDEO_API_ORIGIN) ||
+    trimmed.includes("kuaizi.cn") ||
+    trimmed.includes("/lz/video/task/")
+  );
+}
+
+export const DEFAULT_KUAIZI_VIDEO_MODE = "fast";
+export const DEFAULT_KUAIZI_VIDEO_RESOLUTION = "720p";
+export const DEFAULT_KUAIZI_VIDEO_RATIO = "16:9";
+export const DEFAULT_KUAIZI_VIDEO_DURATION = 5;
+export const DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE = "video";
+
+export interface KuaiziVideoParams {
+  mode: string;
+  resolution: string;
+  ratio: string;
+  duration: number;
+  generationType: string;
+}
+
+export function getDefaultKuaiziVideoParams(): KuaiziVideoParams {
+  return {
+    mode: DEFAULT_KUAIZI_VIDEO_MODE,
+    resolution: DEFAULT_KUAIZI_VIDEO_RESOLUTION,
+    ratio: DEFAULT_KUAIZI_VIDEO_RATIO,
+    duration: DEFAULT_KUAIZI_VIDEO_DURATION,
+    generationType: DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE,
+  };
+}
+
 export const DEFAULT_VIDEO_API_URL =
   "http://27.159.92.210:8081/v1/videos/sync";
 export const DEFAULT_VIDEO_API_KEY =
