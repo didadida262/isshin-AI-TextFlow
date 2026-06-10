@@ -15,6 +15,7 @@ import {
   isKuaiziVideoApi,
   isVideoSettingsValid,
   loadConfig,
+  normalizeKuaiziVideoCreateUrl,
   type KuaiziVideoParams,
   type VideoGenerationSettings,
 } from "./config";
@@ -81,12 +82,15 @@ export async function generateVideoB64(
   const kuaiziParams = useKuaizi
     ? (input.kuaizi ?? getDefaultKuaiziVideoParams())
     : undefined;
+  const apiUrl = useKuaizi
+    ? normalizeKuaiziVideoCreateUrl(settings.videoApiUrl)
+    : settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL;
 
   const result = await invoke<{ videoB64: string }>("generate_video", {
     input: useKuaizi
       ? {
           prompt: input.prompt.trim(),
-          apiUrl: settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL,
+          apiUrl,
           apiKey: settings.videoApiKey.trim(),
           mode: kuaiziParams?.mode,
           resolution: kuaiziParams?.resolution,
@@ -96,7 +100,7 @@ export async function generateVideoB64(
         }
       : {
           prompt: input.prompt.trim(),
-          apiUrl: settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL,
+          apiUrl,
           apiKey: settings.videoApiKey.trim(),
           size: input.size ?? DEFAULT_VIDEO_SIZE,
           numFrames: input.numFrames ?? DEFAULT_VIDEO_NUM_FRAMES,

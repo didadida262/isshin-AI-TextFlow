@@ -32,6 +32,10 @@ const KUAIZI_DEFAULT_DURATION: u32 = 5;
 const KUAIZI_DEFAULT_GENERATION_TYPE: &str = "video";
 const KUAIZI_POLL_INTERVAL_SECS: u64 = 5;
 const KUAIZI_POLL_TIMEOUT_SECS: u64 = 600;
+const KUAIZI_MAX_POLL_FAILURES: u32 = 5;
+const KUAIZI_CREATE_TIMEOUT_SECS: u64 = 120;
+const KUAIZI_STATUS_TIMEOUT_SECS: u64 = 60;
+const KUAIZI_DOWNLOAD_TIMEOUT_SECS: u64 = 300;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -85,6 +89,23 @@ fn map_request_error(error: &reqwest::Error, url: &str) -> String {
     format!("视频生成请求失败: {error}")
 }
 
+fn map_kuaizi_request_error(error: &reqwest::Error, url: &str, action: &str) -> String {
+    if error.is_connect() || error.is_timeout() {
+        return format!(
+            "无法连接筷子视频服务（{url}），请检查网络与 ApiKey 是否正确。{action}"
+        );
+    }
+    format!("筷子{action}失败: {error}")
+}
+
+fn build_kuaizi_client(timeout_secs: u64) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(timeout_secs))
+        .build()
+        .map_err(|error| format!("初始化筷子 HTTP 客户端失败: {error}"))
+}
+
 fn format_f64(value: f64) -> String {
     let text = format!("{value}");
     if text.contains('.') {
@@ -116,6 +137,9 @@ fn normalize_kuaizi_create_url(url: &str) -> String {
     if trimmed.contains("/task/create") {
         return trimmed.to_string();
     }
+    if trimmed.contains("/task/status") {
+        return trimmed.replace("/task/status", "/task/create");
+    }
     if trimmed.contains("kuaizi.cn") {
         let base = trimmed.trim_end_matches('/');
         if base.ends_with("/ai-open-platform-api") {
@@ -130,14 +154,7 @@ fn normalize_kuaizi_create_url(url: &str) -> String {
 }
 
 fn kuaizi_status_url(create_url: &str) -> String {
-    if create_url.contains("/task/create") {
-        create_url.replace("/task/create", "/task/status")
-    } else {
-        format!(
-            "{}/status",
-            create_url.trim_end_matches('/').trim_end_matches("/create")
-        )
-    }
+    normalize_kuaizi_create_url(create_url).replace("/task/create", "/task/status")
 }
 
 async fn read_response_json(
@@ -277,6 +294,7 @@ fn parse_kuaizi_error_message(value: &serde_json::Value, status: u16) -> String 
             "/data/error/message",
             "/error/message",
             "/data/fail_reason",
+            "/data/failReason",
             "/data/error",
             "/error",
         ],
@@ -332,12 +350,57 @@ fn is_kuaizi_terminal_success(status: &str) -> bool {
 fn is_kuaizi_running_status(status: &str) -> bool {
     matches!(
         normalize_kuaizi_status(status).as_str(),
-        "running" | "pending" | "processing" | "queueing" | "queued" | "submitted" | "unknown"
+        "running"
+            | "pending"
+            | "processing"
+            | "queueing"
+            | "queued"
+            | "submitted"
+            | "in_progress"
+            | "inprogress"
+            | "not_start"
+            | "notstart"
+            | "generating"
+            | "unknown"
     )
 }
 
-async fn generate_video_kuaizi(
+async fn download_kuaizi_video(
     client: &reqwest::Client,
+    video_url: &str,
+) -> Result<GenerateVideoResult, String> {
+    println!("[Video/Kuaizi] 下载视频 → {video_url}");
+    let video_response = client
+        .get(video_url)
+        .send()
+        .await
+        .map_err(|error| format!("下载筷子视频失败: {error}"))?;
+
+    let download_status = video_response.status();
+    let bytes = video_response
+        .bytes()
+        .await
+        .map_err(|error| format!("读取筷子视频数据失败: {error}"))?;
+
+    if !download_status.is_success() {
+        let text = String::from_utf8_lossy(&bytes);
+        return Err(format!(
+            "下载筷子视频失败（HTTP {}）: {text}",
+            download_status.as_u16()
+        ));
+    }
+
+    if bytes.is_empty() {
+        return Err("筷子视频下载地址未返回视频数据".to_string());
+    }
+
+    println!("[Video/Kuaizi] 完成 ← bytes={}", bytes.len());
+    Ok(GenerateVideoResult {
+        video_b64: base64::engine::general_purpose::STANDARD.encode(bytes),
+    })
+}
+
+async fn generate_video_kuaizi(
     prompt: &str,
     create_url: &str,
     api_key: &str,
@@ -349,6 +412,9 @@ async fn generate_video_kuaizi(
 ) -> Result<GenerateVideoResult, String> {
     let create_url = normalize_kuaizi_create_url(create_url);
     let status_url = kuaizi_status_url(&create_url);
+    let create_client = build_kuaizi_client(KUAIZI_CREATE_TIMEOUT_SECS)?;
+    let status_client = build_kuaizi_client(KUAIZI_STATUS_TIMEOUT_SECS)?;
+    let download_client = build_kuaizi_client(KUAIZI_DOWNLOAD_TIMEOUT_SECS)?;
 
     let request_body = KuaiziCreateRequest {
         prompt: prompt.to_string(),
@@ -368,14 +434,20 @@ async fn generate_video_kuaizi(
         request_body.generation_type
     );
 
-    let create_response = client
+    let create_response = create_client
         .post(&create_url)
         .header("Content-Type", "application/json")
         .header("ApiKey", api_key.trim())
         .json(&request_body)
         .send()
         .await
-        .map_err(|error| map_request_error(&error, &create_url))?;
+        .map_err(|error| {
+            map_kuaizi_request_error(
+                &error,
+                &create_url,
+                "创建任务（POST /lz/video/task/create）",
+            )
+        })?;
 
     let (create_status, create_json) =
         read_response_json(create_response, "创建任务").await?;
@@ -385,19 +457,17 @@ async fn generate_video_kuaizi(
     }
 
     let task_id = parse_kuaizi_task_id(&create_json).ok_or_else(|| {
-        format!(
-            "筷子 API 未返回 task_id: {}",
-            create_json.to_string()
-        )
+        format!("筷子 API 未返回 task_id: {}", create_json)
     })?;
 
-    println!("[Video/Kuaizi] 任务已创建 task_id={task_id}");
+    println!("[Video/Kuaizi] 任务已创建 task_id={task_id}，开始轮询 {status_url}");
 
     let started_at = Instant::now();
+    let mut poll_failures = 0u32;
     loop {
         if started_at.elapsed() >= Duration::from_secs(KUAIZI_POLL_TIMEOUT_SECS) {
             return Err(format!(
-                "筷子视频生成超时（超过 {} 秒）",
+                "筷子视频生成超时（超过 {} 秒），task_id={task_id}",
                 KUAIZI_POLL_TIMEOUT_SECS
             ));
         }
@@ -407,14 +477,40 @@ async fn generate_video_kuaizi(
         let status_request = KuaiziStatusRequest {
             task_id: task_id.as_str(),
         };
-        let status_response = client
+        let status_response = match status_client
             .post(&status_url)
             .header("Content-Type", "application/json")
             .header("ApiKey", api_key.trim())
             .json(&status_request)
             .send()
             .await
-            .map_err(|error| map_request_error(&error, &status_url))?;
+        {
+            Ok(response) => {
+                poll_failures = 0;
+                response
+            }
+            Err(error) if error.is_connect() || error.is_timeout() => {
+                poll_failures += 1;
+                println!(
+                    "[Video/Kuaizi] 状态查询暂时失败 ({poll_failures}/{KUAIZI_MAX_POLL_FAILURES}): {error}"
+                );
+                if poll_failures >= KUAIZI_MAX_POLL_FAILURES {
+                    return Err(map_kuaizi_request_error(
+                        &error,
+                        &status_url,
+                        "查询任务状态（POST /lz/video/task/status）",
+                    ));
+                }
+                continue;
+            }
+            Err(error) => {
+                return Err(map_kuaizi_request_error(
+                    &error,
+                    &status_url,
+                    "查询任务状态（POST /lz/video/task/status）",
+                ));
+            }
+        };
 
         let (http_status, status_json) =
             read_response_json(status_response, "任务状态").await?;
@@ -435,42 +531,14 @@ async fn generate_video_kuaizi(
             return Err(parse_kuaizi_error_message(&status_json, http_status.as_u16()));
         }
 
-        if let Some(video_url) = parse_kuaizi_video_url(&status_json) {
-            if is_kuaizi_terminal_success(&status) || !video_url.trim().is_empty() {
-                println!("[Video/Kuaizi] 下载视频 → {video_url}");
-                let video_response = client
-                    .get(video_url)
-                    .send()
-                    .await
-                    .map_err(|error| format!("下载筷子视频失败: {error}"))?;
-
-                let download_status = video_response.status();
-                let bytes = video_response
-                    .bytes()
-                    .await
-                    .map_err(|error| format!("读取筷子视频数据失败: {error}"))?;
-
-                if !download_status.is_success() {
-                    let text = String::from_utf8_lossy(&bytes);
-                    return Err(format!("下载筷子视频失败（HTTP {}）: {text}", download_status.as_u16()));
-                }
-
-                if bytes.is_empty() {
-                    return Err("筷子视频下载地址未返回视频数据".to_string());
-                }
-
-                println!("[Video/Kuaizi] 完成 ← bytes={}", bytes.len());
-                return Ok(GenerateVideoResult {
-                    video_b64: base64::engine::general_purpose::STANDARD.encode(bytes),
-                });
-            }
-        }
-
         if is_kuaizi_terminal_success(&status) {
-            return Err(format!(
-                "筷子任务已完成但未返回 video_url: {}",
-                status_json.to_string()
-            ));
+            let video_url = parse_kuaizi_video_url(&status_json).filter(|url| !url.trim().is_empty());
+            return match video_url {
+                Some(url) => download_kuaizi_video(&download_client, &url).await,
+                None => Err(format!(
+                    "筷子任务已完成（status={status}）但未返回 video_url: {status_json}"
+                )),
+            };
         }
 
         if !is_kuaizi_running_status(&status) {
@@ -613,7 +681,6 @@ pub async fn generate_video(input: GenerateVideoInput) -> Result<GenerateVideoRe
         };
 
         return generate_video_kuaizi(
-            &client,
             prompt,
             &url,
             &api_key,
@@ -861,6 +928,50 @@ mod tests {
         assert_eq!(
             normalize_kuaizi_create_url("https://aiopenapi.kuaizi.cn/ai-open-platform-api"),
             KUAIZI_DEFAULT_CREATE_URL
+        );
+    }
+
+    #[test]
+    fn normalizes_kuaizi_status_url_to_create() {
+        assert_eq!(
+            normalize_kuaizi_create_url(
+                "https://aiopenapi.kuaizi.cn/ai-open-platform-api/v1/lz/video/task/status"
+            ),
+            KUAIZI_DEFAULT_CREATE_URL
+        );
+        assert_eq!(
+            kuaizi_status_url(
+                "https://aiopenapi.kuaizi.cn/ai-open-platform-api/v1/lz/video/task/status"
+            ),
+            "https://aiopenapi.kuaizi.cn/ai-open-platform-api/v1/lz/video/task/status"
+        );
+    }
+
+    #[test]
+    fn parses_kuaizi_create_and_status_payload() {
+        let create_json: serde_json::Value = serde_json::json!({
+            "code": 0,
+            "message": "",
+            "data": { "task_id": "kz-cgt-1tsk1808657871180349525e4b1f36797a4f" }
+        });
+        assert_eq!(
+            parse_kuaizi_task_id(&create_json).as_deref(),
+            Some("kz-cgt-1tsk1808657871180349525e4b1f36797a4f")
+        );
+
+        let status_json: serde_json::Value = serde_json::json!({
+            "code": 0,
+            "data": {
+                "task_id": "kz-cgt-1tsk1808657871180349525e4b1f36797a4f",
+                "status": "succeeded",
+                "video_url": "https://example.com/video.mp4"
+            }
+        });
+        assert_eq!(parse_kuaizi_status(&status_json).as_deref(), Some("succeeded"));
+        assert!(is_kuaizi_terminal_success("succeeded"));
+        assert_eq!(
+            parse_kuaizi_video_url(&status_json).as_deref(),
+            Some("https://example.com/video.mp4")
         );
     }
 

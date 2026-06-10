@@ -13,6 +13,9 @@ export const DEFAULT_NUM_INFERENCE_STEPS = 25;
 export const KUAIZI_VIDEO_API_URL =
   "https://aiopenapi.kuaizi.cn/ai-open-platform-api/v1/lz/video/task/create";
 
+export const KUAIZI_VIDEO_STATUS_URL =
+  "https://aiopenapi.kuaizi.cn/ai-open-platform-api/v1/lz/video/task/status";
+
 export const KUAIZI_VIDEO_API_ORIGIN = "https://aiopenapi.kuaizi.cn";
 
 export function isKuaiziVideoApi(url: string): boolean {
@@ -22,6 +25,26 @@ export function isKuaiziVideoApi(url: string): boolean {
     trimmed.includes("kuaizi.cn") ||
     trimmed.includes("/lz/video/task/")
   );
+}
+
+/** 将域名、status 地址等规范为筷子创建任务接口。 */
+export function normalizeKuaiziVideoCreateUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return KUAIZI_VIDEO_API_URL;
+  if (trimmed.includes("/task/create")) return trimmed;
+  if (trimmed.includes("/task/status")) {
+    return trimmed.replace("/task/status", "/task/create");
+  }
+  if (!trimmed.includes("kuaizi.cn")) return trimmed;
+
+  const base = trimmed.replace(/\/+$/, "");
+  if (base.endsWith("/ai-open-platform-api")) {
+    return `${base}/v1/lz/video/task/create`;
+  }
+  if (base.endsWith("/v1/lz/video/task")) {
+    return `${base}/create`;
+  }
+  return `${base}/ai-open-platform-api/v1/lz/video/task/create`;
 }
 
 export const DEFAULT_KUAIZI_VIDEO_MODE = "fast";
