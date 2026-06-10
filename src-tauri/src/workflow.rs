@@ -60,6 +60,7 @@ pub struct AiScriptNodeDetail {
 #[serde(rename_all = "camelCase")]
 pub struct GenerateAssetsNodeDetail {
     pub node_id: String,
+    pub scripts: Vec<ScriptRecord>,
     pub assets: ListProjectAssetsResult,
 }
 
@@ -281,6 +282,7 @@ pub fn get_project_workflow_node_detail(
         NODE_GENERATE_ASSETS => Ok(WorkflowNodeDetail::GenerateAssets(
             GenerateAssetsNodeDetail {
                 node_id: input.node_id,
+                scripts: script::fetch_scripts(&conn, &input.project_id)?,
                 assets: assets::list_project_assets_internal(
                     &conn,
                     &input.project_id,

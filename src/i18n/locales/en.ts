@@ -343,9 +343,26 @@ export const en: TranslationSchema = {
       noVideo: "No video yet",
     },
     generateAssetsStep: {
+      batchExtract: "Batch Extract Assets",
+      batchGenerate: "Batch Generate Assets",
+      batchGenerating: "Batch generating…",
+      batchGenerateComplete:
+        "All assets generated. Click a thumbnail below for the full image, or click a row for details.",
+      draftHint:
+        "Draft assets extracted from scripts. Edit names and prompts, then click Batch Generate Assets. Batch Extract is disabled while generating.",
+      noScriptsToExtract:
+        "No successful scripts to extract from. Generate scripts first.",
+      extractNoAssets:
+        "No characters or scenes found in scripts. Check the script format.",
+      extractSuccess: (count: number) =>
+        `Extracted ${count} draft asset(s) from scripts. Review them, then click Batch Generate Assets.`,
+      draftInvalid: "Every asset needs a name and prompt",
+      statusPending: "Pending",
+      statusGenerating: "Generating",
+      regenerate: "Regenerate",
       generateAsset: "Generate Asset",
       emptyHint:
-        'Click "Generate Asset" in the top-right corner, fill in the prompt, and the service will create and save the asset.',
+        'Click "Batch Extract Assets" to pull characters and scenes from scripts, or "Generate Asset" to create one manually.',
       loading: "Loading assets…",
       colPreview: "Preview",
       colName: "Name",
@@ -440,6 +457,8 @@ export const en: TranslationSchema = {
       cancel: "Cancel",
       confirm: "Save",
       saving: "Saving…",
+      regenerate: "Regenerate",
+      regenerating: "Regenerating…",
     },
     importNovelModal: {
       title: "Upload Novel Source",

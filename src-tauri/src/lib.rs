@@ -17,7 +17,10 @@ use edit_export::export_timeline;
 use assistant_context::query_assistant_context;
 use image::generate_image;
 use video::{generate_image_to_video, generate_video};
-use assets::{create_project_asset, delete_project_asset, list_project_assets, update_project_asset};
+use assets::{
+    create_project_asset, delete_project_asset, list_project_assets, regenerate_project_asset,
+    update_project_asset,
+};
 use db::login;
 use db_admin::{
     clear_database, clear_database_table, export_database, export_database_to_file,
@@ -102,6 +105,7 @@ pub fn run() {
             list_project_assets,
             create_project_asset,
             update_project_asset,
+            regenerate_project_asset,
             delete_project_asset,
             generate_image,
             generate_video,

@@ -34,6 +34,7 @@ export interface AiScriptNodeDetail {
 export interface GenerateAssetsNodeDetail {
   kind: "generateAssets";
   nodeId: ProjectWorkflowStepId;
+  scripts: ScriptRecord[];
   assets: ListProjectAssetsResult;
 }
 

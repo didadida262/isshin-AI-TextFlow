@@ -3,6 +3,7 @@ import { chatCompletion } from "../../../services/chat";
 import { stripThink } from "../../../utils/stripThink";
 import {
   buildMarkdownRetryHint,
+  getMissingAdaptationStrategySections,
   parseAdaptationStrategyOutput,
 } from "../../../utils/xmlTags";
 import {
@@ -29,11 +30,12 @@ export async function runAdaptationStrategyAgent(
     ctx.workData.storySkeleton,
     "\n## 章节事件表\n",
     formatChapterEvents(ctx.chapters),
-    "\n请基于故事骨架制定改编策略。先写 200-300 字思路阐述，再以 Markdown 输出正文（从 ## 改编基调 开始）。",
+    "\n请基于故事骨架制定改编策略。先写 200-300 字思路阐述，再以 Markdown **一次性完整输出**全部 5 个章节（从 ## 改编基调 至 ## 衔接规则，不得省略任何章节）。",
     buildDirectorManualTaskReminder(ctx.directorSkillContent),
   ].join("\n");
 
   let lastError = "改编策略 Agent 未返回有效的 Markdown 正文";
+  let missingSections: string[] | undefined;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     if (ctx.signal?.aborted) {
@@ -49,7 +51,12 @@ export async function runAdaptationStrategyAgent(
           role: "user",
           content:
             baseUserContent +
-            buildMarkdownRetryHint("改编基调", STRATEGY_SECTIONS, attempt),
+            buildMarkdownRetryHint(
+              "改编基调",
+              STRATEGY_SECTIONS,
+              attempt,
+              missingSections,
+            ),
         },
       ],
       ctx.signal,
@@ -59,9 +66,15 @@ export async function runAdaptationStrategyAgent(
 
     const strategy = parseAdaptationStrategyOutput(stripThink(raw));
     if (strategy) {
-      return strategy;
+      missingSections = getMissingAdaptationStrategySections(strategy);
+      if (missingSections.length === 0) {
+        return strategy;
+      }
+      lastError = `改编策略缺少章节：${missingSections.join("、")}（尝试 ${attempt + 1}/${MAX_ATTEMPTS}）`;
+      continue;
     }
 
+    missingSections = undefined;
     lastError = `改编策略 Agent 未返回有效的 Markdown 正文（尝试 ${attempt + 1}/${MAX_ATTEMPTS}）`;
   }
 

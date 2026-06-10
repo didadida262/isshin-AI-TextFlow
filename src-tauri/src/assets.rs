@@ -72,6 +72,19 @@ pub struct UpdateProjectAssetInput {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RegenerateProjectAssetInput {
+    pub project_id: String,
+    pub asset_id: i64,
+    pub name: String,
+    pub asset_type: String,
+    pub prompt: String,
+    pub image_b64: String,
+    pub generation_duration_ms: Option<i64>,
+    pub num_inference_steps: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeleteProjectAssetInput {
     pub project_id: String,
     pub asset_id: i64,
@@ -513,6 +526,88 @@ pub fn create_project_asset(input: CreateProjectAssetInput) -> Result<ProjectAss
     if record.asset_state == ASSET_STATE_SUCCESS {
         sync_workflow_after_assets_change(&conn, &input.project_id)?;
     }
+    Ok(record)
+}
+
+#[tauri::command]
+pub fn regenerate_project_asset(
+    input: RegenerateProjectAssetInput,
+) -> Result<ProjectAssetRecord, String> {
+    let conn = init_db()?;
+    let now = timestamp();
+    let name = input.name.trim();
+    let asset_type = input.asset_type.trim();
+    let prompt = input.prompt.trim();
+    let image_b64 = input.image_b64.trim();
+
+    if name.is_empty() {
+        return Err("资产名称不能为空".to_string());
+    }
+    if prompt.is_empty() {
+        return Err("提示词不能为空".to_string());
+    }
+    if image_b64.is_empty() {
+        return Err("请提供图片数据".to_string());
+    }
+    if !matches!(asset_type, "character" | "scene" | "prop") {
+        return Err("资产类型无效".to_string());
+    }
+
+    let existing = fetch_asset_by_id(&conn, &input.project_id, input.asset_id)?;
+    if existing.asset_type == "video" {
+        return Err("视频资产不支持重新生成图片".to_string());
+    }
+
+    if let Some(old_path) = existing.image_path.as_deref() {
+        let _ = remove_asset_image_file(old_path);
+    }
+
+    let media_path = match save_asset_image(&input.project_id, input.asset_id, image_b64) {
+        Ok(path) => path,
+        Err(error) => {
+            conn.execute(
+                "UPDATE project_assets
+                 SET name = ?1, asset_type = ?2, prompt = ?3, asset_state = ?4,
+                     error_reason = ?5, updated_at = ?6
+                 WHERE id = ?7",
+                params![
+                    name,
+                    asset_type,
+                    prompt,
+                    ASSET_STATE_ERROR,
+                    error.clone(),
+                    now,
+                    input.asset_id
+                ],
+            )
+            .map_err(|e| e.to_string())?;
+            return fetch_asset_by_id(&conn, &input.project_id, input.asset_id);
+        }
+    };
+
+    conn.execute(
+        "UPDATE project_assets
+         SET name = ?1, asset_type = ?2, prompt = ?3, image_path = ?4,
+             asset_state = ?5, error_reason = NULL, updated_at = ?6,
+             generation_duration_ms = ?7, num_inference_steps = ?8
+         WHERE id = ?9 AND project_id = ?10",
+        params![
+            name,
+            asset_type,
+            prompt,
+            media_path,
+            ASSET_STATE_SUCCESS,
+            now,
+            input.generation_duration_ms,
+            input.num_inference_steps,
+            input.asset_id,
+            input.project_id
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    let record = fetch_asset_by_id(&conn, &input.project_id, input.asset_id)?;
+    sync_workflow_after_assets_change(&conn, &input.project_id)?;
     Ok(record)
 }
 

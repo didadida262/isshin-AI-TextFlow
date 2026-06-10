@@ -288,6 +288,7 @@ export function ProjectDetailView({
           project={project}
           title={activeLabel}
           config={config}
+          scripts={generateAssetsDetail.scripts}
           initialAssets={generateAssetsDetail.assets}
           onConfigError={onConfigError}
           onWorkflowChange={() => void refreshProjectWorkflow()}

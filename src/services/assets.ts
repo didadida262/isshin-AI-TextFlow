@@ -79,6 +79,23 @@ export async function updateProjectAsset(
   return invoke<ProjectAssetRecord>("update_project_asset", { input });
 }
 
+export interface RegenerateProjectAssetInput {
+  projectId: string;
+  assetId: number;
+  name: string;
+  assetType: string;
+  prompt: string;
+  imageB64: string;
+  generationDurationMs?: number;
+  numInferenceSteps?: number;
+}
+
+export async function regenerateProjectAsset(
+  input: RegenerateProjectAssetInput,
+): Promise<ProjectAssetRecord> {
+  return invoke<ProjectAssetRecord>("regenerate_project_asset", { input });
+}
+
 export interface DeleteProjectAssetInput {
   projectId: string;
   assetId: number;

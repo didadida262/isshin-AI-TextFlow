@@ -23,8 +23,29 @@ export function buildXmlRetryHint(tagName: string, attempt: number): string {
   );
 }
 
-const SKELETON_MARKERS = /(?:\*\*故事核\*\*|##\s*故事核|#\s*故事骨架|三幕结构)/i;
-const STRATEGY_MARKERS = /(?:\*\*改编基调\*\*|##\s*改编基调|#\s*改编策略|分集脚本指引)/i;
+const SKELETON_MARKERS =
+  /(?:^|\n)(?:##\s*故事核|#\s*故事骨架|\*\*故事核\*\*)/m;
+const STRATEGY_MARKERS =
+  /(?:^|\n)(?:##\s*改编基调|#\s*改编策略|\*\*改编基调\*\*)/m;
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Match `## 标题`、`## 标题：`、`**标题**` 等常见模型输出格式。 */
+function buildSectionHeadingPattern(
+  title: string,
+  aliases: string[] = [],
+): RegExp {
+  const titles = [title, ...aliases];
+  const alternatives = titles
+    .map((item) => {
+      const escaped = escapeRegExp(item);
+      return `(?:#+\\s*${escaped}|\\*\\*${escaped}\\*\\*)`;
+    })
+    .join("|");
+  return new RegExp(`(?:^|\\n)(?:${alternatives})(?:\\s*[：:]|\\s|$)`, "m");
+}
 
 function stripXmlDecorations(text: string): string {
   return text
@@ -39,13 +60,73 @@ export function buildMarkdownRetryHint(
   firstHeading: string,
   sectionList: string,
   attempt: number,
+  missingSections?: string[],
 ): string {
+  if (missingSections?.length) {
+    return (
+      `\n\n【重要】上次输出不完整，缺少以下章节：${missingSections.join("、")}。` +
+      `思路阐述之后必须用 Markdown **一次性完整输出**全部章节，` +
+      `以 \`## ${firstHeading}\` 开头，依次包含：${sectionList}。` +
+      "不得只写前几节即停止；该用表格的章节须使用 Markdown 表格。禁止 XML/HTML 标签，禁止用 ``` 代码块包裹正文。"
+    );
+  }
   if (attempt === 0) return "";
   return (
     `\n\n【重要】上次输出格式无效。思路阐述之后必须用 Markdown 输出正文，` +
     `以 \`## ${firstHeading}\` 开头，依次包含：${sectionList}。` +
     "禁止 XML/HTML 标签，禁止用 ``` 代码块包裹正文。"
   );
+}
+
+interface MarkdownSectionSpec {
+  label: string;
+  pattern: RegExp;
+}
+
+const STORY_SKELETON_SECTION_SPECS: MarkdownSectionSpec[] = [
+  { label: "故事核", pattern: buildSectionHeadingPattern("故事核") },
+  { label: "隐线", pattern: buildSectionHeadingPattern("隐线") },
+  { label: "三幕结构", pattern: buildSectionHeadingPattern("三幕结构") },
+  { label: "分集决策", pattern: buildSectionHeadingPattern("分集决策") },
+  {
+    label: "全局删减决策表",
+    pattern: buildSectionHeadingPattern("全局删减决策表", ["全局删减"]),
+  },
+  {
+    label: "付费卡点设计",
+    pattern: buildSectionHeadingPattern("付费卡点设计", ["付费卡点"]),
+  },
+];
+
+const ADAPTATION_STRATEGY_SECTION_SPECS: MarkdownSectionSpec[] = [
+  { label: "改编基调", pattern: buildSectionHeadingPattern("改编基调") },
+  { label: "人物改编", pattern: buildSectionHeadingPattern("人物改编") },
+  { label: "场景改编", pattern: buildSectionHeadingPattern("场景改编") },
+  { label: "分集脚本指引", pattern: buildSectionHeadingPattern("分集脚本指引") },
+  { label: "衔接规则", pattern: buildSectionHeadingPattern("衔接规则") },
+];
+
+export function getMissingMarkdownSections(
+  text: string,
+  specs: MarkdownSectionSpec[],
+): string[] {
+  return specs.filter((spec) => !spec.pattern.test(text)).map((spec) => spec.label);
+}
+
+export function getMissingStorySkeletonSections(text: string): string[] {
+  return getMissingMarkdownSections(text, STORY_SKELETON_SECTION_SPECS);
+}
+
+export function isStorySkeletonComplete(text: string): boolean {
+  return getMissingStorySkeletonSections(text).length === 0;
+}
+
+export function getMissingAdaptationStrategySections(text: string): string[] {
+  return getMissingMarkdownSections(text, ADAPTATION_STRATEGY_SECTION_SPECS);
+}
+
+export function isAdaptationStrategyComplete(text: string): boolean {
+  return getMissingAdaptationStrategySections(text).length === 0;
 }
 
 function extractUnclosedXmlTag(text: string, tagName: string): string | null {

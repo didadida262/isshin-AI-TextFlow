@@ -311,6 +311,18 @@ export type TranslationSchema = {
       noVideo: string;
     };
     generateAssetsStep: {
+      batchExtract: string;
+      batchGenerate: string;
+      batchGenerating: string;
+      batchGenerateComplete: string;
+      draftHint: string;
+      noScriptsToExtract: string;
+      extractNoAssets: string;
+      extractSuccess: (count: number) => string;
+      draftInvalid: string;
+      statusPending: string;
+      statusGenerating: string;
+      regenerate: string;
       generateAsset: string;
       emptyHint: string;
       loading: string;
@@ -403,6 +415,8 @@ export type TranslationSchema = {
       cancel: string;
       confirm: string;
       saving: string;
+      regenerate: string;
+      regenerating: string;
     };
     importNovelModal: {
       title: string;
@@ -804,8 +818,24 @@ export const zh: TranslationSchema = {
       noVideo: "暂无视频",
     },
     generateAssetsStep: {
+      batchExtract: "批量提取资产",
+      batchGenerate: "批量生成资产",
+      batchGenerating: "批量生成中…",
+      batchGenerateComplete:
+        "全部资产生成完成，可在下方列表点击缩略图查看大图，或点击行查看详情。",
+      draftHint:
+        "已从剧本提取资产草稿，可编辑名称与提示词后点击「批量生成资产」。生成过程中「批量提取资产」将暂时不可用。",
+      noScriptsToExtract: "没有可提取的成功剧本，请先完成剧本生成",
+      extractNoAssets: "未能从剧本中识别出人物或场景，请检查剧本格式",
+      extractSuccess: (count: number) =>
+        `已从剧本识别出 ${count} 条资产草稿，请确认后点击「批量生成资产」。`,
+      draftInvalid: "请为每条资产填写名称和提示词",
+      statusPending: "待生成",
+      statusGenerating: "生成中",
+      regenerate: "重新生成",
       generateAsset: "资产生成",
-      emptyHint: "点击右上角「资产生成」，填写提示词后将调用服务生成并保存资产。",
+      emptyHint:
+        "点击「批量提取资产」从剧本中识别人物与场景，或点击「资产生成」手动创建单条资产。",
       loading: "加载资产列表…",
       colPreview: "预览",
       colName: "名称",
@@ -899,6 +929,8 @@ export const zh: TranslationSchema = {
       cancel: "取消",
       confirm: "保存",
       saving: "保存中…",
+      regenerate: "重新生成",
+      regenerating: "重新生成中…",
     },
     importNovelModal: {
       title: "上传小说原文",
