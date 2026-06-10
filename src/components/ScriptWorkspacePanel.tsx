@@ -6,6 +6,7 @@ import type {
   ScriptPipelineStage,
 } from "../agents/workflowAgent/scriptGeneration";
 import { useTranslationMessages } from "../contexts/I18nContext";
+import type { NovelChapterRecord } from "../services/novel";
 import type { ScriptRecord, ScriptWorkData } from "../services/script";
 import {
   formatAdaptationStrategyDisplay,
@@ -19,6 +20,7 @@ type WorkspaceTab = "skeleton" | "strategy" | "scripts";
 interface ScriptWorkspacePanelProps {
   workData: ScriptWorkData;
   scripts: ScriptRecord[];
+  chapters: NovelChapterRecord[];
   hasFailedScripts: boolean;
   isGenerating: boolean;
   generationProgress: ScriptGenerationProgress | null;
@@ -28,6 +30,7 @@ interface ScriptWorkspacePanelProps {
 export function ScriptWorkspacePanel({
   workData,
   scripts,
+  chapters,
   hasFailedScripts,
   isGenerating,
   generationProgress,
@@ -55,10 +58,17 @@ export function ScriptWorkspacePanel({
     statusSuccess: s.statusSuccess,
     statusError: s.statusError,
     statusPending: s.statusPending,
+    generatingRowScript: s.generatingRowScript,
     noContent: s.noContent,
   };
 
   const hasScripts = scripts.length > 0;
+  const showScriptsTable =
+    hasScripts ||
+    (isGenerating &&
+      generationProgress?.stage === "scripts" &&
+      generationProgress.total != null &&
+      generationProgress.total > 0);
   const hasSkeleton = workData.storySkeleton.trim().length > 0;
   const hasStrategy = workData.adaptationStrategy.trim().length > 0;
 
@@ -72,7 +82,7 @@ export function ScriptWorkspacePanel({
     generationProgress?.stage === "adaptation";
   const scriptsLoading =
     isGenerating &&
-    !hasScripts &&
+    !showScriptsTable &&
     generationProgress?.stage === "scripts";
 
   return (
@@ -148,9 +158,15 @@ export function ScriptWorkspacePanel({
         ) : null}
 
         {activeTab === "scripts" ? (
-          hasScripts ? (
+          showScriptsTable ? (
             <div className="flex h-full min-h-0 flex-col overflow-hidden">
-              <ScriptEpisodesTable scripts={scripts} labels={tableLabels} />
+              <ScriptEpisodesTable
+                scripts={scripts}
+                chapters={chapters}
+                isGenerating={isGenerating}
+                generationProgress={generationProgress}
+                labels={tableLabels}
+              />
             </div>
           ) : scriptsLoading ? (
             <WorkspaceLoading

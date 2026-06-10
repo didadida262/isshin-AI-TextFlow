@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   DEFAULT_IMAGE_COUNT,
@@ -39,7 +40,7 @@ interface GenerateAssetModalProps {
   onClose: () => void;
   onSubmit?: (values: GenerateAssetFormValues, imageB64: string) => Promise<void>;
   allowBackground?: boolean;
-  onBackgroundSubmit?: (values: GenerateAssetSubmitValues) => void;
+  onBackgroundSubmit?: (values: GenerateAssetSubmitValues) => string;
 }
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
@@ -77,10 +78,21 @@ export function GenerateAssetModal({
     String(DEFAULT_NUM_INFERENCE_STEPS),
   );
   const [submitting, setSubmitting] = useState(false);
+  const [backgroundJobId, setBackgroundJobId] = useState<string | null>(null);
   const [expandingPrompt, setExpandingPrompt] = useState(false);
   const [error, setError] = useState("");
   const abortRef = useRef(false);
   const requestIdRef = useRef(0);
+  const { jobs } = useGenerationJobs();
+
+  const backgroundJob = useMemo(
+    () =>
+      backgroundJobId
+        ? jobs.find((job) => job.id === backgroundJobId)
+        : undefined,
+    [backgroundJobId, jobs],
+  );
+  const isBackgroundGenerating = backgroundJobId != null;
 
   useEffect(() => {
     if (!open) return;
@@ -92,8 +104,26 @@ export function GenerateAssetModal({
     setSize(defaultSize);
     setNumInferenceSteps(String(DEFAULT_NUM_INFERENCE_STEPS));
     setExpandingPrompt(false);
+    setSubmitting(false);
+    setBackgroundJobId(null);
     setError("");
   }, [config.imageModel, defaultSize, open]);
+
+  useEffect(() => {
+    if (!backgroundJob || backgroundJob.status === "running") return;
+
+    if (backgroundJob.status === "success") {
+      onClose();
+      return;
+    }
+
+    const message = backgroundJob.errorMessage ?? errors.imageConfigRequired;
+    setSubmitting(false);
+    setBackgroundJobId(null);
+    setError(
+      message === "IMAGE_CONFIG_REQUIRED" ? errors.imageConfigRequired : message,
+    );
+  }, [backgroundJob, errors.imageConfigRequired, onClose]);
 
   const canSubmit =
     name.trim() && prompt.trim() && imageModel && !submitting && !expandingPrompt;
@@ -133,13 +163,14 @@ export function GenerateAssetModal({
   );
 
   const handleClose = useCallback(() => {
-    if (submitting) {
+    if (submitting && !isBackgroundGenerating) {
       abortRef.current = true;
       requestIdRef.current += 1;
       setSubmitting(false);
     }
+    setBackgroundJobId(null);
     onClose();
-  }, [onClose, submitting]);
+  }, [isBackgroundGenerating, onClose, submitting]);
 
   const handleExpandPrompt = useCallback(async () => {
     if (!canExpandPrompt) return;
@@ -187,7 +218,7 @@ export function GenerateAssetModal({
         numInferenceSteps,
         DEFAULT_NUM_INFERENCE_STEPS,
       );
-      onBackgroundSubmit({
+      const jobId = onBackgroundSubmit({
         name: name.trim(),
         assetType,
         prompt: prompt.trim(),
@@ -196,7 +227,9 @@ export function GenerateAssetModal({
         n: imageCount,
         numInferenceSteps: resolvedNumInferenceSteps,
       });
-      onClose();
+      setBackgroundJobId(jobId);
+      setSubmitting(true);
+      setError("");
       return;
     }
 
@@ -287,7 +320,7 @@ export function GenerateAssetModal({
             type="button"
             aria-label={m.cancel}
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={submitting ? undefined : handleClose}
+            onClick={submitting && !isBackgroundGenerating ? undefined : handleClose}
           />
 
           <motion.div
@@ -308,12 +341,12 @@ export function GenerateAssetModal({
               <h3 id="generate-asset-title" className="text-base font-semibold text-white">
                 {m.title}
               </h3>
-              {!submitting ? (
+              {!submitting || isBackgroundGenerating ? (
                 <button
                   type="button"
                   onClick={handleClose}
-                  title={m.cancel}
-                  aria-label={m.cancel}
+                  title={isBackgroundGenerating ? m.closeWhileGenerating : m.cancel}
+                  aria-label={isBackgroundGenerating ? m.closeWhileGenerating : m.cancel}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white"
                 >
                   <FontAwesomeIcon icon={faXmark} />
@@ -449,7 +482,14 @@ export function GenerateAssetModal({
                     aria-live="polite"
                     aria-busy="true"
                   >
-                    <PaintbrushLoading label={m.generating} />
+                    <div className="flex flex-col items-center gap-3">
+                      <PaintbrushLoading label={m.generating} />
+                      {isBackgroundGenerating ? (
+                        <p className="max-w-xs text-center text-xs text-text-muted">
+                          {m.backgroundGeneratingHint}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 )}
               </div>
@@ -461,7 +501,11 @@ export function GenerateAssetModal({
                 onClick={handleClose}
                 className="rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white"
               >
-                {submitting ? m.abortGenerating : m.cancel}
+                {submitting
+                  ? isBackgroundGenerating
+                    ? m.closeWhileGenerating
+                    : m.abortGenerating
+                  : m.cancel}
               </button>
               <button
                 type="button"

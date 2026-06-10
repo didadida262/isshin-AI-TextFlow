@@ -300,6 +300,7 @@ export const en: TranslationSchema = {
       statusSuccess: "Done",
       statusError: "Failed",
       statusPending: "Pending",
+      generatingRowScript: "Generating…",
       noContent: "—",
       chatWelcome: "Hi, I'm the script coordinator agent.",
       chatWelcomeHint:
@@ -455,6 +456,9 @@ export const en: TranslationSchema = {
       confirm: "Generate",
       generating: "Generating…",
       abortGenerating: "Cancel generation",
+      closeWhileGenerating: "Close",
+      backgroundGeneratingHint:
+        "You can close this window and track progress in notifications.",
     },
     textToVideoModal: {
       title: "Video Generation",
@@ -478,6 +482,9 @@ export const en: TranslationSchema = {
       confirm: "Generate",
       generating: "Generating…",
       abortGenerating: "Cancel generation",
+      closeWhileGenerating: "Close",
+      backgroundGeneratingHint:
+        "You can close this window and track progress in notifications.",
     },
     editAssetModal: {
       title: "Edit Asset",

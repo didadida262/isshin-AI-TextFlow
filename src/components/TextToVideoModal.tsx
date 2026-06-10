@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   DEFAULT_VIDEO_BOUNDARY_RATIO,
@@ -45,7 +46,7 @@ interface TextToVideoModalProps {
   onClose: () => void;
   onSubmit?: (values: TextToVideoFormValues, videoB64: string) => Promise<void>;
   allowBackground?: boolean;
-  onBackgroundSubmit?: (values: TextToVideoSubmitValues) => void;
+  onBackgroundSubmit?: (values: TextToVideoSubmitValues) => string;
   initialName?: string;
   initialPrompt?: string;
 }
@@ -93,9 +94,20 @@ export function TextToVideoModal({
   const [flowShift, setFlowShift] = useState(String(DEFAULT_VIDEO_FLOW_SHIFT));
   const [seed, setSeed] = useState(String(DEFAULT_VIDEO_SEED));
   const [submitting, setSubmitting] = useState(false);
+  const [backgroundJobId, setBackgroundJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const abortRef = useRef(false);
   const requestIdRef = useRef(0);
+  const { jobs } = useGenerationJobs();
+
+  const backgroundJob = useMemo(
+    () =>
+      backgroundJobId
+        ? jobs.find((job) => job.id === backgroundJobId)
+        : undefined,
+    [backgroundJobId, jobs],
+  );
+  const isBackgroundGenerating = backgroundJobId != null;
 
   useEffect(() => {
     if (!open) return;
@@ -115,8 +127,26 @@ export function TextToVideoModal({
     setBoundaryRatio(String(DEFAULT_VIDEO_BOUNDARY_RATIO));
     setFlowShift(String(DEFAULT_VIDEO_FLOW_SHIFT));
     setSeed(String(DEFAULT_VIDEO_SEED));
+    setSubmitting(false);
+    setBackgroundJobId(null);
     setError("");
   }, [initialName, initialPrompt, open]);
+
+  useEffect(() => {
+    if (!backgroundJob || backgroundJob.status === "running") return;
+
+    if (backgroundJob.status === "success") {
+      onClose();
+      return;
+    }
+
+    const message = backgroundJob.errorMessage ?? errors.videoConfigRequired;
+    setSubmitting(false);
+    setBackgroundJobId(null);
+    setError(
+      message === "VIDEO_CONFIG_REQUIRED" ? errors.videoConfigRequired : message,
+    );
+  }, [backgroundJob, errors.videoConfigRequired, onClose]);
 
   const canSubmit = name.trim() && prompt.trim() && !submitting;
 
@@ -130,19 +160,20 @@ export function TextToVideoModal({
   );
 
   const handleClose = useCallback(() => {
-    if (submitting) {
+    if (submitting && !isBackgroundGenerating) {
       abortRef.current = true;
       requestIdRef.current += 1;
       setSubmitting(false);
     }
+    setBackgroundJobId(null);
     onClose();
-  }, [onClose, submitting]);
+  }, [isBackgroundGenerating, onClose, submitting]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
 
     if (allowBackground && onBackgroundSubmit) {
-      onBackgroundSubmit({
+      const jobId = onBackgroundSubmit({
         name: name.trim(),
         prompt: prompt.trim(),
         model: videoModel || m.modelDefault,
@@ -165,7 +196,9 @@ export function TextToVideoModal({
         flowShift: parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT),
         seed: parsePositiveInt(seed, DEFAULT_VIDEO_SEED),
       });
-      onClose();
+      setBackgroundJobId(jobId);
+      setSubmitting(true);
+      setError("");
       return;
     }
 
@@ -289,7 +322,7 @@ export function TextToVideoModal({
               type="button"
               aria-label={m.cancel}
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={submitting ? undefined : handleClose}
+              onClick={submitting && !isBackgroundGenerating ? undefined : handleClose}
             />
 
             <motion.div
@@ -313,12 +346,14 @@ export function TextToVideoModal({
                 >
                   {m.title}
                 </h3>
-                {!submitting ? (
+                {!submitting || isBackgroundGenerating ? (
                   <button
                     type="button"
                     onClick={handleClose}
-                    title={m.cancel}
-                    aria-label={m.cancel}
+                    title={isBackgroundGenerating ? m.closeWhileGenerating : m.cancel}
+                    aria-label={
+                      isBackgroundGenerating ? m.closeWhileGenerating : m.cancel
+                    }
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white"
                   >
                     <FontAwesomeIcon icon={faXmark} />
@@ -503,7 +538,14 @@ export function TextToVideoModal({
                       aria-live="polite"
                       aria-busy="true"
                     >
-                      <PaintbrushLoading label={m.generating} />
+                      <div className="flex flex-col items-center gap-3">
+                        <PaintbrushLoading label={m.generating} />
+                        {isBackgroundGenerating ? (
+                          <p className="max-w-xs text-center text-xs text-text-muted">
+                            {m.backgroundGeneratingHint}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -515,7 +557,11 @@ export function TextToVideoModal({
                   onClick={handleClose}
                   className="rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white"
                 >
-                  {submitting ? m.abortGenerating : m.cancel}
+                  {submitting
+                    ? isBackgroundGenerating
+                      ? m.closeWhileGenerating
+                      : m.abortGenerating
+                    : m.cancel}
                 </button>
                 <button
                   type="button"

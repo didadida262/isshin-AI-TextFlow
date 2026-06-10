@@ -332,14 +332,14 @@ export function GenerateVideoStep({
         initialName={videoScript?.name ?? ""}
         initialPrompt={videoScript?.content ?? ""}
         onClose={closeVideoModal}
-        onBackgroundSubmit={(values) => {
+        onBackgroundSubmit={(values) =>
           startVideoJob({
             projectId: project.id,
             projectName: project.name,
             values,
             onWorkflowChange: onVideosUpdated,
-          });
-        }}
+          })
+        }
       />
 
       <ScriptEpisodeDetailModal

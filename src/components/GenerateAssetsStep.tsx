@@ -595,15 +595,15 @@ export function GenerateAssetsStep({
         config={config}
         allowBackground
         onClose={() => setGenerateModalOpen(false)}
-        onBackgroundSubmit={(values) => {
+        onBackgroundSubmit={(values) =>
           startImageJob({
             projectId: project.id,
             projectName: project.name,
             values,
             config,
             onWorkflowChange,
-          });
-        }}
+          })
+        }
       />
 
       <AssetImagePreviewModal

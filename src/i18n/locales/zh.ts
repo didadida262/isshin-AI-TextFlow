@@ -274,6 +274,7 @@ export type TranslationSchema = {
       statusSuccess: string;
       statusError: string;
       statusPending: string;
+      generatingRowScript: string;
       noContent: string;
       chatWelcome: string;
       chatWelcomeHint: string;
@@ -414,6 +415,8 @@ export type TranslationSchema = {
       confirm: string;
       generating: string;
       abortGenerating: string;
+      closeWhileGenerating: string;
+      backgroundGeneratingHint: string;
     };
     textToVideoModal: {
       title: string;
@@ -436,6 +439,8 @@ export type TranslationSchema = {
       confirm: string;
       generating: string;
       abortGenerating: string;
+      closeWhileGenerating: string;
+      backgroundGeneratingHint: string;
     };
     editAssetModal: {
       title: string;
@@ -804,6 +809,7 @@ export const zh: TranslationSchema = {
       statusSuccess: "已完成",
       statusError: "失败",
       statusPending: "待生成",
+      generatingRowScript: "正在生成…",
       noContent: "—",
       chatWelcome: "你好，我是剧本统筹 Agent。",
       chatWelcomeHint:
@@ -954,6 +960,8 @@ export const zh: TranslationSchema = {
       confirm: "开始生成",
       generating: "生成中…",
       abortGenerating: "中断生成",
+      closeWhileGenerating: "关闭",
+      backgroundGeneratingHint: "关闭窗口后可在通知面板继续查看进度",
     },
     textToVideoModal: {
       title: "视频生成",
@@ -977,6 +985,8 @@ export const zh: TranslationSchema = {
       confirm: "开始生成",
       generating: "生成中…",
       abortGenerating: "中断生成",
+      closeWhileGenerating: "关闭",
+      backgroundGeneratingHint: "关闭窗口后可在通知面板继续查看进度",
     },
     editAssetModal: {
       title: "编辑资产",

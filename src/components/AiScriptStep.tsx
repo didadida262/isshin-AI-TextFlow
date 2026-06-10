@@ -128,6 +128,7 @@ export function AiScriptStep({
           <ScriptWorkspacePanel
             workData={workData}
             scripts={scripts}
+            chapters={chapters}
             hasFailedScripts={hasFailedScripts}
             isGenerating={isGenerating}
             generationProgress={generationProgress}

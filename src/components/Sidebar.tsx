@@ -151,7 +151,7 @@ export function Sidebar({
           >
             <FontAwesomeIcon icon={faBell} className="text-sm" />
             {notificationCount > 0 ? (
-              <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-black">
+              <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
                 {notificationCount > 9 ? "9+" : notificationCount}
               </span>
             ) : null}
