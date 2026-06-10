@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
@@ -112,6 +113,7 @@ export function ProjectDetailView({
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [stepDirection, setStepDirection] = useState(0);
   const [enableStepAnimation, setEnableStepAnimation] = useState(false);
+  const { navigationTarget } = useGenerationJobs();
 
   useEffect(() => {
     if (!HIDDEN_WORKFLOW_STEPS.includes(selectedStep)) return;
@@ -211,6 +213,12 @@ export function ProjectDetailView({
     },
     [loadNodeDetail, project.id, selectedStep],
   );
+
+  useEffect(() => {
+    if (!navigationTarget || navigationTarget.projectId !== project.id) return;
+    if (navigationTarget.stepId === selectedStep) return;
+    handleStepChange(navigationTarget.stepId);
+  }, [handleStepChange, navigationTarget, project.id, selectedStep]);
 
   const activeLabel = w[selectedStep];
 

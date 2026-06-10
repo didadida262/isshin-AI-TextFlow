@@ -12,6 +12,7 @@ import { getPromptRefineSettingsFromConfig } from "../services/config";
 import { generateImageB64 } from "../services/imageGeneration";
 import { expandPrompt } from "../services/promptRefine";
 import type { AppConfig } from "../types";
+import { parsePositiveInt } from "../utils/numericInput";
 import { PaintbrushLoading } from "./PaintbrushLoading";
 import { ModalPortal } from "./ModalPortal";
 import { Select } from "./Select";
@@ -27,11 +28,18 @@ export interface GenerateAssetFormValues {
   generationDurationMs: number;
 }
 
+type GenerateAssetSubmitValues = Omit<
+  GenerateAssetFormValues,
+  "generationDurationMs"
+>;
+
 interface GenerateAssetModalProps {
   open: boolean;
   config: AppConfig;
   onClose: () => void;
-  onSubmit: (values: GenerateAssetFormValues, imageB64: string) => Promise<void>;
+  onSubmit?: (values: GenerateAssetFormValues, imageB64: string) => Promise<void>;
+  allowBackground?: boolean;
+  onBackgroundSubmit?: (values: GenerateAssetSubmitValues) => void;
 }
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
@@ -45,16 +53,13 @@ const fieldClass =
 const readOnlyClass =
   "box-border h-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-text-muted outline-none read-only:cursor-default read-only:opacity-70";
 
-function parsePositiveInt(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
-}
-
 export function GenerateAssetModal({
   open,
   config,
   onClose,
   onSubmit,
+  allowBackground = false,
+  onBackgroundSubmit,
 }: GenerateAssetModalProps) {
   const m = useTranslationMessages().creation.generateAssetModal;
   const errors = useTranslationMessages().errors;
@@ -69,7 +74,7 @@ export function GenerateAssetModal({
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState(defaultSize);
   const [numInferenceSteps, setNumInferenceSteps] = useState(
-    DEFAULT_NUM_INFERENCE_STEPS,
+    String(DEFAULT_NUM_INFERENCE_STEPS),
   );
   const [submitting, setSubmitting] = useState(false);
   const [expandingPrompt, setExpandingPrompt] = useState(false);
@@ -85,7 +90,7 @@ export function GenerateAssetModal({
     setAssetType("scene");
     setPrompt("");
     setSize(defaultSize);
-    setNumInferenceSteps(DEFAULT_NUM_INFERENCE_STEPS);
+    setNumInferenceSteps(String(DEFAULT_NUM_INFERENCE_STEPS));
     setExpandingPrompt(false);
     setError("");
   }, [config.imageModel, defaultSize, open]);
@@ -176,18 +181,44 @@ export function GenerateAssetModal({
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
+
+    if (allowBackground && onBackgroundSubmit) {
+      const resolvedNumInferenceSteps = parsePositiveInt(
+        numInferenceSteps,
+        DEFAULT_NUM_INFERENCE_STEPS,
+      );
+      onBackgroundSubmit({
+        name: name.trim(),
+        assetType,
+        prompt: prompt.trim(),
+        model: imageModel,
+        size,
+        n: imageCount,
+        numInferenceSteps: resolvedNumInferenceSteps,
+      });
+      onClose();
+      return;
+    }
+
+    if (!onSubmit) return;
+
     const requestId = ++requestIdRef.current;
     abortRef.current = false;
     setSubmitting(true);
     setError("");
     const startedAt = performance.now();
     try {
+      const resolvedNumInferenceSteps = parsePositiveInt(
+        numInferenceSteps,
+        DEFAULT_NUM_INFERENCE_STEPS,
+      );
+
       const imageB64 = await generateImageB64({
         prompt,
         size,
         model: imageModel,
         n: imageCount,
-        numInferenceSteps,
+        numInferenceSteps: resolvedNumInferenceSteps,
         settings: imageSettings,
       });
       if (abortRef.current || requestId !== requestIdRef.current) return;
@@ -202,7 +233,7 @@ export function GenerateAssetModal({
           model: imageModel,
           size,
           n: imageCount,
-          numInferenceSteps,
+          numInferenceSteps: resolvedNumInferenceSteps,
           generationDurationMs,
         },
         imageB64,
@@ -224,6 +255,7 @@ export function GenerateAssetModal({
       }
     }
   }, [
+    allowBackground,
     assetType,
     canSubmit,
     errors.imageConfigRequired,
@@ -232,6 +264,7 @@ export function GenerateAssetModal({
     imageSettings,
     name,
     numInferenceSteps,
+    onBackgroundSubmit,
     onClose,
     onSubmit,
     prompt,
@@ -397,11 +430,7 @@ export function GenerateAssetModal({
                       min={1}
                       max={100}
                       value={numInferenceSteps}
-                      onChange={(event) =>
-                        setNumInferenceSteps(
-                          parsePositiveInt(event.target.value, DEFAULT_NUM_INFERENCE_STEPS),
-                        )
-                      }
+                      onChange={(event) => setNumInferenceSteps(event.target.value)}
                       disabled={submitting}
                       className={fieldClass}
                     />

@@ -10,6 +10,7 @@ import {
 import { downloadBase64Media } from "../../services/mediaDownload";
 import { useI18n, useTranslationMessages } from "../../contexts/I18nContext";
 import { formatDurationMs } from "../../utils/formatDuration";
+import { parsePositiveInt } from "../../utils/numericInput";
 import {
   DEFAULT_IMAGE_COUNT,
   DEFAULT_IMAGE_SIZE,
@@ -49,11 +50,6 @@ function toImageSrc(b64: string): string {
   return `data:image/png;base64,${cleaned}`;
 }
 
-function parsePositiveInt(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
-}
-
 export function ImageTestResultModal({
   open,
   settings,
@@ -67,7 +63,7 @@ export function ImageTestResultModal({
   const [prompt, setPrompt] = useState(IMAGE_TEST_PROMPT);
   const [size, setSize] = useState(DEFAULT_IMAGE_SIZE);
   const [numInferenceSteps, setNumInferenceSteps] = useState(
-    DEFAULT_NUM_INFERENCE_STEPS,
+    String(DEFAULT_NUM_INFERENCE_STEPS),
   );
   const [imageB64, setImageB64] = useState("");
   const [error, setError] = useState("");
@@ -85,7 +81,7 @@ export function ImageTestResultModal({
     setPhase("form");
     setPrompt(IMAGE_TEST_PROMPT);
     setSize(defaultSize);
-    setNumInferenceSteps(DEFAULT_NUM_INFERENCE_STEPS);
+    setNumInferenceSteps(String(DEFAULT_NUM_INFERENCE_STEPS));
     setImageB64("");
     setError("");
     setElapsedMs(null);
@@ -126,7 +122,10 @@ export function ImageTestResultModal({
       size,
       model: imageModel,
       n: imageCount,
-      numInferenceSteps,
+      numInferenceSteps: parsePositiveInt(
+        numInferenceSteps,
+        DEFAULT_NUM_INFERENCE_STEPS,
+      ),
       settings,
     })
       .then((b64) => {
@@ -255,14 +254,7 @@ export function ImageTestResultModal({
                         min={1}
                         max={100}
                         value={numInferenceSteps}
-                        onChange={(event) =>
-                          setNumInferenceSteps(
-                            parsePositiveInt(
-                              event.target.value,
-                              DEFAULT_NUM_INFERENCE_STEPS,
-                            ),
-                          )
-                        }
+                        onChange={(event) => setNumInferenceSteps(event.target.value)}
                         className={fieldClass}
                       />
                     </label>

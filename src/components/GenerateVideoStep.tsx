@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -9,7 +10,6 @@ import {
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   ASSET_STATE_ERROR,
-  createProjectAsset,
   type ProjectAssetRecord,
 } from "../services/assets";
 import {
@@ -20,10 +20,7 @@ import {
 import type { CreationProject } from "../types";
 import { ScriptEpisodeDetailModal } from "./ScriptEpisodeDetailModal";
 import { VideoThumbnail } from "./VideoThumbnail";
-import {
-  TextToVideoModal,
-  type TextToVideoFormValues,
-} from "./TextToVideoModal";
+import { TextToVideoModal } from "./TextToVideoModal";
 
 interface GenerateVideoStepProps {
   project: CreationProject;
@@ -151,17 +148,55 @@ export function GenerateVideoStep({
   onConfigError,
   onVideosUpdated,
 }: GenerateVideoStepProps) {
+  void onConfigError;
   const s = useTranslationMessages().creation.generateVideoStep;
   const [videos, setVideos] = useState(initialVideos);
   const [videoScript, setVideoScript] = useState<ScriptRecord | null>(null);
   const [detailScript, setDetailScript] = useState<ScriptRecord | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const { startVideoJob, navigationTarget, clearNavigationTarget } =
+    useGenerationJobs();
 
   useEffect(() => {
     setVideos(initialVideos);
   }, [initialVideos]);
 
   const videoMap = useMemo(() => buildLatestVideoMap(videos), [videos]);
+
+  useEffect(() => {
+    if (
+      !navigationTarget ||
+      navigationTarget.projectId !== project.id ||
+      navigationTarget.stepId !== "generateVideo" ||
+      !navigationTarget.scriptName
+    ) {
+      return;
+    }
+
+    const script = scripts.find(
+      (item) => item.name === navigationTarget.scriptName,
+    );
+    if (!script) {
+      clearNavigationTarget();
+      return;
+    }
+
+    if (navigationTarget.assetId != null) {
+      const video = videoMap.get(script.name);
+      if (!video || video.id !== navigationTarget.assetId) {
+        return;
+      }
+    }
+
+    setDetailScript(script);
+    clearNavigationTarget();
+  }, [
+    clearNavigationTarget,
+    navigationTarget,
+    project.id,
+    scripts,
+    videoMap,
+  ]);
 
   const sorted = [...scripts].sort((a, b) => a.episodeIndex - b.episodeIndex);
   const hasScripts = sorted.length > 0;
@@ -175,34 +210,6 @@ export function GenerateVideoStep({
     setModalOpen(false);
     setVideoScript(null);
   }, []);
-
-  const handleCreateVideo = useCallback(
-    async (values: TextToVideoFormValues, videoB64: string) => {
-      onConfigError(null);
-      const saved = await createProjectAsset({
-        projectId: project.id,
-        name: values.name,
-        assetType: "video",
-        prompt: values.prompt,
-        model: values.model,
-        size: values.size,
-        videoB64,
-        generationDurationMs: values.generationDurationMs,
-        numInferenceSteps: values.numInferenceSteps,
-      });
-
-      setVideos((prev) => [
-        saved,
-        ...prev.filter((item) => item.name !== saved.name),
-      ]);
-      if (videoScript) {
-        setDetailScript(videoScript);
-      }
-      closeVideoModal();
-      onVideosUpdated?.();
-    },
-    [closeVideoModal, onConfigError, onVideosUpdated, project.id, videoScript],
-  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -321,10 +328,18 @@ export function GenerateVideoStep({
 
       <TextToVideoModal
         open={modalOpen}
+        allowBackground
         initialName={videoScript?.name ?? ""}
         initialPrompt={videoScript?.content ?? ""}
         onClose={closeVideoModal}
-        onSubmit={handleCreateVideo}
+        onBackgroundSubmit={(values) => {
+          startVideoJob({
+            projectId: project.id,
+            projectName: project.name,
+            values,
+            onWorkflowChange: onVideosUpdated,
+          });
+        }}
       />
 
       <ScriptEpisodeDetailModal

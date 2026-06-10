@@ -7,6 +7,11 @@ import { CreationView } from "./components/CreationView";
 import { SettingsModal } from "./components/settings/SettingsModal";
 import { LoginView } from "./components/LoginView";
 import { I18nProvider, useTranslationMessages } from "./contexts/I18nContext";
+import {
+  GenerationJobsProvider,
+  useGenerationJobs,
+} from "./contexts/GenerationJobsContext";
+import { GenerationNotificationsPanel } from "./components/GenerationNotificationsPanel";
 import { useAppState } from "./hooks/useAppState";
 import { readAuthSession, logout as clearAuthSession } from "./services/auth";
 import type { AppNav, AuthUser } from "./types";
@@ -37,28 +42,34 @@ const navPanelVariants = {
   }),
 };
 
-function MainApp({
+function MainAppInner({
   user,
   onLogout,
+  activeNav,
+  onNavChange,
 }: {
   user: AuthUser;
   onLogout: () => void;
+  activeNav: AppNav;
+  onNavChange: (nav: AppNav) => void;
 }) {
-  const [activeNav, setActiveNav] = useState<AppNav>("creation");
   const [navDirection, setNavDirection] = useState(0);
   const [enableNavAnimation, setEnableNavAnimation] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dataRevision, setDataRevision] = useState(0);
 
-  const handleNavChange = useCallback((nav: AppNav) => {
-    if (nav === activeNav) return;
+  const handleNavChange = useCallback(
+    (nav: AppNav) => {
+      if (nav === activeNav) return;
 
-    const prevIndex = NAV_ORDER.indexOf(activeNav);
-    const nextIndex = NAV_ORDER.indexOf(nav);
-    setNavDirection(nextIndex >= prevIndex ? 1 : -1);
-    setEnableNavAnimation(true);
-    setActiveNav(nav);
-  }, [activeNav]);
+      const prevIndex = NAV_ORDER.indexOf(activeNav);
+      const nextIndex = NAV_ORDER.indexOf(nav);
+      setNavDirection(nextIndex >= prevIndex ? 1 : -1);
+      setEnableNavAnimation(true);
+      onNavChange(nav);
+    },
+    [activeNav, onNavChange],
+  );
 
   const {
     config,
@@ -82,6 +93,7 @@ function MainApp({
     setChatMode,
   } = useAppState();
   const i18n = useTranslationMessages();
+  const { unreadCount, setPanelOpen } = useGenerationJobs();
 
   const handleCreationConfigError = (message: string | null) => {
     setConfigError(message);
@@ -106,6 +118,8 @@ function MainApp({
           setConfigError(null);
           setSettingsOpen(true);
         }}
+        onOpenNotifications={() => setPanelOpen(true)}
+        notificationCount={unreadCount}
         onLogout={() => {
           clearAuthSession();
           onLogout();
@@ -169,7 +183,30 @@ function MainApp({
         onSave={handleSaveConfig}
         onDatabaseChanged={() => setDataRevision((revision) => revision + 1)}
       />
+
+      <GenerationNotificationsPanel />
     </div>
+  );
+}
+
+function MainApp({
+  user,
+  onLogout,
+}: {
+  user: AuthUser;
+  onLogout: () => void;
+}) {
+  const [activeNav, setActiveNav] = useState<AppNav>("creation");
+
+  return (
+    <GenerationJobsProvider onNavigateToCreation={() => setActiveNav("creation")}>
+      <MainAppInner
+        user={user}
+        onLogout={onLogout}
+        activeNav={activeNav}
+        onNavChange={setActiveNav}
+      />
+    </GenerationJobsProvider>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   batchGenerateDraftAssets,
@@ -7,7 +8,6 @@ import {
   type DraftAssetItem,
 } from "../services/assetExtraction";
 import {
-  createProjectAsset,
   deleteProjectAsset,
   listProjectAssets,
   regenerateProjectAsset,
@@ -25,10 +25,7 @@ import { AssetImagePreviewModal } from "./AssetImagePreviewModal";
 import { AssetListTable } from "./AssetListTable";
 import { DeleteAssetConfirmModal } from "./DeleteAssetConfirmModal";
 import { EditAssetModal } from "./EditAssetModal";
-import {
-  GenerateAssetModal,
-  type GenerateAssetFormValues,
-} from "./GenerateAssetModal";
+import { GenerateAssetModal } from "./GenerateAssetModal";
 
 const PAGE_SIZE = 10;
 
@@ -76,6 +73,8 @@ export function GenerateAssetsStep({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const batchAbortRef = useRef<AbortController | null>(null);
+  const { startImageJob, navigationTarget, clearNavigationTarget } =
+    useGenerationJobs();
 
   const totalPages = Math.max(1, Math.ceil(assets.total / PAGE_SIZE));
   const hasDrafts = draftAssets.length > 0;
@@ -111,27 +110,42 @@ export function GenerateAssetsStep({
     };
   }, []);
 
-  const handleCreateAsset = useCallback(
-    async (values: GenerateAssetFormValues, imageB64: string) => {
-      onConfigError(null);
-      const saved = await createProjectAsset({
-        projectId: project.id,
-        name: values.name,
-        assetType: values.assetType,
-        prompt: values.prompt,
-        model: values.model,
-        size: values.size,
-        imageB64,
-        generationDurationMs: values.generationDurationMs,
-        numInferenceSteps: values.numInferenceSteps,
-      });
+  useEffect(() => {
+    if (
+      !navigationTarget ||
+      navigationTarget.projectId !== project.id ||
+      navigationTarget.stepId !== "generateAssets" ||
+      navigationTarget.assetId == null
+    ) {
+      return;
+    }
 
-      setPreviewAsset(saved);
-      await loadPage(1);
-      onWorkflowChange?.();
-    },
-    [loadPage, onConfigError, onWorkflowChange, project.id],
-  );
+    const assetId = navigationTarget.assetId;
+    let cancelled = false;
+
+    void (async () => {
+      const result = await listProjectAssets(project.id, 1, 100, {
+        excludeAssetTypes: ["video"],
+      });
+      if (cancelled) return;
+
+      const asset = result.items.find((item) => item.id === assetId);
+      if (asset) {
+        setPreviewAsset(asset);
+        await loadPage(1);
+      }
+      clearNavigationTarget();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    clearNavigationTarget,
+    loadPage,
+    navigationTarget,
+    project.id,
+  ]);
 
   const handleUpdateAsset = useCallback(
     async (assetId: number, name: string, assetType: string) => {
@@ -579,8 +593,17 @@ export function GenerateAssetsStep({
       <GenerateAssetModal
         open={generateModalOpen}
         config={config}
+        allowBackground
         onClose={() => setGenerateModalOpen(false)}
-        onSubmit={handleCreateAsset}
+        onBackgroundSubmit={(values) => {
+          startImageJob({
+            projectId: project.id,
+            projectName: project.name,
+            values,
+            config,
+            onWorkflowChange,
+          });
+        }}
       />
 
       <AssetImagePreviewModal

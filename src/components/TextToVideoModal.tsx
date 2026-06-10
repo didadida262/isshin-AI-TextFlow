@@ -17,6 +17,7 @@ import {
   loadConfig,
 } from "../services/config";
 import { generateVideoB64 } from "../services/videoGeneration";
+import { parsePositiveFloat, parsePositiveInt } from "../utils/numericInput";
 import { PaintbrushLoading } from "./PaintbrushLoading";
 import { ModalPortal } from "./ModalPortal";
 import { Select } from "./Select";
@@ -37,10 +38,14 @@ export interface TextToVideoFormValues {
   generationDurationMs: number;
 }
 
+type TextToVideoSubmitValues = Omit<TextToVideoFormValues, "generationDurationMs">;
+
 interface TextToVideoModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (values: TextToVideoFormValues, videoB64: string) => Promise<void>;
+  onSubmit?: (values: TextToVideoFormValues, videoB64: string) => Promise<void>;
+  allowBackground?: boolean;
+  onBackgroundSubmit?: (values: TextToVideoSubmitValues) => void;
   initialName?: string;
   initialPrompt?: string;
 }
@@ -56,20 +61,12 @@ const fieldClass =
 const readOnlyClass =
   "box-border h-10 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-text-muted outline-none read-only:cursor-default read-only:opacity-70";
 
-function parsePositiveInt(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
-}
-
-function parsePositiveFloat(value: string, fallback: number): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 export function TextToVideoModal({
   open,
   onClose,
   onSubmit,
+  allowBackground = false,
+  onBackgroundSubmit,
   initialName = "",
   initialPrompt = "",
 }: TextToVideoModalProps) {
@@ -79,18 +76,22 @@ export function TextToVideoModal({
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState(DEFAULT_VIDEO_SIZE);
-  const [numFrames, setNumFrames] = useState(DEFAULT_VIDEO_NUM_FRAMES);
-  const [fps, setFps] = useState(DEFAULT_VIDEO_FPS);
+  const [numFrames, setNumFrames] = useState(String(DEFAULT_VIDEO_NUM_FRAMES));
+  const [fps, setFps] = useState(String(DEFAULT_VIDEO_FPS));
   const [numInferenceSteps, setNumInferenceSteps] = useState(
-    DEFAULT_VIDEO_INFERENCE_STEPS,
+    String(DEFAULT_VIDEO_INFERENCE_STEPS),
   );
-  const [guidanceScale, setGuidanceScale] = useState(DEFAULT_VIDEO_GUIDANCE_SCALE);
+  const [guidanceScale, setGuidanceScale] = useState(
+    String(DEFAULT_VIDEO_GUIDANCE_SCALE),
+  );
   const [guidanceScale2, setGuidanceScale2] = useState(
-    DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+    String(DEFAULT_VIDEO_GUIDANCE_SCALE_2),
   );
-  const [boundaryRatio, setBoundaryRatio] = useState(DEFAULT_VIDEO_BOUNDARY_RATIO);
-  const [flowShift, setFlowShift] = useState(DEFAULT_VIDEO_FLOW_SHIFT);
-  const [seed, setSeed] = useState(DEFAULT_VIDEO_SEED);
+  const [boundaryRatio, setBoundaryRatio] = useState(
+    String(DEFAULT_VIDEO_BOUNDARY_RATIO),
+  );
+  const [flowShift, setFlowShift] = useState(String(DEFAULT_VIDEO_FLOW_SHIFT));
+  const [seed, setSeed] = useState(String(DEFAULT_VIDEO_SEED));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const abortRef = useRef(false);
@@ -106,14 +107,14 @@ export function TextToVideoModal({
     setName(initialName.trim());
     setPrompt(initialPrompt.trim());
     setSize(DEFAULT_VIDEO_SIZE);
-    setNumFrames(DEFAULT_VIDEO_NUM_FRAMES);
-    setFps(DEFAULT_VIDEO_FPS);
-    setNumInferenceSteps(DEFAULT_VIDEO_INFERENCE_STEPS);
-    setGuidanceScale(DEFAULT_VIDEO_GUIDANCE_SCALE);
-    setGuidanceScale2(DEFAULT_VIDEO_GUIDANCE_SCALE_2);
-    setBoundaryRatio(DEFAULT_VIDEO_BOUNDARY_RATIO);
-    setFlowShift(DEFAULT_VIDEO_FLOW_SHIFT);
-    setSeed(DEFAULT_VIDEO_SEED);
+    setNumFrames(String(DEFAULT_VIDEO_NUM_FRAMES));
+    setFps(String(DEFAULT_VIDEO_FPS));
+    setNumInferenceSteps(String(DEFAULT_VIDEO_INFERENCE_STEPS));
+    setGuidanceScale(String(DEFAULT_VIDEO_GUIDANCE_SCALE));
+    setGuidanceScale2(String(DEFAULT_VIDEO_GUIDANCE_SCALE_2));
+    setBoundaryRatio(String(DEFAULT_VIDEO_BOUNDARY_RATIO));
+    setFlowShift(String(DEFAULT_VIDEO_FLOW_SHIFT));
+    setSeed(String(DEFAULT_VIDEO_SEED));
     setError("");
   }, [initialName, initialPrompt, open]);
 
@@ -139,23 +140,75 @@ export function TextToVideoModal({
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
+
+    if (allowBackground && onBackgroundSubmit) {
+      onBackgroundSubmit({
+        name: name.trim(),
+        prompt: prompt.trim(),
+        model: videoModel || m.modelDefault,
+        size,
+        numFrames: parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES),
+        fps: parsePositiveInt(fps, DEFAULT_VIDEO_FPS),
+        numInferenceSteps: parsePositiveInt(
+          numInferenceSteps,
+          DEFAULT_VIDEO_INFERENCE_STEPS,
+        ),
+        guidanceScale: parsePositiveFloat(guidanceScale, DEFAULT_VIDEO_GUIDANCE_SCALE),
+        guidanceScale2: parsePositiveFloat(
+          guidanceScale2,
+          DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+        ),
+        boundaryRatio: parsePositiveFloat(
+          boundaryRatio,
+          DEFAULT_VIDEO_BOUNDARY_RATIO,
+        ),
+        flowShift: parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT),
+        seed: parsePositiveInt(seed, DEFAULT_VIDEO_SEED),
+      });
+      onClose();
+      return;
+    }
+
+    if (!onSubmit) return;
+
     const requestId = ++requestIdRef.current;
     abortRef.current = false;
     setSubmitting(true);
     setError("");
     const startedAt = performance.now();
     try {
+      const resolvedNumFrames = parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES);
+      const resolvedFps = parsePositiveInt(fps, DEFAULT_VIDEO_FPS);
+      const resolvedNumInferenceSteps = parsePositiveInt(
+        numInferenceSteps,
+        DEFAULT_VIDEO_INFERENCE_STEPS,
+      );
+      const resolvedGuidanceScale = parsePositiveFloat(
+        guidanceScale,
+        DEFAULT_VIDEO_GUIDANCE_SCALE,
+      );
+      const resolvedGuidanceScale2 = parsePositiveFloat(
+        guidanceScale2,
+        DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+      );
+      const resolvedBoundaryRatio = parsePositiveFloat(
+        boundaryRatio,
+        DEFAULT_VIDEO_BOUNDARY_RATIO,
+      );
+      const resolvedFlowShift = parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT);
+      const resolvedSeed = parsePositiveInt(seed, DEFAULT_VIDEO_SEED);
+
       const videoB64 = await generateVideoB64({
         prompt,
         size,
-        numFrames,
-        fps,
-        numInferenceSteps,
-        guidanceScale,
-        guidanceScale2,
-        boundaryRatio,
-        flowShift,
-        seed,
+        numFrames: resolvedNumFrames,
+        fps: resolvedFps,
+        numInferenceSteps: resolvedNumInferenceSteps,
+        guidanceScale: resolvedGuidanceScale,
+        guidanceScale2: resolvedGuidanceScale2,
+        boundaryRatio: resolvedBoundaryRatio,
+        flowShift: resolvedFlowShift,
+        seed: resolvedSeed,
       });
       if (abortRef.current || requestId !== requestIdRef.current) return;
 
@@ -170,14 +223,14 @@ export function TextToVideoModal({
           prompt: prompt.trim(),
           model: videoModel || m.modelDefault,
           size,
-          numFrames,
-          fps,
-          numInferenceSteps,
-          guidanceScale,
-          guidanceScale2,
-          boundaryRatio,
-          flowShift,
-          seed,
+          numFrames: resolvedNumFrames,
+          fps: resolvedFps,
+          numInferenceSteps: resolvedNumInferenceSteps,
+          guidanceScale: resolvedGuidanceScale,
+          guidanceScale2: resolvedGuidanceScale2,
+          boundaryRatio: resolvedBoundaryRatio,
+          flowShift: resolvedFlowShift,
+          seed: resolvedSeed,
           generationDurationMs,
         },
         videoB64,
@@ -199,6 +252,7 @@ export function TextToVideoModal({
       }
     }
   }, [
+    allowBackground,
     boundaryRatio,
     canSubmit,
     errors.videoConfigRequired,
@@ -210,6 +264,7 @@ export function TextToVideoModal({
     name,
     numFrames,
     numInferenceSteps,
+    onBackgroundSubmit,
     onClose,
     onSubmit,
     prompt,
@@ -325,14 +380,7 @@ export function TextToVideoModal({
                             min={1}
                             max={200}
                             value={numFrames}
-                            onChange={(event) =>
-                              setNumFrames(
-                                parsePositiveInt(
-                                  event.target.value,
-                                  DEFAULT_VIDEO_NUM_FRAMES,
-                                ),
-                              )
-                            }
+                            onChange={(event) => setNumFrames(event.target.value)}
                             disabled={submitting}
                             className={fieldClass}
                           />
@@ -345,9 +393,7 @@ export function TextToVideoModal({
                             min={1}
                             max={60}
                             value={fps}
-                            onChange={(event) =>
-                              setFps(parsePositiveInt(event.target.value, DEFAULT_VIDEO_FPS))
-                            }
+                            onChange={(event) => setFps(event.target.value)}
                             disabled={submitting}
                             className={fieldClass}
                           />
@@ -363,14 +409,7 @@ export function TextToVideoModal({
                           min={1}
                           max={100}
                           value={numInferenceSteps}
-                          onChange={(event) =>
-                            setNumInferenceSteps(
-                              parsePositiveInt(
-                                event.target.value,
-                                DEFAULT_VIDEO_INFERENCE_STEPS,
-                              ),
-                            )
-                          }
+                          onChange={(event) => setNumInferenceSteps(event.target.value)}
                           disabled={submitting}
                           className={fieldClass}
                         />
@@ -386,14 +425,7 @@ export function TextToVideoModal({
                             min={0}
                             step={0.1}
                             value={guidanceScale}
-                            onChange={(event) =>
-                              setGuidanceScale(
-                                parsePositiveFloat(
-                                  event.target.value,
-                                  DEFAULT_VIDEO_GUIDANCE_SCALE,
-                                ),
-                              )
-                            }
+                            onChange={(event) => setGuidanceScale(event.target.value)}
                             disabled={submitting}
                             className={fieldClass}
                           />
@@ -408,14 +440,7 @@ export function TextToVideoModal({
                             min={0}
                             step={0.1}
                             value={guidanceScale2}
-                            onChange={(event) =>
-                              setGuidanceScale2(
-                                parsePositiveFloat(
-                                  event.target.value,
-                                  DEFAULT_VIDEO_GUIDANCE_SCALE_2,
-                                ),
-                              )
-                            }
+                            onChange={(event) => setGuidanceScale2(event.target.value)}
                             disabled={submitting}
                             className={fieldClass}
                           />
@@ -433,14 +458,7 @@ export function TextToVideoModal({
                             max={1}
                             step={0.001}
                             value={boundaryRatio}
-                            onChange={(event) =>
-                              setBoundaryRatio(
-                                parsePositiveFloat(
-                                  event.target.value,
-                                  DEFAULT_VIDEO_BOUNDARY_RATIO,
-                                ),
-                              )
-                            }
+                            onChange={(event) => setBoundaryRatio(event.target.value)}
                             disabled={submitting}
                             className={fieldClass}
                           />
@@ -453,14 +471,7 @@ export function TextToVideoModal({
                             min={0}
                             step={0.1}
                             value={flowShift}
-                            onChange={(event) =>
-                              setFlowShift(
-                                parsePositiveFloat(
-                                  event.target.value,
-                                  DEFAULT_VIDEO_FLOW_SHIFT,
-                                ),
-                              )
-                            }
+                            onChange={(event) => setFlowShift(event.target.value)}
                             disabled={submitting}
                             className={fieldClass}
                           />
@@ -473,7 +484,7 @@ export function TextToVideoModal({
                           type="number"
                           value={seed}
                           onChange={(event) =>
-                            setSeed(parsePositiveInt(event.target.value, DEFAULT_VIDEO_SEED))
+                            setSeed(event.target.value)
                           }
                           disabled={submitting}
                           className={fieldClass}

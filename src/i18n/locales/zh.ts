@@ -3,8 +3,22 @@ export type TranslationSchema = {
     session: string;
     creation: string;
     settings: string;
+    notifications: string;
     collapseSidebar: string;
     expandSidebar: string;
+  };
+  notifications: {
+    title: string;
+    open: string;
+    close: string;
+    empty: string;
+    markAllRead: string;
+    dismiss: string;
+    viewResult: string;
+    statusRunning: string;
+    statusSuccess: string;
+    typeImage: string;
+    typeVideo: string;
   };
   language: {
     label: string;
@@ -504,8 +518,22 @@ export const zh: TranslationSchema = {
     session: "会话",
     creation: "项目",
     settings: "设置",
+    notifications: "消息提醒",
     collapseSidebar: "收起侧边栏",
     expandSidebar: "展开侧边栏",
+  },
+  notifications: {
+    title: "生成消息",
+    open: "打开消息面板",
+    close: "关闭",
+    empty: "暂无生成消息",
+    markAllRead: "全部已读",
+    dismiss: "移除",
+    viewResult: "查看结果",
+    statusRunning: "生成中…",
+    statusSuccess: "生成完成",
+    typeImage: "文生图片",
+    typeVideo: "文生视频",
   },
   language: {
     label: "语言",

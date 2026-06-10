@@ -5,6 +5,7 @@ import {
   faChevronRight,
   faClapperboard,
   faComments,
+  faBell,
   faGear,
   faRightFromBracket,
   faUser,
@@ -24,6 +25,8 @@ interface SidebarProps {
   onToggleCollapsed: () => void;
   onNavChange: (nav: AppNav) => void;
   onOpenSettings: () => void;
+  onOpenNotifications: () => void;
+  notificationCount?: number;
   onLogout: () => void;
 }
 
@@ -42,6 +45,8 @@ export function Sidebar({
   onToggleCollapsed,
   onNavChange,
   onOpenSettings,
+  onOpenNotifications,
+  notificationCount = 0,
   onLogout,
 }: SidebarProps) {
   const { t } = useI18n();
@@ -135,6 +140,22 @@ export function Sidebar({
             collapsed ? "flex-col" : ""
           }`}
         >
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            title={t("nav.notifications")}
+            aria-label={t("nav.notifications")}
+            className={`relative flex items-center justify-center text-text-muted transition hover:bg-white/5 hover:text-white ${
+              collapsed ? "border-b border-white/5 py-2.5" : "border-r border-white/5 flex-1 py-2.5"
+            }`}
+          >
+            <FontAwesomeIcon icon={faBell} className="text-sm" />
+            {notificationCount > 0 ? (
+              <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-black">
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
+            ) : null}
+          </button>
           <LanguageToggle
             compact={collapsed}
             className={collapsed ? "border-b border-white/5" : "border-r border-white/5"}

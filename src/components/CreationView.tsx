@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faClapperboard,
@@ -57,6 +58,7 @@ export function CreationView({
     null,
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const { navigationTarget } = useGenerationJobs();
 
   const refreshProjects = useCallback(async () => {
     setLoading(true);
@@ -68,6 +70,13 @@ export function CreationView({
   useEffect(() => {
     void refreshProjects();
   }, [dataRevision, refreshProjects]);
+
+  useEffect(() => {
+    if (!navigationTarget) return;
+    if (activeProjectId === navigationTarget.projectId) return;
+    setActiveProjectId(navigationTarget.projectId);
+    onProjectDetailChange?.(true);
+  }, [activeProjectId, navigationTarget, onProjectDetailChange]);
 
   useEffect(() => {
     if (loading || !activeProjectId) return;

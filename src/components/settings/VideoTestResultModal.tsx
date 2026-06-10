@@ -10,6 +10,7 @@ import {
 import { downloadBase64Media } from "../../services/mediaDownload";
 import { useI18n, useTranslationMessages } from "../../contexts/I18nContext";
 import { formatDurationMs } from "../../utils/formatDuration";
+import { parsePositiveFloat, parsePositiveInt } from "../../utils/numericInput";
 import {
   DEFAULT_KUAIZI_VIDEO_DURATION,
   DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE,
@@ -63,16 +64,6 @@ function toVideoSrc(b64: string): string {
   return `data:video/mp4;base64,${cleaned}`;
 }
 
-function parsePositiveInt(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
-}
-
-function parsePositiveFloat(value: string, fallback: number): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 export function VideoTestResultModal({
   open,
   settings,
@@ -85,25 +76,29 @@ export function VideoTestResultModal({
   const [phase, setPhase] = useState<TestPhase>("form");
   const [prompt, setPrompt] = useState(VIDEO_TEST_PROMPT);
   const [size, setSize] = useState(DEFAULT_VIDEO_SIZE);
-  const [numFrames, setNumFrames] = useState(DEFAULT_VIDEO_NUM_FRAMES);
-  const [fps, setFps] = useState(DEFAULT_VIDEO_FPS);
+  const [numFrames, setNumFrames] = useState(String(DEFAULT_VIDEO_NUM_FRAMES));
+  const [fps, setFps] = useState(String(DEFAULT_VIDEO_FPS));
   const [numInferenceSteps, setNumInferenceSteps] = useState(
-    DEFAULT_VIDEO_INFERENCE_STEPS,
+    String(DEFAULT_VIDEO_INFERENCE_STEPS),
   );
-  const [guidanceScale, setGuidanceScale] = useState(DEFAULT_VIDEO_GUIDANCE_SCALE);
+  const [guidanceScale, setGuidanceScale] = useState(
+    String(DEFAULT_VIDEO_GUIDANCE_SCALE),
+  );
   const [guidanceScale2, setGuidanceScale2] = useState(
-    DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+    String(DEFAULT_VIDEO_GUIDANCE_SCALE_2),
   );
-  const [boundaryRatio, setBoundaryRatio] = useState(DEFAULT_VIDEO_BOUNDARY_RATIO);
-  const [flowShift, setFlowShift] = useState(DEFAULT_VIDEO_FLOW_SHIFT);
-  const [seed, setSeed] = useState(DEFAULT_VIDEO_SEED);
+  const [boundaryRatio, setBoundaryRatio] = useState(
+    String(DEFAULT_VIDEO_BOUNDARY_RATIO),
+  );
+  const [flowShift, setFlowShift] = useState(String(DEFAULT_VIDEO_FLOW_SHIFT));
+  const [seed, setSeed] = useState(String(DEFAULT_VIDEO_SEED));
   const [kuaiziMode, setKuaiziMode] = useState(DEFAULT_KUAIZI_VIDEO_MODE);
   const [kuaiziResolution, setKuaiziResolution] = useState(
     DEFAULT_KUAIZI_VIDEO_RESOLUTION,
   );
   const [kuaiziRatio, setKuaiziRatio] = useState(DEFAULT_KUAIZI_VIDEO_RATIO);
   const [kuaiziDuration, setKuaiziDuration] = useState(
-    DEFAULT_KUAIZI_VIDEO_DURATION,
+    String(DEFAULT_KUAIZI_VIDEO_DURATION),
   );
   const [kuaiziGenerationType, setKuaiziGenerationType] = useState(
     DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE,
@@ -123,18 +118,18 @@ export function VideoTestResultModal({
     setPhase("form");
     setPrompt(VIDEO_TEST_PROMPT);
     setSize(DEFAULT_VIDEO_SIZE);
-    setNumFrames(DEFAULT_VIDEO_NUM_FRAMES);
-    setFps(DEFAULT_VIDEO_FPS);
-    setNumInferenceSteps(DEFAULT_VIDEO_INFERENCE_STEPS);
-    setGuidanceScale(DEFAULT_VIDEO_GUIDANCE_SCALE);
-    setGuidanceScale2(DEFAULT_VIDEO_GUIDANCE_SCALE_2);
-    setBoundaryRatio(DEFAULT_VIDEO_BOUNDARY_RATIO);
-    setFlowShift(DEFAULT_VIDEO_FLOW_SHIFT);
-    setSeed(DEFAULT_VIDEO_SEED);
+    setNumFrames(String(DEFAULT_VIDEO_NUM_FRAMES));
+    setFps(String(DEFAULT_VIDEO_FPS));
+    setNumInferenceSteps(String(DEFAULT_VIDEO_INFERENCE_STEPS));
+    setGuidanceScale(String(DEFAULT_VIDEO_GUIDANCE_SCALE));
+    setGuidanceScale2(String(DEFAULT_VIDEO_GUIDANCE_SCALE_2));
+    setBoundaryRatio(String(DEFAULT_VIDEO_BOUNDARY_RATIO));
+    setFlowShift(String(DEFAULT_VIDEO_FLOW_SHIFT));
+    setSeed(String(DEFAULT_VIDEO_SEED));
     setKuaiziMode(kuaiziDefaults.mode);
     setKuaiziResolution(kuaiziDefaults.resolution);
     setKuaiziRatio(kuaiziDefaults.ratio);
-    setKuaiziDuration(kuaiziDefaults.duration);
+    setKuaiziDuration(String(kuaiziDefaults.duration));
     setKuaiziGenerationType(kuaiziDefaults.generationType);
     setVideoB64("");
     setError("");
@@ -184,21 +179,36 @@ export function VideoTestResultModal({
               mode: kuaiziMode,
               resolution: kuaiziResolution,
               ratio: kuaiziRatio,
-              duration: kuaiziDuration,
+              duration: parsePositiveInt(
+                kuaiziDuration,
+                DEFAULT_KUAIZI_VIDEO_DURATION,
+              ),
               generationType: kuaiziGenerationType,
             },
           }
         : {
             prompt,
             size,
-            numFrames,
-            fps,
-            numInferenceSteps,
-            guidanceScale,
-            guidanceScale2,
-            boundaryRatio,
-            flowShift,
-            seed,
+            numFrames: parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES),
+            fps: parsePositiveInt(fps, DEFAULT_VIDEO_FPS),
+            numInferenceSteps: parsePositiveInt(
+              numInferenceSteps,
+              DEFAULT_VIDEO_INFERENCE_STEPS,
+            ),
+            guidanceScale: parsePositiveFloat(
+              guidanceScale,
+              DEFAULT_VIDEO_GUIDANCE_SCALE,
+            ),
+            guidanceScale2: parsePositiveFloat(
+              guidanceScale2,
+              DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+            ),
+            boundaryRatio: parsePositiveFloat(
+              boundaryRatio,
+              DEFAULT_VIDEO_BOUNDARY_RATIO,
+            ),
+            flowShift: parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT),
+            seed: parsePositiveInt(seed, DEFAULT_VIDEO_SEED),
             settings,
           },
     )
@@ -315,8 +325,8 @@ export function VideoTestResultModal({
                         value={prompt}
                         onChange={(event) => setPrompt(event.target.value)}
                         placeholder={formLabels.promptPlaceholder}
-                        rows={3}
-                        className="max-h-[120px] w-full resize-none overflow-y-auto rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-accent/50"
+                        rows={6}
+                        className="max-h-[240px] w-full resize-none overflow-y-auto rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-accent/50"
                       />
                     </label>
 
@@ -386,14 +396,7 @@ export function VideoTestResultModal({
                             min={1}
                             max={30}
                             value={kuaiziDuration}
-                            onChange={(event) =>
-                              setKuaiziDuration(
-                                parsePositiveInt(
-                                  event.target.value,
-                                  DEFAULT_KUAIZI_VIDEO_DURATION,
-                                ),
-                              )
-                            }
+                            onChange={(event) => setKuaiziDuration(event.target.value)}
                             className={fieldClass}
                           />
                         </label>
@@ -426,14 +429,7 @@ export function VideoTestResultModal({
                               min={1}
                               max={200}
                               value={numFrames}
-                              onChange={(event) =>
-                                setNumFrames(
-                                  parsePositiveInt(
-                                    event.target.value,
-                                    DEFAULT_VIDEO_NUM_FRAMES,
-                                  ),
-                                )
-                              }
+                              onChange={(event) => setNumFrames(event.target.value)}
                               className={fieldClass}
                             />
                           </label>
@@ -445,9 +441,7 @@ export function VideoTestResultModal({
                               min={1}
                               max={60}
                               value={fps}
-                              onChange={(event) =>
-                                setFps(parsePositiveInt(event.target.value, DEFAULT_VIDEO_FPS))
-                              }
+                              onChange={(event) => setFps(event.target.value)}
                               className={fieldClass}
                             />
                           </label>
@@ -462,14 +456,7 @@ export function VideoTestResultModal({
                             min={1}
                             max={100}
                             value={numInferenceSteps}
-                            onChange={(event) =>
-                              setNumInferenceSteps(
-                                parsePositiveInt(
-                                  event.target.value,
-                                  DEFAULT_VIDEO_INFERENCE_STEPS,
-                                ),
-                              )
-                            }
+                            onChange={(event) => setNumInferenceSteps(event.target.value)}
                             className={fieldClass}
                           />
                         </label>
@@ -484,14 +471,7 @@ export function VideoTestResultModal({
                               min={0}
                               step={0.1}
                               value={guidanceScale}
-                              onChange={(event) =>
-                                setGuidanceScale(
-                                  parsePositiveFloat(
-                                    event.target.value,
-                                    DEFAULT_VIDEO_GUIDANCE_SCALE,
-                                  ),
-                                )
-                              }
+                              onChange={(event) => setGuidanceScale(event.target.value)}
                               className={fieldClass}
                             />
                           </label>
@@ -505,14 +485,7 @@ export function VideoTestResultModal({
                               min={0}
                               step={0.1}
                               value={guidanceScale2}
-                              onChange={(event) =>
-                                setGuidanceScale2(
-                                  parsePositiveFloat(
-                                    event.target.value,
-                                    DEFAULT_VIDEO_GUIDANCE_SCALE_2,
-                                  ),
-                                )
-                              }
+                              onChange={(event) => setGuidanceScale2(event.target.value)}
                               className={fieldClass}
                             />
                           </label>
@@ -529,14 +502,7 @@ export function VideoTestResultModal({
                               max={1}
                               step={0.001}
                               value={boundaryRatio}
-                              onChange={(event) =>
-                                setBoundaryRatio(
-                                  parsePositiveFloat(
-                                    event.target.value,
-                                    DEFAULT_VIDEO_BOUNDARY_RATIO,
-                                  ),
-                                )
-                              }
+                              onChange={(event) => setBoundaryRatio(event.target.value)}
                               className={fieldClass}
                             />
                           </label>
@@ -550,14 +516,7 @@ export function VideoTestResultModal({
                               min={0}
                               step={0.1}
                               value={flowShift}
-                              onChange={(event) =>
-                                setFlowShift(
-                                  parsePositiveFloat(
-                                    event.target.value,
-                                    DEFAULT_VIDEO_FLOW_SHIFT,
-                                  ),
-                                )
-                              }
+                              onChange={(event) => setFlowShift(event.target.value)}
                               className={fieldClass}
                             />
                           </label>
@@ -568,9 +527,7 @@ export function VideoTestResultModal({
                           <input
                             type="number"
                             value={seed}
-                            onChange={(event) =>
-                              setSeed(parsePositiveInt(event.target.value, DEFAULT_VIDEO_SEED))
-                            }
+                            onChange={(event) => setSeed(event.target.value)}
                             className={fieldClass}
                           />
                         </label>
@@ -601,30 +558,18 @@ export function VideoTestResultModal({
                             className="max-h-[min(50vh,420px)] w-auto max-w-full rounded-md object-contain"
                           />
                         </div>
-                        <div className="space-y-3">
-                          <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-                            <span className="inline-flex items-center gap-2 text-sm text-accent">
-                              <FontAwesomeIcon icon={faCircleCheck} />
-                              {i18n.connectionOk}
+                        <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                          <span className="inline-flex items-center gap-2 text-sm text-accent">
+                            <FontAwesomeIcon icon={faCircleCheck} />
+                            {i18n.connectionOk}
+                          </span>
+                          {elapsedMs != null ? (
+                            <span className="text-xs text-text-muted">
+                              {i18n.testDurationLabel}：
+                              {formatDurationMs(elapsedMs, locale)}
                             </span>
-                            {elapsedMs != null ? (
-                              <span className="text-xs text-text-muted">
-                                {i18n.testDurationLabel}：
-                                {formatDurationMs(elapsedMs, locale)}
-                              </span>
-                            ) : null}
-                          </p>
-                          <div className="flex justify-center">
-                            <button
-                              type="button"
-                              onClick={handleDownload}
-                              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90"
-                            >
-                              <FontAwesomeIcon icon={faDownload} className="text-xs" />
-                              {i18n.download}
-                            </button>
-                          </div>
-                        </div>
+                          ) : null}
+                        </p>
                       </>
                     ) : (
                       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2">
@@ -659,6 +604,16 @@ export function VideoTestResultModal({
                       ? i18n.testAgain
                       : formLabels.cancel}
                 </button>
+                {showSuccess ? (
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/5"
+                  >
+                    <FontAwesomeIcon icon={faDownload} className="text-xs" />
+                    {i18n.download}
+                  </button>
+                ) : null}
                 {showForm ? (
                   <button
                     type="button"

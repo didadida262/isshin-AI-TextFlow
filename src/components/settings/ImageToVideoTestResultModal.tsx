@@ -17,6 +17,7 @@ import {
 import { downloadBase64Media } from "../../services/mediaDownload";
 import { useI18n, useTranslationMessages } from "../../contexts/I18nContext";
 import { formatDurationMs } from "../../utils/formatDuration";
+import { parsePositiveFloat, parsePositiveInt } from "../../utils/numericInput";
 import {
   DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT,
   DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE,
@@ -66,16 +67,6 @@ function toImageSrc(b64: string): string {
   return `data:image/jpeg;base64,${cleaned}`;
 }
 
-function parsePositiveInt(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
-}
-
-function parsePositiveFloat(value: string, fallback: number): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 async function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -109,20 +100,22 @@ export function ImageToVideoTestResultModal({
   const [referenceB64, setReferenceB64] = useState("");
   const [referenceFilename, setReferenceFilename] = useState("");
   const [size, setSize] = useState(DEFAULT_VIDEO_SIZE);
-  const [numFrames, setNumFrames] = useState(DEFAULT_VIDEO_NUM_FRAMES);
-  const [fps, setFps] = useState(DEFAULT_VIDEO_FPS);
+  const [numFrames, setNumFrames] = useState(String(DEFAULT_VIDEO_NUM_FRAMES));
+  const [fps, setFps] = useState(String(DEFAULT_VIDEO_FPS));
   const [numInferenceSteps, setNumInferenceSteps] = useState(
-    DEFAULT_VIDEO_INFERENCE_STEPS,
+    String(DEFAULT_VIDEO_INFERENCE_STEPS),
   );
   const [guidanceScale, setGuidanceScale] = useState(
-    DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE,
+    String(DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE),
   );
   const [guidanceScale2, setGuidanceScale2] = useState(
-    DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE_2,
+    String(DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE_2),
   );
-  const [boundaryRatio, setBoundaryRatio] = useState(DEFAULT_VIDEO_BOUNDARY_RATIO);
-  const [flowShift, setFlowShift] = useState(DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT);
-  const [seed, setSeed] = useState(DEFAULT_VIDEO_SEED);
+  const [boundaryRatio, setBoundaryRatio] = useState(
+    String(DEFAULT_VIDEO_BOUNDARY_RATIO),
+  );
+  const [flowShift, setFlowShift] = useState(String(DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT));
+  const [seed, setSeed] = useState(String(DEFAULT_VIDEO_SEED));
   const [videoB64, setVideoB64] = useState("");
   const [error, setError] = useState("");
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
@@ -140,14 +133,14 @@ export function ImageToVideoTestResultModal({
     setReferenceB64("");
     setReferenceFilename("");
     setSize(DEFAULT_VIDEO_SIZE);
-    setNumFrames(DEFAULT_VIDEO_NUM_FRAMES);
-    setFps(DEFAULT_VIDEO_FPS);
-    setNumInferenceSteps(DEFAULT_VIDEO_INFERENCE_STEPS);
-    setGuidanceScale(DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE);
-    setGuidanceScale2(DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE_2);
-    setBoundaryRatio(DEFAULT_VIDEO_BOUNDARY_RATIO);
-    setFlowShift(DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT);
-    setSeed(DEFAULT_VIDEO_SEED);
+    setNumFrames(String(DEFAULT_VIDEO_NUM_FRAMES));
+    setFps(String(DEFAULT_VIDEO_FPS));
+    setNumInferenceSteps(String(DEFAULT_VIDEO_INFERENCE_STEPS));
+    setGuidanceScale(String(DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE));
+    setGuidanceScale2(String(DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE_2));
+    setBoundaryRatio(String(DEFAULT_VIDEO_BOUNDARY_RATIO));
+    setFlowShift(String(DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT));
+    setSeed(String(DEFAULT_VIDEO_SEED));
     setVideoB64("");
     setError("");
     setElapsedMs(null);
@@ -212,14 +205,26 @@ export function ImageToVideoTestResultModal({
       inputReferenceB64: referenceB64,
       inputReferenceFilename: referenceFilename,
       size,
-      numFrames,
-      fps,
-      numInferenceSteps,
-      guidanceScale,
-      guidanceScale2,
-      boundaryRatio,
-      flowShift,
-      seed,
+      numFrames: parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES),
+      fps: parsePositiveInt(fps, DEFAULT_VIDEO_FPS),
+      numInferenceSteps: parsePositiveInt(
+        numInferenceSteps,
+        DEFAULT_VIDEO_INFERENCE_STEPS,
+      ),
+      guidanceScale: parsePositiveFloat(
+        guidanceScale,
+        DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE,
+      ),
+      guidanceScale2: parsePositiveFloat(
+        guidanceScale2,
+        DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE_2,
+      ),
+      boundaryRatio: parsePositiveFloat(
+        boundaryRatio,
+        DEFAULT_VIDEO_BOUNDARY_RATIO,
+      ),
+      flowShift: parsePositiveFloat(flowShift, DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT),
+      seed: parsePositiveInt(seed, DEFAULT_VIDEO_SEED),
       settings,
     })
       .then((b64) => {
@@ -412,14 +417,7 @@ export function ImageToVideoTestResultModal({
                           min={1}
                           max={200}
                           value={numFrames}
-                          onChange={(event) =>
-                            setNumFrames(
-                              parsePositiveInt(
-                                event.target.value,
-                                DEFAULT_VIDEO_NUM_FRAMES,
-                              ),
-                            )
-                          }
+                          onChange={(event) => setNumFrames(event.target.value)}
                           className={fieldClass}
                         />
                       </label>
@@ -431,9 +429,7 @@ export function ImageToVideoTestResultModal({
                           min={1}
                           max={60}
                           value={fps}
-                          onChange={(event) =>
-                            setFps(parsePositiveInt(event.target.value, DEFAULT_VIDEO_FPS))
-                          }
+                          onChange={(event) => setFps(event.target.value)}
                           className={fieldClass}
                         />
                       </label>
@@ -448,14 +444,7 @@ export function ImageToVideoTestResultModal({
                         min={1}
                         max={100}
                         value={numInferenceSteps}
-                        onChange={(event) =>
-                          setNumInferenceSteps(
-                            parsePositiveInt(
-                              event.target.value,
-                              DEFAULT_VIDEO_INFERENCE_STEPS,
-                            ),
-                          )
-                        }
+                        onChange={(event) => setNumInferenceSteps(event.target.value)}
                         className={fieldClass}
                       />
                     </label>
@@ -470,14 +459,7 @@ export function ImageToVideoTestResultModal({
                           min={0}
                           step={0.1}
                           value={guidanceScale}
-                          onChange={(event) =>
-                            setGuidanceScale(
-                              parsePositiveFloat(
-                                event.target.value,
-                                DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE,
-                              ),
-                            )
-                          }
+                          onChange={(event) => setGuidanceScale(event.target.value)}
                           className={fieldClass}
                         />
                       </label>
@@ -491,14 +473,7 @@ export function ImageToVideoTestResultModal({
                           min={0}
                           step={0.1}
                           value={guidanceScale2}
-                          onChange={(event) =>
-                            setGuidanceScale2(
-                              parsePositiveFloat(
-                                event.target.value,
-                                DEFAULT_IMAGE_TO_VIDEO_GUIDANCE_SCALE_2,
-                              ),
-                            )
-                          }
+                          onChange={(event) => setGuidanceScale2(event.target.value)}
                           className={fieldClass}
                         />
                       </label>
@@ -515,14 +490,7 @@ export function ImageToVideoTestResultModal({
                           max={1}
                           step={0.001}
                           value={boundaryRatio}
-                          onChange={(event) =>
-                            setBoundaryRatio(
-                              parsePositiveFloat(
-                                event.target.value,
-                                DEFAULT_VIDEO_BOUNDARY_RATIO,
-                              ),
-                            )
-                          }
+                          onChange={(event) => setBoundaryRatio(event.target.value)}
                           className={fieldClass}
                         />
                       </label>
@@ -536,14 +504,7 @@ export function ImageToVideoTestResultModal({
                           min={0}
                           step={0.1}
                           value={flowShift}
-                          onChange={(event) =>
-                            setFlowShift(
-                              parsePositiveFloat(
-                                event.target.value,
-                                DEFAULT_IMAGE_TO_VIDEO_FLOW_SHIFT,
-                              ),
-                            )
-                          }
+                          onChange={(event) => setFlowShift(event.target.value)}
                           className={fieldClass}
                         />
                       </label>
@@ -554,9 +515,7 @@ export function ImageToVideoTestResultModal({
                       <input
                         type="number"
                         value={seed}
-                        onChange={(event) =>
-                          setSeed(parsePositiveInt(event.target.value, DEFAULT_VIDEO_SEED))
-                        }
+                        onChange={(event) => setSeed(event.target.value)}
                         className={fieldClass}
                       />
                     </label>

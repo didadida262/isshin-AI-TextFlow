@@ -20,7 +20,7 @@ export function LanguageToggle({ className = "", compact = false }: LanguageTogg
       aria-label={label}
       className={`flex flex-1 items-center justify-center gap-1.5 py-2.5 text-text-muted transition hover:bg-white/5 hover:text-white ${className}`}
     >
-      <FontAwesomeIcon icon={faGlobe} className="text-sm text-accent" />
+      <FontAwesomeIcon icon={faGlobe} className="text-sm" />
       {!compact && (
         <span className="text-[10px] font-medium uppercase tracking-wide text-text-dim">
           {locale === "zh" ? "中" : "EN"}
