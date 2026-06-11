@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useGenerationJobs } from "../contexts/GenerationJobsContext";
+import {
+  useGenerationJobs,
+  type GenerationJob,
+  type GenerationJobStatus,
+} from "../contexts/GenerationJobsContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleCheck,
@@ -39,6 +43,25 @@ interface GenerateVideoStepProps {
   onConfigError: (message: string | null) => void;
   onVideosUpdated?: () => void;
   onScriptsUpdated?: () => void;
+}
+
+function buildLatestVideoJobStatusMap(
+  jobs: GenerationJob[],
+  projectId: string,
+): Map<string, GenerationJobStatus> {
+  const map = new Map<string, GenerationJobStatus>();
+  const videoJobs = jobs
+    .filter((job) => job.kind === "video" && job.projectId === projectId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  for (const job of videoJobs) {
+    const key = job.scriptName ?? job.itemName;
+    if (!map.has(key)) {
+      map.set(key, job.status);
+    }
+  }
+
+  return map;
 }
 
 function buildLatestVideoMap(
@@ -119,11 +142,14 @@ function scriptStatusClass(script: ScriptRecord): string {
   return "text-text-dim";
 }
 
-type VideoStatusKind = "success" | "error" | "pending";
+type VideoStatusKind = "success" | "error" | "pending" | "generating";
 
 function getVideoStatusKind(
   video: ProjectAssetRecord | undefined,
+  jobStatus?: GenerationJobStatus,
 ): VideoStatusKind {
+  if (jobStatus === "running") return "generating";
+  if (jobStatus === "error") return "error";
   if (!video) return "pending";
   if (video.assetState === ASSET_STATE_ERROR) return "error";
   if (video.imagePath) return "success";
@@ -135,6 +161,7 @@ const videoStatusBadgeClass: Record<VideoStatusKind, string> = {
     "border-accent/35 bg-accent/10 text-accent shadow-[0_0_10px_rgba(0,255,102,0.15)]",
   error: "border-red-500/35 bg-red-500/10 text-red-400",
   pending: "border-amber-400/30 bg-amber-400/10 text-amber-300",
+  generating: "border-sky-400/35 bg-sky-400/10 text-sky-300",
 };
 
 function VideoStatusBadge({
@@ -146,6 +173,7 @@ function VideoStatusBadge({
     statusSuccess: string;
     statusError: string;
     statusPending: string;
+    statusGenerating: string;
   };
 }) {
   const label =
@@ -153,19 +181,26 @@ function VideoStatusBadge({
       ? labels.statusError
       : kind === "success"
         ? labels.statusSuccess
-        : labels.statusPending;
+        : kind === "generating"
+          ? labels.statusGenerating
+          : labels.statusPending;
   const icon =
     kind === "error"
       ? faCircleExclamation
       : kind === "success"
         ? faCircleCheck
-        : faClock;
+        : kind === "generating"
+          ? faSpinner
+          : faClock;
 
   return (
     <span
       className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${videoStatusBadgeClass[kind]}`}
     >
-      <FontAwesomeIcon icon={icon} className="text-sm" />
+      <FontAwesomeIcon
+        icon={icon}
+        className={`text-sm ${kind === "generating" ? "animate-spin" : ""}`}
+      />
       {label}
     </span>
   );
@@ -202,7 +237,7 @@ export function GenerateVideoStep({
   );
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const { startVideoJob, navigationTarget, clearNavigationTarget } =
+  const { jobs, startVideoJob, navigationTarget, clearNavigationTarget } =
     useGenerationJobs();
 
   useEffect(() => {
@@ -214,6 +249,10 @@ export function GenerateVideoStep({
   }, [initialVideos]);
 
   const videoMap = useMemo(() => buildLatestVideoMap(videos), [videos]);
+  const videoJobStatusMap = useMemo(
+    () => buildLatestVideoJobStatusMap(jobs, project.id),
+    [jobs, project.id],
+  );
 
   useEffect(() => {
     if (
@@ -499,12 +538,15 @@ export function GenerateVideoStep({
               <tbody>
                 {sorted.map((script) => {
                   const video = videoMap.get(script.name);
+                  const videoJobStatus = videoJobStatusMap.get(script.name);
+                  const isVideoGenerating = videoJobStatus === "running";
                   const hasVideo = Boolean(video?.imagePath);
                   const generateEnabled = canGenerateVideo(script);
                   const hasPrompt = Boolean(
                     resolveEpisodeVideoPrompt(script, video),
                   );
-                  const generateVideoEnabled = generateEnabled && hasPrompt;
+                  const generateVideoEnabled =
+                    generateEnabled && hasPrompt && !isVideoGenerating;
                   const detailEnabled = canViewDetail(script);
                   const isPromptGenerating = promptGeneratingIds.has(script.id);
                   const promptPreview = episodePromptPreview(
@@ -553,7 +595,7 @@ export function GenerateVideoStep({
                       </td>
                       <td className="px-3 py-2.5">
                         <VideoStatusBadge
-                          kind={getVideoStatusKind(video)}
+                          kind={getVideoStatusKind(video, videoJobStatus)}
                           labels={s}
                         />
                       </td>

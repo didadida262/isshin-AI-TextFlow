@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -27,6 +28,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenNotifications: () => void;
   notificationCount?: number;
+  notificationShakeTick?: number;
   onLogout: () => void;
 }
 
@@ -47,10 +49,23 @@ export function Sidebar({
   onOpenSettings,
   onOpenNotifications,
   notificationCount = 0,
+  notificationShakeTick = 0,
   onLogout,
 }: SidebarProps) {
   const { t } = useI18n();
   const toggleLabel = collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar");
+  const [bellShaking, setBellShaking] = useState(false);
+  const prevShakeTickRef = useRef(0);
+
+  useEffect(() => {
+    if (notificationShakeTick <= prevShakeTickRef.current) return;
+    prevShakeTickRef.current = notificationShakeTick;
+    setBellShaking(true);
+    const timer = window.setTimeout(() => setBellShaking(false), 1300);
+    return () => window.clearTimeout(timer);
+  }, [notificationShakeTick]);
+
+  const bellIconClass = `text-sm origin-top ${bellShaking ? "animate-bell-shake" : ""}`;
 
   return (
     <motion.aside
@@ -149,7 +164,7 @@ export function Sidebar({
               collapsed ? "border-b border-white/5 py-2.5" : "border-r border-white/5 flex-1 py-2.5"
             }`}
           >
-            <FontAwesomeIcon icon={faBell} className="text-sm" />
+            <FontAwesomeIcon icon={faBell} className={bellIconClass} />
             {notificationCount > 0 ? (
               <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
                 {notificationCount > 9 ? "9+" : notificationCount}

@@ -1,12 +1,74 @@
 import { useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClapperboard } from "@fortawesome/free-solid-svg-icons";
+import { faClapperboard, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import type { DraftAssetItem } from "../services/assetExtraction";
 import type { ProjectAssetRecord } from "../services/assets";
 import { ASSET_STATE_ERROR, ASSET_STATE_SUCCESS } from "../services/assets";
 import { AssetRowActions } from "./AssetRowActions";
 import { AssetTypeTag } from "./AssetTypeTag";
 import { VideoThumbnail } from "./VideoThumbnail";
+
+export type AssetTableRow =
+  | { kind: "asset"; asset: ProjectAssetRecord }
+  | { kind: "draft"; draft: DraftAssetItem };
+
+function draftFingerprint(draft: DraftAssetItem): string {
+  return `${draft.assetType}::${draft.name.trim()}::${draft.prompt.trim()}`;
+}
+
+function assetFingerprint(asset: ProjectAssetRecord): string {
+  return `${asset.assetType}::${asset.name.trim()}::${asset.prompt.trim()}`;
+}
+
+function isDraftCoveredByItems(
+  draft: DraftAssetItem,
+  items: ProjectAssetRecord[],
+  knownAssetIdsBeforeBatch: ReadonlySet<number>,
+): boolean {
+  if (draft.savedAssetId && items.some((asset) => asset.id === draft.savedAssetId)) {
+    return true;
+  }
+  if (draft.savedAsset && items.some((asset) => asset.id === draft.savedAsset!.id)) {
+    return true;
+  }
+
+  const fingerprint = draftFingerprint(draft);
+  return items.some(
+    (asset) =>
+      !knownAssetIdsBeforeBatch.has(asset.id) &&
+      assetFingerprint(asset) === fingerprint,
+  );
+}
+
+export function buildAssetTableRows(
+  items: ProjectAssetRecord[],
+  drafts: DraftAssetItem[] = [],
+  knownAssetIdsBeforeBatch: ReadonlySet<number> = new Set(),
+): AssetTableRow[] {
+  const savedIds = new Set(items.map((asset) => asset.id));
+  const rows: AssetTableRow[] = items.map((asset) => ({ kind: "asset", asset }));
+
+  for (const draft of drafts) {
+    if (isDraftCoveredByItems(draft, items, knownAssetIdsBeforeBatch)) {
+      continue;
+    }
+
+    if (draft.status === "success" && draft.savedAsset) {
+      if (!savedIds.has(draft.savedAsset.id)) {
+        rows.push({ kind: "asset", asset: draft.savedAsset });
+        savedIds.add(draft.savedAsset.id);
+      }
+      continue;
+    }
+
+    if (draft.status === "generating" || draft.status === "error") {
+      rows.push({ kind: "draft", draft });
+    }
+  }
+
+  return rows;
+}
 
 interface AssetListTableLabels {
   colPreview: string;
@@ -25,6 +87,7 @@ interface AssetListTableLabels {
   openActionsMenu: string;
   statusSuccess: string;
   statusError: string;
+  statusGenerating: string;
   typeCharacter: string;
   typeScene: string;
   typeProp: string;
@@ -36,6 +99,10 @@ interface AssetListTableLabels {
 
 interface AssetListTableProps {
   items: ProjectAssetRecord[];
+  draftPlaceholders?: DraftAssetItem[];
+  knownAssetIdsBeforeBatch?: ReadonlySet<number>;
+  draftModel?: string;
+  draftInferenceSteps?: number;
   labels: AssetListTableLabels;
   onRowClick?: (asset: ProjectAssetRecord) => void;
   onViewImage?: (asset: ProjectAssetRecord) => void;
@@ -65,6 +132,23 @@ function statusClass(asset: ProjectAssetRecord): string {
   return "text-red-400";
 }
 
+function LoadingStatusCell({ label }: { label: string }) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-text-muted">
+      <FontAwesomeIcon icon={faSpinner} spin className="shrink-0 text-xs text-accent" />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+function DraftPreviewPlaceholder() {
+  return (
+    <span className="inline-flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-accent/25 bg-accent/5">
+      <FontAwesomeIcon icon={faSpinner} spin className="text-sm text-accent" />
+    </span>
+  );
+}
+
 const colgroup = (
   <colgroup>
     <col className="w-20" />
@@ -81,6 +165,10 @@ const colgroup = (
 
 export function AssetListTable({
   items,
+  draftPlaceholders = [],
+  knownAssetIdsBeforeBatch = new Set<number>(),
+  draftModel = "—",
+  draftInferenceSteps,
   labels,
   onRowClick,
   onViewImage,
@@ -89,8 +177,13 @@ export function AssetListTable({
   onDelete,
 }: AssetListTableProps) {
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const rows = buildAssetTableRows(
+    items,
+    draftPlaceholders,
+    knownAssetIdsBeforeBatch,
+  );
 
-  if (items.length === 0) return null;
+  if (rows.length === 0) return null;
 
   return (
     <div className="min-h-0 flex-1 overflow-auto select-none">
@@ -110,7 +203,52 @@ export function AssetListTable({
           </tr>
         </thead>
         <tbody>
-          {items.map((asset) => (
+          {rows.map((row) => {
+            if (row.kind === "draft") {
+              const { draft } = row;
+              return (
+                <tr
+                  key={`draft-${draft.id}`}
+                  className="border-b border-white/5 align-middle"
+                >
+                  <td className="px-3 py-2.5">
+                    <DraftPreviewPlaceholder />
+                  </td>
+                  <td className="max-w-0 px-3 py-2.5 text-white">
+                    <p className="truncate">{draft.name}</p>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <AssetTypeTag assetType={draft.assetType} labels={labels} />
+                  </td>
+                  <td className="max-w-0 px-3 py-2.5 text-text-muted">
+                    <p className="line-clamp-2 break-words">{draft.prompt}</p>
+                  </td>
+                  <td className="max-w-0 px-3 py-2.5 text-text-muted">
+                    <p className="truncate">{draftModel}</p>
+                  </td>
+                  <td className="px-3 py-2.5 text-text-muted">
+                    {draftInferenceSteps ?? "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-text-muted">—</td>
+                  <td className="px-3 py-2.5">
+                    {draft.status === "error" ? (
+                      <p
+                        className="truncate text-red-400/90"
+                        title={draft.errorReason ?? labels.statusError}
+                      >
+                        {draft.errorReason ?? labels.statusError}
+                      </p>
+                    ) : (
+                      <LoadingStatusCell label={labels.statusGenerating} />
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-text-dim">—</td>
+                </tr>
+              );
+            }
+
+            const { asset } = row;
+            return (
             <tr
               key={asset.id}
               onClick={() => onRowClick?.(asset)}
@@ -211,7 +349,8 @@ export function AssetListTable({
                 />
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

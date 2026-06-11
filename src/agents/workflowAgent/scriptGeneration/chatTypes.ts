@@ -1,3 +1,5 @@
+import type { ScriptPipelineStage } from "./types";
+
 export type ScriptChatMessageStatus =
   | "pending"
   | "streaming"
@@ -24,4 +26,6 @@ export interface ScriptChatMessage {
   thinking?: ScriptChatThinking;
   suggestions?: ScriptChatSuggestion[];
   status?: ScriptChatMessageStatus;
+  /** Highlights a completed pipeline stage in the chat timeline. */
+  milestone?: ScriptPipelineStage;
 }

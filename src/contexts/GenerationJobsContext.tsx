@@ -67,6 +67,8 @@ interface StartVideoJobInput {
 interface GenerationJobsContextValue {
   jobs: GenerationJob[];
   unreadCount: number;
+  /** Increments once per completed notification (success or error). */
+  notificationShakeTick: number;
   panelOpen: boolean;
   navigationTarget: GenerationNavigationTarget | null;
   setPanelOpen: (open: boolean) => void;
@@ -120,12 +122,17 @@ export function GenerationJobsProvider({
 }: GenerationJobsProviderProps) {
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [notificationShakeTick, setNotificationShakeTick] = useState(0);
   const [navigationTarget, setNavigationTarget] =
     useState<GenerationNavigationTarget | null>(null);
   const unreadCount = useMemo(
     () => jobs.filter((job) => !job.read && job.status !== "running").length,
     [jobs],
   );
+
+  const bumpNotificationShake = useCallback(() => {
+    setNotificationShakeTick((tick) => tick + 1);
+  }, []);
 
   const updateJob = useCallback(
     (jobId: string, patch: Partial<GenerationJob>) => {
@@ -177,8 +184,9 @@ export function GenerationJobsProvider({
           completedAt: Date.now(),
           read: false,
         });
-        onWorkflowChange?.();
+        bumpNotificationShake();
         onComplete?.({ success: true, asset: saved });
+        onWorkflowChange?.();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         updateJob(jobId, {
@@ -187,10 +195,12 @@ export function GenerationJobsProvider({
           completedAt: Date.now(),
           read: false,
         });
+        bumpNotificationShake();
         onComplete?.({ success: false, errorMessage: message });
+        onWorkflowChange?.();
       }
     },
-    [updateJob],
+    [bumpNotificationShake, updateJob],
   );
 
   const runVideoJob = useCallback(
@@ -236,6 +246,7 @@ export function GenerationJobsProvider({
           completedAt: Date.now(),
           read: false,
         });
+        bumpNotificationShake();
         onWorkflowChange?.();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -245,9 +256,10 @@ export function GenerationJobsProvider({
           completedAt: Date.now(),
           read: false,
         });
+        bumpNotificationShake();
       }
     },
-    [updateJob],
+    [bumpNotificationShake, updateJob],
   );
 
   const startImageJob = useCallback(
@@ -348,6 +360,7 @@ export function GenerationJobsProvider({
     () => ({
       jobs,
       unreadCount,
+      notificationShakeTick,
       panelOpen,
       navigationTarget,
       setPanelOpen,
@@ -362,6 +375,7 @@ export function GenerationJobsProvider({
     [
       jobs,
       unreadCount,
+      notificationShakeTick,
       panelOpen,
       navigationTarget,
       startImageJob,

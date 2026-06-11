@@ -93,7 +93,8 @@ function MainAppInner({
     setChatMode,
   } = useAppState();
   const i18n = useTranslationMessages();
-  const { unreadCount, setPanelOpen } = useGenerationJobs();
+  const { unreadCount, notificationShakeTick, setPanelOpen } =
+    useGenerationJobs();
 
   const handleCreationConfigError = (message: string | null) => {
     setConfigError(message);
@@ -120,6 +121,7 @@ function MainAppInner({
         }}
         onOpenNotifications={() => setPanelOpen(true)}
         notificationCount={unreadCount}
+        notificationShakeTick={notificationShakeTick}
         onLogout={() => {
           clearAuthSession();
           onLogout();

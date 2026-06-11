@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faCheck,
   faChevronDown,
   faChevronRight,
   faPaperPlane,
@@ -22,9 +23,36 @@ interface ScriptAgentChatPanelProps {
   onSuggestionClick: (suggestion: ScriptChatSuggestion) => void;
 }
 
+function ScriptChatMilestone({ message }: { message: ScriptChatMessage }) {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#10A37F] text-white">
+        <ChatGptLogo className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        {message.name ? (
+          <p className="mb-1 text-[11px] font-medium text-text-muted">
+            {message.name}
+          </p>
+        ) : null}
+        <div className="flex items-center gap-2.5 rounded-lg border border-accent/35 bg-accent/10 px-3.5 py-2.5 shadow-[0_0_14px_rgba(0,255,102,0.1)]">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-black shadow-[0_0_8px_rgba(0,255,102,0.35)]">
+            <FontAwesomeIcon icon={faCheck} className="text-[9px]" />
+          </span>
+          <span className="text-sm font-medium text-accent">{message.content}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScriptChatBubble({ message }: { message: ScriptChatMessage }) {
   const isUser = message.role === "user";
   const [thinkingOpen, setThinkingOpen] = useState(false);
+
+  if (message.milestone) {
+    return <ScriptChatMilestone message={message} />;
+  }
 
   if (isUser) {
     return (

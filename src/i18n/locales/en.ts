@@ -280,6 +280,9 @@ export const en: TranslationSchema = {
         "Click Generate Script to build the story skeleton, adaptation strategy, and episode scripts.",
       stageSkeleton: "Building story skeleton…",
       stageAdaptation: "Drafting adaptation strategy…",
+      stageSkeletonComplete: "Story skeleton complete",
+      stageAdaptationComplete: "Adaptation strategy complete",
+      stageScriptsComplete: "Episode scripts complete",
       stageScripts: "Writing scripts…",
       stageScriptsProgress: (completed: number, total: number) =>
         `Writing scripts ${completed}/${total}…`,
@@ -363,6 +366,7 @@ export const en: TranslationSchema = {
       statusSuccess: "Done",
       statusError: "Failed",
       statusPending: "Pending",
+      statusGenerating: "Generating",
       noContent: "—",
       noPrompt: "—",
       noVideo: "No video yet",
@@ -389,6 +393,7 @@ export const en: TranslationSchema = {
     },
     generateAssetsStep: {
       batchExtract: "Batch Extract Assets",
+      viewExtractedAssets: "View Extracted Assets",
       batchExtracting: "Extracting assets with AI…",
       batchExtractingProgress: (completed, total) =>
         `Extracting assets ${completed}/${total}…`,
@@ -404,7 +409,7 @@ export const en: TranslationSchema = {
       batchGenerateComplete:
         "All assets generated. Click a thumbnail below for the full image, or click a row for details.",
       batchGenerateBackground:
-        "Assets are generating in the background. You'll be notified when done. Reopen the draft list via the link above to check progress.",
+        "Assets are generating in the background. You'll be notified when done.",
       draftHint:
         "AI-extracted character and scene drafts. Click a row to edit name and prompt, then click Batch Generate Assets. You may close this dialog while generating; jobs continue in the background and notify you when done. Batch Extract is disabled while extracting or generating.",
       noScriptsToExtract:

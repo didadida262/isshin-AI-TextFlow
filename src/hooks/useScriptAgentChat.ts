@@ -8,6 +8,7 @@ import { SCRIPT_STATE_ERROR, SCRIPT_STATE_SUCCESS } from "../services/script";
 import type {
   ScriptChatMessage,
   ScriptGenerationProgress,
+  ScriptPipelineStage,
 } from "../agents/workflowAgent/scriptGeneration";
 import {
   isEventExtractionComplete,
@@ -111,6 +112,19 @@ function progressToAgentMessage(
   return labels.stageAdaptation;
 }
 
+function stageCompleteLabel(
+  stage: ScriptPipelineStage,
+  labels: {
+    stageSkeletonComplete: string;
+    stageAdaptationComplete: string;
+    stageScriptsComplete: string;
+  },
+): string {
+  if (stage === "skeleton") return labels.stageSkeletonComplete;
+  if (stage === "adaptation") return labels.stageAdaptationComplete;
+  return labels.stageScriptsComplete;
+}
+
 interface UseScriptAgentChatOptions {
   project: CreationProject;
   config: AppConfig;
@@ -127,6 +141,9 @@ interface UseScriptAgentChatOptions {
     agentWriter: string;
     stageSkeleton: string;
     stageAdaptation: string;
+    stageSkeletonComplete: string;
+    stageAdaptationComplete: string;
+    stageScriptsComplete: string;
     stageScriptsProgress: (completed: number, total: number) => string;
     pipelineComplete: string;
     pipelineStopped: string;
@@ -170,6 +187,7 @@ export function useScriptAgentChat({
     useState<ScriptGenerationProgress | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const progressMsgIdRef = useRef<string | null>(null);
+  const completedStagesRef = useRef<Set<ScriptPipelineStage>>(new Set());
 
   useEffect(() => {
     scriptChatCache.set(project.id, messages);
@@ -272,6 +290,36 @@ export function useScriptAgentChat({
     setIsGenerating(true);
     setGenerationProgress({ stage: "skeleton" });
     onConfigError(null);
+    completedStagesRef.current = new Set();
+
+    const markStageComplete = (
+      stage: ScriptPipelineStage,
+      nextProgress: ScriptGenerationProgress | null,
+    ) => {
+      const currentId = progressMsgIdRef.current;
+      if (!currentId) return;
+
+      patchMessage(currentId, {
+        content: stageCompleteLabel(stage, labels),
+        status: "complete",
+        milestone: stage,
+      });
+
+      if (!nextProgress) {
+        progressMsgIdRef.current = null;
+        return;
+      }
+
+      const nextId = createId();
+      appendMessage({
+        id: nextId,
+        role: "assistant",
+        name: labels.agentWriter,
+        content: progressToAgentMessage(nextProgress, labels),
+        status: "streaming",
+      });
+      progressMsgIdRef.current = nextId;
+    };
 
     const progressId = appendMessage({
       id: createId(),
@@ -293,34 +341,68 @@ export function useScriptAgentChat({
         signal: controller.signal,
         onProgress: (progress) => {
           setGenerationProgress(progress);
-          patchMessage(progressId, {
+          const activeId = progressMsgIdRef.current;
+          if (!activeId) return;
+          patchMessage(activeId, {
             content: progressToAgentMessage(progress, labels),
             status: "streaming",
           });
         },
         onStageComplete: (partial) => {
           onPartialUpdate?.(partial);
+          const wd = partial.workData;
+
+          if (
+            wd.storySkeleton.trim() &&
+            !completedStagesRef.current.has("skeleton")
+          ) {
+            completedStagesRef.current.add("skeleton");
+            markStageComplete("skeleton", { stage: "adaptation" });
+          } else if (
+            wd.adaptationStrategy.trim() &&
+            !completedStagesRef.current.has("adaptation")
+          ) {
+            completedStagesRef.current.add("adaptation");
+            markStageComplete("adaptation", {
+              stage: "scripts",
+              completed: 0,
+              total: chapters.length,
+            });
+          }
         },
       });
 
-      patchMessage(progressId, {
+      if (!completedStagesRef.current.has("scripts")) {
+        completedStagesRef.current.add("scripts");
+        markStageComplete("scripts", null);
+      }
+
+      appendMessage({
+        id: createId(),
+        role: "assistant",
+        name: labels.agentWriter,
         content: labels.pipelineComplete,
         status: "complete",
       });
       onComplete?.(result);
     } catch (error) {
+      const activeProgressId = progressMsgIdRef.current;
       if (error instanceof DOMException && error.name === "AbortError") {
-        patchMessage(progressId, {
-          content: labels.pipelineStopped,
-          status: "stop",
-        });
+        if (activeProgressId) {
+          patchMessage(activeProgressId, {
+            content: labels.pipelineStopped,
+            status: "stop",
+          });
+        }
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
-      patchMessage(progressId, {
-        content: message,
-        status: "error",
-      });
+      if (activeProgressId) {
+        patchMessage(activeProgressId, {
+          content: message,
+          status: "error",
+        });
+      }
       onConfigError(message);
     } finally {
       setIsGenerating(false);

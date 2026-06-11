@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -26,12 +26,40 @@ import type { AppConfig, CreationProject } from "../types";
 import { BatchExtractAssetsModal } from "./BatchExtractAssetsModal";
 import { AssetDetailModal } from "./AssetDetailModal";
 import { AssetImagePreviewModal } from "./AssetImagePreviewModal";
-import { AssetListTable } from "./AssetListTable";
+import { AssetListTable, buildAssetTableRows } from "./AssetListTable";
 import { DeleteAssetConfirmModal } from "./DeleteAssetConfirmModal";
 import { EditAssetModal } from "./EditAssetModal";
 import { GenerateAssetModal } from "./GenerateAssetModal";
 
 const PAGE_SIZE = 10;
+
+interface AssetDraftSessionState {
+  draftAssets: DraftAssetItem[];
+  selectedDraftIds: string[];
+  batchGenerating: boolean;
+  extractNotice: string | null;
+}
+
+const assetDraftCache = new Map<string, AssetDraftSessionState>();
+
+function getAssetDraftSession(projectId: string): AssetDraftSessionState {
+  return (
+    assetDraftCache.get(projectId) ?? {
+      draftAssets: [],
+      selectedDraftIds: [],
+      batchGenerating: false,
+      extractNotice: null,
+    }
+  );
+}
+
+function syncAssetDraftSession(
+  projectId: string,
+  patch: Partial<AssetDraftSessionState>,
+): void {
+  const current = getAssetDraftSession(projectId);
+  assetDraftCache.set(projectId, { ...current, ...patch });
+}
 
 interface GenerateAssetsStepProps {
   project: CreationProject;
@@ -56,12 +84,19 @@ export function GenerateAssetsStep({
 }: GenerateAssetsStepProps) {
   const s = useTranslationMessages().creation.generateAssetsStep;
   const errors = useTranslationMessages().errors;
+  const cachedDraftSession = getAssetDraftSession(project.id);
   const [assets, setAssets] = useState(initialAssets);
   const [page, setPage] = useState(initialAssets.page);
   const [loading, setLoading] = useState(false);
-  const [draftAssets, setDraftAssets] = useState<DraftAssetItem[]>([]);
-  const [selectedDraftIds, setSelectedDraftIds] = useState<Set<string>>(new Set());
-  const [batchGenerating, setBatchGenerating] = useState(false);
+  const [draftAssets, setDraftAssets] = useState<DraftAssetItem[]>(
+    () => cachedDraftSession.draftAssets,
+  );
+  const [selectedDraftIds, setSelectedDraftIds] = useState<Set<string>>(
+    () => new Set(cachedDraftSession.selectedDraftIds),
+  );
+  const [batchGenerating, setBatchGenerating] = useState(
+    () => cachedDraftSession.batchGenerating,
+  );
   const [extracting, setExtracting] = useState(false);
   const [extractProgress, setExtractProgress] = useState<{
     completed: number;
@@ -69,7 +104,9 @@ export function GenerateAssetsStep({
   } | null>(null);
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [extractModalOpen, setExtractModalOpen] = useState(false);
-  const [extractNotice, setExtractNotice] = useState<string | null>(null);
+  const [extractNotice, setExtractNotice] = useState<string | null>(
+    () => cachedDraftSession.extractNotice,
+  );
   const [previewAsset, setPreviewAsset] = useState<ProjectAssetRecord | null>(
     null,
   );
@@ -84,18 +121,41 @@ export function GenerateAssetsStep({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const extractAbortRef = useRef<AbortController | null>(null);
+  const batchKnownAssetIdsRef = useRef<Set<number>>(new Set());
   const { startImageJob, navigationTarget, clearNavigationTarget } =
     useGenerationJobs();
 
   const totalPages = Math.max(1, Math.ceil(assets.total / PAGE_SIZE));
   const hasDrafts = draftAssets.length > 0;
   const hasSavedItems = assets.items.length > 0;
+  const draftTableItems = useMemo(
+    () =>
+      draftAssets.filter(
+        (item) =>
+          item.status === "generating" ||
+          item.status === "error" ||
+          (item.status === "success" && item.savedAsset),
+      ),
+    [draftAssets],
+  );
+  const hasDisplayItems = useMemo(
+    () =>
+      buildAssetTableRows(
+        assets.items,
+        draftTableItems,
+        batchKnownAssetIdsRef.current,
+      ).length > 0,
+    [assets.items, draftTableItems, batchGenerating],
+  );
   const successfulScripts = scripts.filter(
     (script) => script.scriptState === SCRIPT_STATE_SUCCESS && script.content.trim(),
   );
   const loadPage = useCallback(
-    async (nextPage: number) => {
-      setLoading(true);
+    async (nextPage: number, options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
+      if (!silent) {
+        setLoading(true);
+      }
       try {
         const result = await listProjectAssets(project.id, nextPage, PAGE_SIZE, {
           excludeAssetTypes: ["video"],
@@ -104,7 +164,9 @@ export function GenerateAssetsStep({
         setPage(result.page);
         return result;
       } finally {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [project.id],
@@ -114,6 +176,21 @@ export function GenerateAssetsStep({
     if (page !== initialAssets.page) return;
     setAssets(initialAssets);
   }, [initialAssets, page]);
+
+  useEffect(() => {
+    syncAssetDraftSession(project.id, {
+      draftAssets,
+      selectedDraftIds: [...selectedDraftIds],
+      batchGenerating,
+      extractNotice,
+    });
+  }, [
+    batchGenerating,
+    draftAssets,
+    extractNotice,
+    project.id,
+    selectedDraftIds,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -400,11 +477,17 @@ export function GenerateAssetsStep({
         setSelectedDraftIds(new Set());
         setExtractNotice(null);
         setExtractModalOpen(false);
+        syncAssetDraftSession(project.id, {
+          draftAssets: [],
+          selectedDraftIds: [],
+          batchGenerating: false,
+          extractNotice: null,
+        });
         setActionNotice(s.batchGenerateComplete);
-        void loadPage(1).then(() => onWorkflowChange?.());
+        void loadPage(1, { silent: true }).then(() => onWorkflowChange?.());
       }
     },
-    [loadPage, onWorkflowChange, s.batchGenerateComplete],
+    [loadPage, onWorkflowChange, project.id, s.batchGenerateComplete],
   );
 
   const handleDraftJobComplete = useCallback(
@@ -433,6 +516,40 @@ export function GenerateAssetsStep({
     },
     [checkBatchFinalize],
   );
+
+  useEffect(() => {
+    if (!batchGenerating) return;
+
+    setDraftAssets((current) => {
+      let changed = false;
+      const next = current.map((draft) => {
+        if (draft.status !== "generating") return draft;
+
+        const match = assets.items.find(
+          (asset) =>
+            !batchKnownAssetIdsRef.current.has(asset.id) &&
+            asset.assetType === draft.assetType &&
+            asset.name.trim() === draft.name.trim() &&
+            asset.prompt.trim() === draft.prompt.trim(),
+        );
+        if (!match) return draft;
+
+        changed = true;
+        return {
+          ...draft,
+          status: "success" as const,
+          savedAssetId: match.id,
+          savedAsset: match,
+          errorReason: undefined,
+        };
+      });
+
+      if (changed) {
+        checkBatchFinalize(next);
+      }
+      return changed ? next : current;
+    });
+  }, [assets.items, batchGenerating, checkBatchFinalize]);
 
   const handleBatchGenerate = useCallback(() => {
     if (batchGenerating || draftAssets.length === 0) return;
@@ -471,6 +588,7 @@ export function GenerateAssetsStep({
       ),
     );
 
+    batchKnownAssetIdsRef.current = new Set(assets.items.map((asset) => asset.id));
     setBatchGenerating(true);
     setActionNotice(null);
 
@@ -480,18 +598,17 @@ export function GenerateAssetsStep({
         projectName: project.name,
         config,
         values: buildDraftImageJobValues(item, config),
-        onWorkflowChange,
         onComplete: (result) => handleDraftJobComplete(item.id, result),
       });
     }
   }, [
+    assets.items,
     batchGenerating,
     config,
     draftAssets,
     errors.imageConfigRequired,
     handleDraftJobComplete,
     onConfigError,
-    onWorkflowChange,
     project.id,
     project.name,
     s.draftInvalid,
@@ -524,6 +641,7 @@ export function GenerateAssetsStep({
     openActionsMenu: s.openActionsMenu,
     statusSuccess: s.statusSuccess,
     statusError: s.statusError,
+    statusGenerating: s.statusGenerating,
     typeCharacter: s.typeCharacter,
     typeScene: s.typeScene,
     typeProp: s.typeProp,
@@ -562,26 +680,44 @@ export function GenerateAssetsStep({
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <h2 className="step-panel-title w-fit min-w-0 shrink self-start">{title}</h2>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void handleBatchExtract()}
-            disabled={!canBatchExtract}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {extracting ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin className="text-xs" />
-                {extractProgress
-                  ? s.batchExtractingProgress(
-                      extractProgress.completed,
-                      extractProgress.total,
-                    )
-                  : s.batchExtracting}
-              </>
-            ) : (
-              s.batchExtract
-            )}
-          </button>
+          {hasDrafts ? (
+            <button
+              type="button"
+              onClick={handleOpenDraftModal}
+              disabled={batchGenerating}
+              className="inline-flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-accent transition hover:border-accent/50 hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {batchGenerating ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} spin className="text-xs" />
+                  {s.batchGenerating}
+                </>
+              ) : (
+                s.viewExtractedAssets
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleBatchExtract()}
+              disabled={!canBatchExtract}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {extracting ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} spin className="text-xs" />
+                  {extractProgress
+                    ? s.batchExtractingProgress(
+                        extractProgress.completed,
+                        extractProgress.total,
+                      )
+                    : s.batchExtracting}
+                </>
+              ) : (
+                s.batchExtract
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setGenerateModalOpen(true)}
@@ -600,14 +736,6 @@ export function GenerateAssetsStep({
         <p className="mt-3 shrink-0 rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-sm text-accent">
           {actionNotice}
         </p>
-      ) : hasDrafts && !extractModalOpen ? (
-        <button
-          type="button"
-          onClick={handleOpenDraftModal}
-          className="mt-3 shrink-0 text-left text-xs text-accent transition hover:text-accent/80"
-        >
-          {s.extractSuccess(draftAssets.length)}
-        </button>
       ) : null}
 
       <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/10 bg-surface/20">
@@ -615,9 +743,13 @@ export function GenerateAssetsStep({
           <div className="flex flex-1 items-center justify-center">
             <p className="text-sm text-text-muted">{s.loading}</p>
           </div>
-        ) : hasSavedItems ? (
+        ) : hasDisplayItems ? (
           <AssetListTable
             items={assets.items}
+            draftPlaceholders={draftTableItems}
+            knownAssetIdsBeforeBatch={batchKnownAssetIdsRef.current}
+            draftModel={config.imageModel.trim() || "—"}
+            draftInferenceSteps={DEFAULT_NUM_INFERENCE_STEPS}
             labels={tableLabels}
             onRowClick={setDetailAsset}
             onViewImage={setPreviewAsset}

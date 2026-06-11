@@ -256,6 +256,9 @@ export type TranslationSchema = {
       emptyHint: string;
       stageSkeleton: string;
       stageAdaptation: string;
+      stageSkeletonComplete: string;
+      stageAdaptationComplete: string;
+      stageScriptsComplete: string;
       stageScripts: string;
       stageScriptsProgress: (completed: number, total: number) => string;
       storySkeletonTitle: string;
@@ -331,6 +334,7 @@ export type TranslationSchema = {
       statusSuccess: string;
       statusError: string;
       statusPending: string;
+      statusGenerating: string;
       noContent: string;
       noPrompt: string;
       noVideo: string;
@@ -353,6 +357,7 @@ export type TranslationSchema = {
     };
     generateAssetsStep: {
       batchExtract: string;
+      viewExtractedAssets: string;
       batchExtracting: string;
       batchExtractingProgress: (completed: number, total: number) => string;
       batchExtractModalTitle: string;
@@ -812,6 +817,9 @@ export const zh: TranslationSchema = {
       emptyHint: "点击「生成剧本」，AI 将依次构建故事骨架、改编策略，并逐集生成剧本。",
       stageSkeleton: "正在构建故事骨架…",
       stageAdaptation: "正在制定改编策略…",
+      stageSkeletonComplete: "故事骨架已完成",
+      stageAdaptationComplete: "改编策略已完成",
+      stageScriptsComplete: "逐集剧本已完成",
       stageScripts: "正在生成剧本…",
       stageScriptsProgress: (completed: number, total: number) =>
         `正在生成剧本 ${completed}/${total}…`,
@@ -893,6 +901,7 @@ export const zh: TranslationSchema = {
       statusSuccess: "已完成",
       statusError: "失败",
       statusPending: "待生成",
+      statusGenerating: "生成中",
       noContent: "—",
       noPrompt: "—",
       noVideo: "暂无视频",
@@ -916,6 +925,7 @@ export const zh: TranslationSchema = {
     },
     generateAssetsStep: {
       batchExtract: "批量提取资产",
+      viewExtractedAssets: "查看自动提取资产",
       batchExtracting: "AI 提取资产中…",
       batchExtractingProgress: (completed, total) =>
         `AI 提取资产中 ${completed}/${total}…`,
@@ -931,7 +941,7 @@ export const zh: TranslationSchema = {
       batchGenerateComplete:
         "全部资产生成完成，可在下方列表点击缩略图查看大图，或点击行查看详情。",
       batchGenerateBackground:
-        "资产正在后台生成，完成后将通过通知提醒，可点击上方链接重新打开草稿列表查看进度。",
+        "资产正在后台生成，完成后将通过通知提醒。",
       draftHint:
         "已由 AI 从剧本提取人物与场景草稿，点击行可编辑名称与提示词，确认后点击「批量生成资产」。生成过程中可关闭弹框，任务将在后台继续并在通知栏提醒。提取或生成过程中「批量提取资产」将暂时不可用。",
       noScriptsToExtract: "没有可提取的成功剧本，请先完成剧本生成",
