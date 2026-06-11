@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -39,6 +39,45 @@ interface NewProjectModalProps {
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:3"];
+const NOVEL_TYPES = ["都市", "武侠"] as const;
+
+const NOVEL_TYPE_MANUAL_PAIR: Record<
+  (typeof NOVEL_TYPES)[number],
+  { directorManual: string; artStyle: string }
+> = {
+  都市: {
+    directorManual: "Urban_workplace_drama",
+    artStyle: "realpeople_urban_modern",
+  },
+  武侠: {
+    directorManual: "Xianxia_fantasy",
+    artStyle: "realpeople_ancient_chinese",
+  },
+};
+
+function resolveManualPair(
+  novelType: string,
+  artSkills: SkillManualItem[],
+  directorManuals: SkillManualItem[],
+): { directorManual: string; artStyle: string } {
+  const normalized = normalizeNovelType(novelType) as (typeof NOVEL_TYPES)[number];
+  const preferred = NOVEL_TYPE_MANUAL_PAIR[normalized];
+  const directorManual = directorManuals.some(
+    (item) => item.id === preferred.directorManual,
+  )
+    ? preferred.directorManual
+    : (directorManuals[0]?.id ?? "");
+  const artStyle = artSkills.some((item) => item.id === preferred.artStyle)
+    ? preferred.artStyle
+    : (artSkills[0]?.id ?? "");
+  return { directorManual, artStyle };
+}
+
+function normalizeNovelType(value: string): string {
+  return (NOVEL_TYPES as readonly string[]).includes(value)
+    ? value
+    : NOVEL_TYPES[0];
+}
 
 function createDefaultDraft(
   models: string[],
@@ -110,24 +149,32 @@ export function NewProjectModal({
 
         if (mode === "edit" && editingProject) {
           const fromProject = projectToDraft(editingProject);
+          const novelType = normalizeNovelType(fromProject.novelType);
           setDraft({
             ...fromProject,
+            novelType,
             artStyle: art.some((item) => item.id === fromProject.artStyle)
               ? fromProject.artStyle
-              : (art[0]?.id ?? ""),
+              : resolveManualPair(novelType, art, manuals).artStyle,
             directorManual: manuals.some(
               (item) => item.id === fromProject.directorManual,
             )
               ? fromProject.directorManual
-              : (manuals[0]?.id ?? ""),
+              : resolveManualPair(novelType, art, manuals).directorManual,
           });
         } else {
+          const novelType = normalizeNovelType(m.defaultNovelType);
+          const { artStyle, directorManual } = resolveManualPair(
+            novelType,
+            art,
+            manuals,
+          );
           setDraft(
             createDefaultDraft(models, {
-              novelType: m.defaultNovelType,
+              novelType,
               intro: m.defaultIntro,
-              artStyle: art[0]?.id ?? "",
-              directorManual: manuals[0]?.id ?? "",
+              artStyle,
+              directorManual,
             }),
           );
         }
@@ -150,6 +197,14 @@ export function NewProjectModal({
     value: ratio,
     label: ratio,
   }));
+
+  const novelTypeOptions = useMemo(
+    () => [
+      { value: "都市", label: m.novelTypeUrban },
+      { value: "武侠", label: m.novelTypeWuxia },
+    ],
+    [m.novelTypeUrban, m.novelTypeWuxia],
+  );
 
   const handleConfirm = async () => {
     if (submitting) return;
@@ -231,20 +286,28 @@ export function NewProjectModal({
                       />
                     </label>
 
-                    <label className="block space-y-2">
+                    <div className="block space-y-2">
                       <span className="text-sm text-text-muted">
                         {m.novelType}
                       </span>
-                      <input
-                        type="text"
+                      <Select
                         value={draft.novelType}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, novelType: e.target.value }))
-                        }
-                        placeholder={m.novelTypePlaceholder}
-                        className={fieldClass}
+                        options={novelTypeOptions}
+                        onChange={(novelType) => {
+                          const { artStyle, directorManual } = resolveManualPair(
+                            novelType,
+                            artSkills,
+                            directorManuals,
+                          );
+                          setDraft((d) => ({
+                            ...d,
+                            novelType,
+                            artStyle,
+                            directorManual,
+                          }));
+                        }}
                       />
-                    </label>
+                    </div>
 
                     <div className="block space-y-2">
                       <span className="text-sm text-text-muted">
@@ -280,9 +343,6 @@ export function NewProjectModal({
                     items={directorManuals}
                     loading={skillsLoading}
                     selectedId={draft.directorManual}
-                    onSelect={(directorManual) =>
-                      setDraft((d) => ({ ...d, directorManual }))
-                    }
                     variant="director"
                     compact
                   />
@@ -291,9 +351,6 @@ export function NewProjectModal({
                     items={artSkills}
                     loading={skillsLoading}
                     selectedId={draft.artStyle}
-                    onSelect={(artStyle) =>
-                      setDraft((d) => ({ ...d, artStyle }))
-                    }
                     variant="visual"
                   />
                 </aside>

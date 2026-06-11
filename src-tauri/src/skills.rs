@@ -20,8 +20,32 @@ fn director_manuals_root(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(paths::get()?.director_manuals_dir.clone())
 }
 
-/// Director manuals enabled in project creation (folder ids under `directorManuals/`).
-const ENABLED_DIRECTOR_MANUAL_IDS: &[&str] = &["Mystery_thriller", "Urban_workplace_drama"];
+/// Director manuals listed first in project creation (folder ids under `directorManuals/`).
+const PRIORITY_DIRECTOR_MANUAL_IDS: &[&str] = &["Urban_workplace_drama", "Xianxia_fantasy"];
+
+/// Visual manuals shown first in project creation (folder ids under `viewManuals/`).
+const PRIORITY_VIEW_MANUAL_IDS: &[&str] =
+    &["realpeople_urban_modern", "realpeople_ancient_chinese"];
+
+fn sort_skill_items_by_priority(
+    mut items: Vec<SkillManualItem>,
+    priority_ids: &[&str],
+) -> Vec<SkillManualItem> {
+    items.sort_by(|left, right| {
+        let left_rank = priority_ids
+            .iter()
+            .position(|id| *id == left.id)
+            .unwrap_or(priority_ids.len());
+        let right_rank = priority_ids
+            .iter()
+            .position(|id| *id == right.id)
+            .unwrap_or(priority_ids.len());
+        left_rank
+            .cmp(&right_rank)
+            .then_with(|| left.id.cmp(&right.id))
+    });
+    items
+}
 
 fn parse_md_title(content: &str) -> String {
     for line in content.lines() {
@@ -344,7 +368,8 @@ pub fn get_story_skill_detail(app: tauri::AppHandle, id: String) -> Result<Skill
 
 #[tauri::command]
 pub fn list_art_skills(app: tauri::AppHandle) -> Result<Vec<SkillManualItem>, String> {
-    list_skill_dir(&app, view_manuals_root(&app)?)
+    let items = list_skill_dir(&app, view_manuals_root(&app)?)?;
+    Ok(sort_skill_items_by_priority(items, PRIORITY_VIEW_MANUAL_IDS))
 }
 
 #[tauri::command]
@@ -355,10 +380,10 @@ pub fn list_story_skills(app: tauri::AppHandle) -> Result<Vec<SkillManualItem>, 
 #[tauri::command]
 pub fn list_director_manuals(app: tauri::AppHandle) -> Result<Vec<SkillManualItem>, String> {
     let items = list_skill_dir(&app, director_manuals_root(&app)?)?;
-    Ok(items
-        .into_iter()
-        .filter(|item| ENABLED_DIRECTOR_MANUAL_IDS.contains(&item.id.as_str()))
-        .collect())
+    Ok(sort_skill_items_by_priority(
+        items,
+        PRIORITY_DIRECTOR_MANUAL_IDS,
+    ))
 }
 
 #[tauri::command]
@@ -366,9 +391,6 @@ pub fn get_director_manual_detail(
     app: tauri::AppHandle,
     id: String,
 ) -> Result<SkillDetail, String> {
-    if !ENABLED_DIRECTOR_MANUAL_IDS.contains(&id.as_str()) {
-        return Err(format!("导演手册不存在: {id}"));
-    }
     get_skill_detail(&app, director_manuals_root(&app)?, &id, STORY_TABS)
 }
 

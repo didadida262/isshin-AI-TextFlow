@@ -10,10 +10,12 @@ interface SkillManualSectionProps {
   items: SkillManualItem[];
   selectedId: string;
   loading?: boolean;
-  onSelect: (id: string) => void;
+  onSelect?: (id: string) => void;
   variant: "visual" | "director";
   /** When true, section sizes to content instead of filling remaining height. */
   compact?: boolean;
+  /** When false, cards only reflect selection (e.g. driven by novel type). */
+  selectable?: boolean;
 }
 
 export function SkillManualSection({
@@ -24,6 +26,7 @@ export function SkillManualSection({
   onSelect,
   variant,
   compact = false,
+  selectable = false,
 }: SkillManualSectionProps) {
   const i18n = useTranslationMessages();
   const viewDetailLabel = i18n.creation.skillDetail.viewDetail;
@@ -86,19 +89,31 @@ export function SkillManualSection({
                   <div
                     key={item.id}
                     ref={selected ? selectedRef : undefined}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onSelect(item.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onSelect(item.id);
-                      }
-                    }}
-                    className={`group relative cursor-pointer overflow-hidden rounded-lg border text-left transition outline-none focus-visible:ring-1 focus-visible:ring-accent/50 ${
+                    role={selectable ? "button" : undefined}
+                    tabIndex={selectable ? 0 : undefined}
+                    onClick={
+                      selectable ? () => onSelect?.(item.id) : undefined
+                    }
+                    onKeyDown={
+                      selectable
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              onSelect?.(item.id);
+                            }
+                          }
+                        : undefined
+                    }
+                    className={`group relative overflow-hidden rounded-lg border text-left transition ${
+                      selectable
+                        ? "cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-accent/50"
+                        : ""
+                    } ${
                       selected
                         ? "border-accent"
-                        : "border-white/10 hover:border-white/20"
+                        : selectable
+                          ? "border-white/10 hover:border-white/20"
+                          : "border-white/10"
                     }`}
                   >
                     <button

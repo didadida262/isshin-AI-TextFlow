@@ -287,6 +287,13 @@ export type TranslationSchema = {
       chatAgentWriter: string;
       chatPipelineComplete: string;
       chatPipelineStopped: string;
+      chatPipelineErrorTitle: string;
+      chatPipelineErrorSkeletonBody: string;
+      chatPipelineErrorAdaptationBody: string;
+      chatPipelineErrorScriptsBody: string;
+      chatPipelineErrorGenericBody: string;
+      chatPipelineErrorTips: string;
+      chatPipelineErrorDetailPrefix: string;
       chatFallback: string;
       retryFailed: string;
       retryFailedProgress: (completed: number, total: number) => string;
@@ -500,7 +507,8 @@ export type TranslationSchema = {
       projectName: string;
       projectNamePlaceholder: string;
       novelType: string;
-      novelTypePlaceholder: string;
+      novelTypeUrban: string;
+      novelTypeWuxia: string;
       imageModel: string;
       videoModel: string;
       selectModel: string;
@@ -851,6 +859,17 @@ export const zh: TranslationSchema = {
       chatAgentWriter: "编剧",
       chatPipelineComplete: "剧本生成完成，请在右侧工作台查看故事骨架、改编策略与各集剧本。",
       chatPipelineStopped: "已停止生成。",
+      chatPipelineErrorTitle: "剧本生成失败",
+      chatPipelineErrorSkeletonBody:
+        "故事骨架阶段未能完成，模型未返回符合要求的 Markdown 内容。",
+      chatPipelineErrorAdaptationBody:
+        "改编策略阶段未能完成，模型未返回符合要求的 Markdown 内容。右侧「故事骨架」若已生成，可先查看后再重试。",
+      chatPipelineErrorScriptsBody:
+        "逐集剧本阶段出现问题，部分集数可能未成功写入。",
+      chatPipelineErrorGenericBody: "生成流程中断，请根据下方建议排查后重试。",
+      chatPipelineErrorTips:
+        "**建议：**\n- 在「设置」中确认 LLM API 地址、密钥与当前模型可用\n- 可尝试切换其他模型后重新生成\n- 若小说简介过长或信息过杂，可适当精简后重试",
+      chatPipelineErrorDetailPrefix: "详情：",
       chatFallback:
         "如需生成剧本，请点击「开始生成剧本」，或输入类似「开始生成剧本」的指令。",
       retryFailed: "重试失败集",
@@ -1077,7 +1096,8 @@ export const zh: TranslationSchema = {
       projectName: "项目名称",
       projectNamePlaceholder: "请输入项目名称",
       novelType: "小说类型",
-      novelTypePlaceholder: "例如：玄幻、科幻、言情",
+      novelTypeUrban: "都市",
+      novelTypeWuxia: "武侠",
       imageModel: "选择图片模型",
       videoModel: "选择视频模型",
       selectModel: "请选择模型",
@@ -1101,7 +1121,7 @@ export const zh: TranslationSchema = {
       modeFast: "快速",
       modeQuality: "品质",
       defaultProjectName: "未命名项目",
-      defaultNovelType: "玄幻",
+      defaultNovelType: "都市",
       defaultIntro: "在一个充满灵气的世界中，少年意外获得神秘传承，踏上修行之路……",
     },
     skillDetail: {

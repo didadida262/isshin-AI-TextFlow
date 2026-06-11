@@ -13,6 +13,7 @@ import type {
 } from "../agents/workflowAgent/scriptGeneration";
 import ChatGptLogo from "../assets/ChatGptLogo";
 import { MarkdownContent } from "./MarkdownContent";
+import { ScriptChatError } from "./ScriptChatError";
 
 interface ScriptAgentChatPanelProps {
   messages: ScriptChatMessage[];
@@ -52,6 +53,10 @@ function ScriptChatBubble({ message }: { message: ScriptChatMessage }) {
 
   if (message.milestone) {
     return <ScriptChatMilestone message={message} />;
+  }
+
+  if (message.status === "error") {
+    return <ScriptChatError message={message} />;
   }
 
   if (isUser) {

@@ -315,6 +315,18 @@ export const en: TranslationSchema = {
       chatPipelineComplete:
         "Script generation is complete. Review the skeleton, strategy, and episodes in the workspace.",
       chatPipelineStopped: "Generation stopped.",
+      chatPipelineErrorTitle: "Script generation failed",
+      chatPipelineErrorSkeletonBody:
+        "The story skeleton step did not finish — the model did not return valid Markdown.",
+      chatPipelineErrorAdaptationBody:
+        "The adaptation strategy step did not finish — the model did not return valid Markdown. If the skeleton is already on the right, review it before retrying.",
+      chatPipelineErrorScriptsBody:
+        "Something went wrong while writing episode scripts; some episodes may not have been saved.",
+      chatPipelineErrorGenericBody:
+        "The pipeline stopped. Use the suggestions below, then try again.",
+      chatPipelineErrorTips:
+        "**Suggestions:**\n- In Settings, verify the LLM API URL, key, and selected model\n- Try another model and regenerate\n- If the synopsis is very long, shorten it and retry",
+      chatPipelineErrorDetailPrefix: "Details: ",
       chatFallback:
         'To generate scripts, click "Start generating scripts" or send a similar command.',
       retryFailed: "Retry failed episodes",
@@ -550,7 +562,8 @@ export const en: TranslationSchema = {
       projectName: "Project name",
       projectNamePlaceholder: "Enter project name",
       novelType: "Novel genre",
-      novelTypePlaceholder: "e.g. Fantasy, Sci-Fi, Romance",
+      novelTypeUrban: "Urban",
+      novelTypeWuxia: "Wuxia",
       imageModel: "Image model",
       videoModel: "Video model",
       selectModel: "Select model",
@@ -574,7 +587,7 @@ export const en: TranslationSchema = {
       modeFast: "Fast",
       modeQuality: "Quality",
       defaultProjectName: "Untitled Project",
-      defaultNovelType: "Fantasy",
+      defaultNovelType: "都市",
       defaultIntro:
         "In a world filled with spiritual energy, a young man gains a mysterious legacy and begins his journey of cultivation…",
     },

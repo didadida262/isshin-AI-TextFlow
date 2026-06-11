@@ -15,6 +15,7 @@ import {
   type NovelChapterRecord,
 } from "../services/novel";
 import type { ScriptRecord, ScriptWorkData } from "../services/script";
+import { buildPipelineErrorResponse } from "../utils/scriptPipelineError";
 import { stripThink } from "../utils/stripThink";
 import type { AppConfig, CreationProject } from "../types";
 
@@ -147,6 +148,13 @@ interface UseScriptAgentChatOptions {
     stageScriptsProgress: (completed: number, total: number) => string;
     pipelineComplete: string;
     pipelineStopped: string;
+    pipelineErrorTitle: string;
+    pipelineErrorSkeletonBody: string;
+    pipelineErrorAdaptationBody: string;
+    pipelineErrorScriptsBody: string;
+    pipelineErrorGenericBody: string;
+    pipelineErrorTips: string;
+    pipelineErrorDetailPrefix: string;
     chatFallback: string;
     retryFailed: string;
     retryFailedProgress: (completed: number, total: number) => string;
@@ -397,10 +405,22 @@ export function useScriptAgentChat({
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
+      const errorResponse = buildPipelineErrorResponse(message, {
+        errorTitle: labels.pipelineErrorTitle,
+        errorSkeletonBody: labels.pipelineErrorSkeletonBody,
+        errorAdaptationBody: labels.pipelineErrorAdaptationBody,
+        errorScriptsBody: labels.pipelineErrorScriptsBody,
+        errorGenericBody: labels.pipelineErrorGenericBody,
+        errorTips: labels.pipelineErrorTips,
+        errorDetailPrefix: labels.pipelineErrorDetailPrefix,
+        suggestRetry: labels.suggestGenerate,
+        suggestGeneratePrompt: labels.suggestGeneratePrompt,
+      });
       if (activeProgressId) {
         patchMessage(activeProgressId, {
-          content: message,
+          content: errorResponse.content,
           status: "error",
+          suggestions: errorResponse.suggestions,
         });
       }
       onConfigError(message);
@@ -515,9 +535,24 @@ export function useScriptAgentChat({
         }
 
         const message = error instanceof Error ? error.message : String(error);
+        const errorResponse = buildPipelineErrorResponse(
+          message || labels.chatFallback,
+          {
+            errorTitle: labels.pipelineErrorTitle,
+            errorSkeletonBody: labels.pipelineErrorSkeletonBody,
+            errorAdaptationBody: labels.pipelineErrorAdaptationBody,
+            errorScriptsBody: labels.pipelineErrorScriptsBody,
+            errorGenericBody: labels.pipelineErrorGenericBody,
+            errorTips: labels.pipelineErrorTips,
+            errorDetailPrefix: labels.pipelineErrorDetailPrefix,
+            suggestRetry: labels.suggestGenerate,
+            suggestGeneratePrompt: labels.suggestGeneratePrompt,
+          },
+        );
         patchMessage(assistantId, {
-          content: message || labels.chatFallback,
+          content: errorResponse.content,
           status: "error",
+          suggestions: errorResponse.suggestions,
         });
         onConfigError(message);
       } finally {
@@ -533,6 +568,15 @@ export function useScriptAgentChat({
       isGenerating,
       labels.agentCoordinator,
       labels.chatFallback,
+      labels.pipelineErrorAdaptationBody,
+      labels.pipelineErrorDetailPrefix,
+      labels.pipelineErrorGenericBody,
+      labels.pipelineErrorScriptsBody,
+      labels.pipelineErrorSkeletonBody,
+      labels.pipelineErrorTips,
+      labels.pipelineErrorTitle,
+      labels.suggestGenerate,
+      labels.suggestGeneratePrompt,
       labels.configRequired,
       labels.modelsRequired,
       labels.pipelineStopped,
@@ -639,9 +683,21 @@ export function useScriptAgentChat({
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
+      const errorResponse = buildPipelineErrorResponse(message, {
+        errorTitle: labels.pipelineErrorTitle,
+        errorSkeletonBody: labels.pipelineErrorSkeletonBody,
+        errorAdaptationBody: labels.pipelineErrorAdaptationBody,
+        errorScriptsBody: labels.pipelineErrorScriptsBody,
+        errorGenericBody: labels.pipelineErrorGenericBody,
+        errorTips: labels.pipelineErrorTips,
+        errorDetailPrefix: labels.pipelineErrorDetailPrefix,
+        suggestRetry: labels.suggestGenerate,
+        suggestGeneratePrompt: labels.suggestGeneratePrompt,
+      });
       patchMessage(progressId, {
-        content: message,
+        content: errorResponse.content,
         status: "error",
+        suggestions: errorResponse.suggestions,
       });
       onConfigError(message);
     } finally {
