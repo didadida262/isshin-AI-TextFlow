@@ -1,13 +1,3 @@
----
-name: seedance-compliant-prompt
-description: >-
-  Rewrites scripts and video prompts for Seedance 2.0 / Kuaizi text-to-video API
-  to pass copyright and content safety checks. Use when writing or converting
-  text-to-video prompts, when API returns copyright/合规 errors, when adapting
-  screenplay or dialogue into video prompts, or when the user mentions Seedance,
-  筷子, 文生视频, or Volcengine prompt guidelines.
----
-
 # Seedance 2.0 文生视频提示词（合规版）
 
 将剧本、分镜或粗糙描述改写为符合 [Doubao Seedance 2.0 系列提示词指南](https://www.volcengine.com/docs/82379/2222480?lang=zh) 要求、且可通过筷子 OpenAPI 审核的**纯文本**提示词。

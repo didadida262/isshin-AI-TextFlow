@@ -1,12 +1,7 @@
-import seedanceSkill from "../../../../.cursor/skills/seedance-compliant-prompt/SKILL.md?raw";
-
-/** Strip YAML frontmatter from skill markdown. */
-export function stripSkillFrontmatter(markdown: string): string {
-  return markdown.replace(/^---[\s\S]*?---\s*\n?/, "").trim();
-}
+import seedanceSkill from "./seedanceSkill.md?raw";
 
 /** Runtime system prompt: Seedance skill + batch-generation output rules. */
-export const VIDEO_PROMPT_GENERATION_SYSTEM = `${stripSkillFrontmatter(seedanceSkill)}
+export const VIDEO_PROMPT_GENERATION_SYSTEM = `${seedanceSkill.trim()}
 
 ---
 
