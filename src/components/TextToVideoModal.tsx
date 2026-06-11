@@ -273,6 +273,9 @@ export function TextToVideoModal({
   useEffect(() => {
     if (!open) {
       autoStartedRef.current = false;
+      setSubmitting(false);
+      setBackgroundJobId(null);
+      setError("");
       return;
     }
     abortRef.current = false;
@@ -406,10 +409,8 @@ export function TextToVideoModal({
     });
 
     if (allowBackground && onBackgroundSubmit) {
-      const jobId = onBackgroundSubmit(submitValues);
-      setBackgroundJobId(jobId);
-      setSubmitting(true);
-      setError("");
+      onBackgroundSubmit(submitValues);
+      onClose();
       return;
     }
 
