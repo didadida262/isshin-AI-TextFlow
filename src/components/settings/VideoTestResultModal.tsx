@@ -42,6 +42,7 @@ interface VideoTestResultModalProps {
   open: boolean;
   settings: VideoGenerationSettings | null;
   onClose: () => void;
+  onVideoModelChange?: (model: string) => void;
 }
 
 const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
@@ -68,6 +69,7 @@ export function VideoTestResultModal({
   open,
   settings,
   onClose,
+  onVideoModelChange,
 }: VideoTestResultModalProps) {
   const { locale } = useI18n();
   const i18n = useTranslationMessages().settings;
@@ -103,12 +105,12 @@ export function VideoTestResultModal({
   const [kuaiziGenerationType, setKuaiziGenerationType] = useState(
     DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE,
   );
+  const [testVideoModel, setTestVideoModel] = useState("");
   const [videoB64, setVideoB64] = useState("");
   const [error, setError] = useState("");
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const requestIdRef = useRef(0);
 
-  const videoModel = settings?.videoModel?.trim() ?? "";
   const isKuaizi = Boolean(settings && isKuaiziVideoApi(settings.videoApiUrl));
 
   useEffect(() => {
@@ -131,10 +133,11 @@ export function VideoTestResultModal({
     setKuaiziRatio(kuaiziDefaults.ratio);
     setKuaiziDuration(String(kuaiziDefaults.duration));
     setKuaiziGenerationType(kuaiziDefaults.generationType);
+    setTestVideoModel(settings?.videoModel?.trim() ?? "");
     setVideoB64("");
     setError("");
     setElapsedMs(null);
-  }, [open]);
+  }, [open, settings?.videoModel]);
 
   const sizeOptions = useMemo(
     () =>
@@ -330,18 +333,22 @@ export function VideoTestResultModal({
                       />
                     </label>
 
-                    <label className="block space-y-1.5">
-                      <span className="text-xs text-text-muted">{formLabels.modelLabel}</span>
-                      <input
-                        readOnly
-                        value={
-                          isKuaizi
-                            ? i18n.kuaiziVideoModelNotUsed
-                            : videoModel || formLabels.modelDefault
-                        }
-                        className={readOnlyClass}
-                      />
-                    </label>
+                    {!isKuaizi ? (
+                      <label className="block space-y-1.5">
+                        <span className="text-xs text-text-muted">
+                          {formLabels.modelLabel}
+                        </span>
+                        <input
+                          value={testVideoModel}
+                          onChange={(event) => {
+                            setTestVideoModel(event.target.value);
+                            onVideoModelChange?.(event.target.value);
+                          }}
+                          placeholder="wan2.2-t2v-5b"
+                          className={fieldClass}
+                        />
+                      </label>
+                    ) : null}
 
                     {isKuaizi ? (
                       <>

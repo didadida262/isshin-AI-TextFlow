@@ -530,22 +530,6 @@ export function ModelServiceSettingsPanel({
           </div>
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-sm text-text-muted">{i18n.settings.videoModel}</span>
-          <input
-            type="text"
-            value={draft.videoModel}
-            onChange={(event) =>
-              onDraftChange((current) => ({
-                ...current,
-                videoModel: event.target.value,
-              }))
-            }
-            placeholder="wan2.2-t2v-5b"
-            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
-          />
-        </label>
-
         <div className="space-y-2">
           <button
             type="button"
@@ -562,6 +546,9 @@ export function ModelServiceSettingsPanel({
         open={videoTestOpen}
         settings={videoTestOpen ? videoSettings : null}
         onClose={() => setVideoTestOpen(false)}
+        onVideoModelChange={(model) =>
+          onDraftChange((current) => ({ ...current, videoModel: model }))
+        }
       />
 
       <div className="h-px bg-white/10" />

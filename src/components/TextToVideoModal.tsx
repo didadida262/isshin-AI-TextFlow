@@ -583,18 +583,18 @@ export function TextToVideoModal({
                         />
                       </label>
 
-                      <label className="block space-y-1.5">
-                        <span className="text-xs text-text-muted">{m.modelLabel}</span>
-                        <input
-                          readOnly
-                          value={
-                            isKuaizi
-                              ? settingsLabels.kuaiziVideoModelNotUsed
-                              : videoModel || m.modelDefault
-                          }
-                          className={readOnlyClass}
-                        />
-                      </label>
+                      {!isKuaizi ? (
+                        <label className="block space-y-1.5">
+                          <span className="text-xs text-text-muted">{m.modelLabel}</span>
+                          <input
+                            value={videoModel}
+                            onChange={(event) => setVideoModel(event.target.value)}
+                            placeholder="wan2.2-t2v-5b"
+                            disabled={submitting}
+                            className={fieldClass}
+                          />
+                        </label>
+                      ) : null}
 
                       {isKuaizi ? (
                         <>
