@@ -213,6 +213,9 @@ export async function runScriptPipeline(
     workData,
     scripts,
   });
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
   workData = await setScriptWorkData(project.id, { storySkeleton });
   onStageComplete?.({ workData, scripts: [...scripts] });
 
@@ -222,6 +225,9 @@ export async function runScriptPipeline(
     workData,
     scripts,
   });
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
   workData = await setScriptWorkData(project.id, { adaptationStrategy });
   onStageComplete?.({ workData, scripts: [...scripts] });
 

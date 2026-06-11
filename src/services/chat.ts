@@ -52,6 +52,12 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
 }
 
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+}
+
 export async function chatCompletion(
   config: AppConfig,
   model: string,
@@ -60,30 +66,57 @@ export async function chatCompletion(
   label = "chat-completion",
   options?: ChatCompletionOptions,
 ): Promise<string> {
-  if (signal?.aborted) {
-    throw new Error("Request cancelled");
-  }
+  throwIfAborted(signal);
 
   const url = resolveApiUrl(config.baseUrl, "/chat/completions");
-  const result = await invoke<{ content: string }>("llm_chat_completion", {
-    payload: {
-      url,
-      apiKey: config.apiKey,
-      label,
-      body: {
-        model,
-        messages,
-        stream: false,
-        ...(options?.maxTokens != null ? { max_tokens: options.maxTokens } : {}),
-      },
-    } satisfies LlmRequestPayload,
+  const body = {
+    model,
+    messages,
+    stream: false,
+    ...(options?.maxTokens != null ? { max_tokens: options.maxTokens } : {}),
+  };
+
+  await logLlmOutbound({
+    url,
+    apiKey: config.apiKey,
+    label,
+    body,
   });
 
-  if (signal?.aborted) {
-    throw new Error("Request cancelled");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  const responseText = await res.text();
+  void logLlmInbound({ data: responseText });
+
+  if (!res.ok) {
+    throw new Error(parseApiErrorMessage(responseText, res.status));
   }
 
-  return result.content;
+  throwIfAborted(signal);
+
+  let json: {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  try {
+    json = JSON.parse(responseText) as typeof json;
+  } catch {
+    throw new Error("解析 LLM 响应失败");
+  }
+
+  const content = json.choices?.[0]?.message?.content;
+  if (content == null || content === "") {
+    throw new Error("模型未返回 content");
+  }
+
+  return content;
 }
 
 export async function* streamChatCompletion(

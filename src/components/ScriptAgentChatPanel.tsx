@@ -198,15 +198,15 @@ export function ScriptAgentChatPanel({
       </div>
 
       <div className="shrink-0 border-t border-white/10 p-2">
-        <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-surface px-1 py-0.5 focus-within:border-accent/50">
+        <div className="flex items-end gap-1 rounded-lg border border-white/[0.08] bg-surface px-1 py-1 focus-within:border-accent/50">
           <textarea
             ref={textareaRef}
-            rows={1}
+            rows={2}
             value={text}
             disabled={disabled}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="max-h-24 min-h-0 flex-1 resize-none bg-transparent px-2 py-1 text-sm leading-5 text-white outline-none disabled:opacity-50"
+            className="max-h-48 min-h-[2.5rem] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm leading-5 text-white outline-none disabled:opacity-50"
           />
           {isGenerating ? (
             <button

@@ -23,6 +23,13 @@ function createId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.message === "Request cancelled")
+  );
+}
+
 const scriptChatCache = new Map<string, ScriptChatMessage[]>();
 
 function hasGeneratedScriptContent(
@@ -394,7 +401,7 @@ export function useScriptAgentChat({
       onComplete?.(result);
     } catch (error) {
       const activeProgressId = progressMsgIdRef.current;
-      if (error instanceof DOMException && error.name === "AbortError") {
+      if (isAbortError(error)) {
         if (activeProgressId) {
           patchMessage(activeProgressId, {
             content: labels.pipelineStopped,
@@ -424,10 +431,12 @@ export function useScriptAgentChat({
       }
       onConfigError(message);
     } finally {
-      setIsGenerating(false);
-      setGenerationProgress(null);
-      progressMsgIdRef.current = null;
-      abortRef.current = null;
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        progressMsgIdRef.current = null;
+        setIsGenerating(false);
+        setGenerationProgress(null);
+      }
     }
   }, [
     appendMessage,
@@ -525,7 +534,7 @@ export function useScriptAgentChat({
           status: "complete",
         });
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
+        if (isAbortError(error)) {
           patchMessage(assistantId, {
             content: labels.pipelineStopped,
             status: "stop",
@@ -555,9 +564,11 @@ export function useScriptAgentChat({
         });
         onConfigError(message);
       } finally {
-        setIsGenerating(false);
-        setGenerationProgress(null);
-        abortRef.current = null;
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setIsGenerating(false);
+          setGenerationProgress(null);
+        }
       }
     },
     [
@@ -594,8 +605,22 @@ export function useScriptAgentChat({
   );
 
   const stopGeneration = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
+    if (!abortRef.current) return;
+
+    abortRef.current.abort();
+
+    const activeProgressId = progressMsgIdRef.current;
+    if (activeProgressId) {
+      patchMessage(activeProgressId, {
+        content: labels.pipelineStopped,
+        status: "stop",
+      });
+      progressMsgIdRef.current = null;
+    }
+
+    setIsGenerating(false);
+    setGenerationProgress(null);
+  }, [labels.pipelineStopped, patchMessage]);
 
   const retryFailed = useCallback(async () => {
     if (isGenerating) return;
@@ -674,7 +699,7 @@ export function useScriptAgentChat({
       });
       onComplete?.(result);
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
+      if (isAbortError(error)) {
         patchMessage(progressId, {
           content: labels.pipelineStopped,
           status: "stop",
@@ -700,9 +725,11 @@ export function useScriptAgentChat({
       });
       onConfigError(message);
     } finally {
-      setIsGenerating(false);
-      setGenerationProgress(null);
-      abortRef.current = null;
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setIsGenerating(false);
+        setGenerationProgress(null);
+      }
     }
   }, [
     appendMessage,
