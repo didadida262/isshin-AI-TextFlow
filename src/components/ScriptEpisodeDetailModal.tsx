@@ -9,7 +9,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import type { ProjectAssetRecord } from "../services/assets";
+import { ASSET_STATE_ERROR, type ProjectAssetRecord } from "../services/assets";
 import type { ScriptRecord } from "../services/script";
 import { SCRIPT_STATE_ERROR } from "../services/script";
 import { MarkdownContent } from "./MarkdownContent";
@@ -17,8 +17,75 @@ import { ModalPortal } from "./ModalPortal";
 
 interface ScriptEpisodeDetailModalVideoLabels {
   colVideo: string;
+  colVideoStatus: string;
+  colPrompt: string;
   noVideo: string;
+  noPrompt: string;
   formatDuration: (ms: number) => string;
+  statusSuccess: string;
+  statusError: string;
+  statusPending: string;
+}
+
+type VideoStatusKind = "success" | "error" | "pending";
+
+function getVideoStatusKind(
+  video: ProjectAssetRecord | null | undefined,
+): VideoStatusKind {
+  if (!video) return "pending";
+  if (video.assetState === ASSET_STATE_ERROR) return "error";
+  if (video.imagePath) return "success";
+  return "pending";
+}
+
+const videoStatusBadgeClass: Record<VideoStatusKind, string> = {
+  success:
+    "border-accent/35 bg-accent/10 text-accent shadow-[0_0_10px_rgba(0,255,102,0.15)]",
+  error: "border-red-500/35 bg-red-500/10 text-red-400",
+  pending: "border-amber-400/30 bg-amber-400/10 text-amber-300",
+};
+
+function VideoStatusBadge({
+  kind,
+  labels,
+}: {
+  kind: VideoStatusKind;
+  labels: {
+    statusSuccess: string;
+    statusError: string;
+    statusPending: string;
+  };
+}) {
+  const label =
+    kind === "error"
+      ? labels.statusError
+      : kind === "success"
+        ? labels.statusSuccess
+        : labels.statusPending;
+  const icon =
+    kind === "error"
+      ? faCircleExclamation
+      : kind === "success"
+        ? faCircleCheck
+        : faClock;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${videoStatusBadgeClass[kind]}`}
+    >
+      <FontAwesomeIcon icon={icon} className="text-base" />
+      {label}
+    </span>
+  );
+}
+
+function resolveEpisodeVideoPrompt(
+  script: ScriptRecord,
+  video?: ProjectAssetRecord | null,
+): string {
+  const draft = script.videoPrompt?.trim();
+  if (draft) return draft;
+  return video?.prompt?.trim() ?? "";
 }
 
 interface ScriptEpisodeDetailModalProps {
@@ -110,6 +177,9 @@ export function ScriptEpisodeDetailModal({
 }: ScriptEpisodeDetailModalProps) {
   const i18n = useTranslationMessages();
   const s = i18n.creation.aiScriptStep;
+  const promptText = script
+    ? resolveEpisodeVideoPrompt(script, video)
+    : "";
 
   return (
     <ModalPortal>
@@ -166,6 +236,27 @@ export function ScriptEpisodeDetailModal({
                   <DetailField label={s.colStatus}>
                     <ScriptStatusBadge script={script} labels={s} />
                   </DetailField>
+                  {videoLabels ? (
+                    <>
+                      <DetailField label={videoLabels.colVideoStatus}>
+                        <VideoStatusBadge
+                          kind={getVideoStatusKind(video)}
+                          labels={videoLabels}
+                        />
+                      </DetailField>
+                      <DetailField label={videoLabels.colPrompt}>
+                        {promptText ? (
+                          <p className="whitespace-pre-wrap break-words text-text-muted">
+                            {promptText}
+                          </p>
+                        ) : (
+                          <span className="text-text-muted">
+                            {videoLabels.noPrompt}
+                          </span>
+                        )}
+                      </DetailField>
+                    </>
+                  ) : null}
                   {videoLabels ? (
                     <DetailField label={videoLabels.colVideo}>
                       {video?.imagePath ? (
