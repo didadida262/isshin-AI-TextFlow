@@ -7,9 +7,9 @@ use tauri::{AppHandle, Manager};
 pub struct AppPaths {
     pub sqlite_dir: PathBuf,
     pub assets_dir: PathBuf,
-    /// Visual manual bundles (`src/prompts/viewManuals`).
+    /// Visual manual bundles (`src/prompts/projectCreation/viewManuals`).
     pub view_manuals_dir: PathBuf,
-    /// Director manual prompts (`src/prompts/directorManuals`).
+    /// Director manual prompts (`src/prompts/projectCreation/directorManuals`).
     pub director_manuals_dir: PathBuf,
 }
 
@@ -28,13 +28,20 @@ pub fn get() -> Result<&'static AppPaths, String> {
         .ok_or_else(|| "应用路径未初始化".to_string())
 }
 
+fn project_creation_prompts_dir(repo: &PathBuf) -> PathBuf {
+    repo.join("src")
+        .join("prompts")
+        .join("projectCreation")
+}
+
 fn resolve(handle: &AppHandle) -> Result<AppPaths, String> {
     if let Some(repo) = find_dev_repo_root() {
         let data = repo.join("data");
         let sqlite_dir = data.join("sqlite");
         let assets_dir = data.join("assets");
-        let view_manuals_dir = repo.join("src").join("prompts").join("viewManuals");
-        let director_manuals_dir = repo.join("src").join("prompts").join("directorManuals");
+        let project_creation = project_creation_prompts_dir(&repo);
+        let view_manuals_dir = project_creation.join("viewManuals");
+        let director_manuals_dir = project_creation.join("directorManuals");
         std::fs::create_dir_all(&sqlite_dir).map_err(|e| e.to_string())?;
         std::fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
         if !view_manuals_dir.is_dir() {
@@ -87,7 +94,7 @@ fn find_dev_repo_root() -> Option<PathBuf> {
 
     for start in starts {
         if let Some(repo) = walk_up_for_repo_root(start) {
-            let view_manuals = repo.join("src").join("prompts").join("viewManuals");
+            let view_manuals = project_creation_prompts_dir(&repo).join("viewManuals");
             if view_manuals.is_dir() {
                 return repo.canonicalize().ok().or(Some(repo));
             }
@@ -110,13 +117,22 @@ fn walk_up_for_repo_root(mut start: PathBuf) -> Option<PathBuf> {
     None
 }
 
+fn bundled_project_creation_candidates(resource: &PathBuf) -> Vec<PathBuf> {
+    vec![
+        resource
+            .join("_up_")
+            .join("src")
+            .join("prompts")
+            .join("projectCreation"),
+        resource.join("src").join("prompts").join("projectCreation"),
+        resource.join("projectCreation"),
+    ]
+}
+
 fn resolve_bundled_view_manuals(handle: &AppHandle) -> Result<PathBuf, String> {
     let resource = handle.path().resource_dir().map_err(|e| e.to_string())?;
-    for candidate in [
-        resource.join("_up_").join("src").join("prompts").join("viewManuals"),
-        resource.join("src").join("prompts").join("viewManuals"),
-        resource.join("viewManuals"),
-    ] {
+    for base in bundled_project_creation_candidates(&resource) {
+        let candidate = base.join("viewManuals");
         if candidate.is_dir() {
             return Ok(candidate);
         }
@@ -130,11 +146,8 @@ fn resolve_bundled_view_manuals(handle: &AppHandle) -> Result<PathBuf, String> {
 
 fn resolve_bundled_director_manuals(handle: &AppHandle) -> Result<PathBuf, String> {
     let resource = handle.path().resource_dir().map_err(|e| e.to_string())?;
-    for candidate in [
-        resource.join("_up_").join("src").join("prompts").join("directorManuals"),
-        resource.join("src").join("prompts").join("directorManuals"),
-        resource.join("directorManuals"),
-    ] {
+    for base in bundled_project_creation_candidates(&resource) {
+        let candidate = base.join("directorManuals");
         if candidate.is_dir() {
             return Ok(candidate);
         }

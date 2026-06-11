@@ -33,8 +33,7 @@
     "active": true,
     "targets": ["app", "dmg", "msi", "nsis"],
     "resources": [
-      "../src/prompts/directorManuals/",
-      "../src/prompts/viewManuals/"
+      "../src/prompts/projectCreation/"
     ],
     "icon": [
       "icons/32x32.png",
