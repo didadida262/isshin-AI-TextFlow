@@ -283,8 +283,7 @@ export type TranslationSchema = {
       chatWelcomeHint: string;
       chatSuggestGenerate: string;
       chatSuggestGeneratePrompt: string;
-      chatAgentCoordinator: string;
-      chatAgentWriter: string;
+      chatAgentName: string;
       chatPipelineComplete: string;
       chatPipelineStopped: string;
       chatPipelineErrorTitle: string;
@@ -850,13 +849,12 @@ export const zh: TranslationSchema = {
       statusPending: "待生成",
       generatingRowScript: "正在生成…",
       noContent: "—",
-      chatWelcome: "你好，我是剧本统筹 Agent。",
+      chatWelcome: "你好，我是剧本编剧 Agent。",
       chatWelcomeHint:
         "我可以帮你依次完成故事骨架、改编策略和逐集剧本。点击下方快捷指令，或直接输入「开始生成剧本」。",
       chatSuggestGenerate: "开始生成剧本",
       chatSuggestGeneratePrompt: "开始生成剧本",
-      chatAgentCoordinator: "统筹",
-      chatAgentWriter: "编剧",
+      chatAgentName: "编剧",
       chatPipelineComplete: "剧本生成完成，请在右侧工作台查看故事骨架、改编策略与各集剧本。",
       chatPipelineStopped: "已停止生成。",
       chatPipelineErrorTitle: "剧本生成失败",

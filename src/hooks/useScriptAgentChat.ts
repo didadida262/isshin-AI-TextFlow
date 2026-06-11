@@ -43,14 +43,14 @@ function buildWelcomeMessage(
     | "welcomeHint"
     | "suggestGenerate"
     | "suggestGeneratePrompt"
-    | "agentCoordinator"
+    | "agentName"
   >,
   withSuggestion: boolean,
 ): ScriptChatMessage {
   return {
     id: createId(),
     role: "assistant",
-    name: labels.agentCoordinator,
+    name: labels.agentName,
     content: `${labels.welcome}\n\n${labels.welcomeHint}`,
     status: "complete",
     suggestions: withSuggestion
@@ -90,7 +90,7 @@ function buildInitialMessages(
     {
       id: createId(),
       role: "assistant",
-      name: labels.agentWriter,
+      name: labels.agentName,
       content: labels.pipelineComplete,
       status: "complete",
     },
@@ -138,8 +138,7 @@ interface UseScriptAgentChatOptions {
     welcomeHint: string;
     suggestGenerate: string;
     suggestGeneratePrompt: string;
-    agentCoordinator: string;
-    agentWriter: string;
+    agentName: string;
     stageSkeleton: string;
     stageAdaptation: string;
     stageSkeletonComplete: string;
@@ -228,7 +227,7 @@ export function useScriptAgentChat({
       const next = prev.map((message) => {
         if (
           message.role === "assistant" &&
-          message.name === labels.agentWriter &&
+          message.name === labels.agentName &&
           message.status === "streaming"
         ) {
           changed = true;
@@ -245,7 +244,7 @@ export function useScriptAgentChat({
   }, [
     chapters.length,
     isGenerating,
-    labels.agentWriter,
+    labels.agentName,
     labels.pipelineComplete,
     scripts,
     updateMessages,
@@ -322,7 +321,7 @@ export function useScriptAgentChat({
       appendMessage({
         id: nextId,
         role: "assistant",
-        name: labels.agentWriter,
+        name: labels.agentName,
         content: progressToAgentMessage(nextProgress, labels),
         status: "streaming",
       });
@@ -332,7 +331,7 @@ export function useScriptAgentChat({
     const progressId = appendMessage({
       id: createId(),
       role: "assistant",
-      name: labels.agentWriter,
+      name: labels.agentName,
       content: labels.stageSkeleton,
       status: "streaming",
     });
@@ -388,7 +387,7 @@ export function useScriptAgentChat({
       appendMessage({
         id: createId(),
         role: "assistant",
-        name: labels.agentWriter,
+        name: labels.agentName,
         content: labels.pipelineComplete,
         status: "complete",
       });
@@ -481,7 +480,7 @@ export function useScriptAgentChat({
       const assistantId = appendMessage({
         id: createId(),
         role: "assistant",
-        name: labels.agentCoordinator,
+        name: labels.agentName,
         content: "",
         status: "streaming",
       });
@@ -566,7 +565,7 @@ export function useScriptAgentChat({
       chapters,
       config,
       isGenerating,
-      labels.agentCoordinator,
+      labels.agentName,
       labels.chatFallback,
       labels.pipelineErrorAdaptationBody,
       labels.pipelineErrorDetailPrefix,
@@ -608,7 +607,7 @@ export function useScriptAgentChat({
       appendMessage({
         id: createId(),
         role: "assistant",
-        name: labels.agentCoordinator,
+        name: labels.agentName,
         content: labels.retryFailedNone,
         status: "complete",
       });
@@ -638,7 +637,7 @@ export function useScriptAgentChat({
     const progressId = appendMessage({
       id: createId(),
       role: "assistant",
-      name: labels.agentWriter,
+      name: labels.agentName,
       content: labels.retryFailed,
       status: "streaming",
     });
