@@ -654,7 +654,6 @@ export function GenerateVideoStep({
       <TextToVideoModal
         open={videoModalOpen}
         allowBackground
-        startImmediately
         initialName={videoScript?.name ?? ""}
         initialPrompt={resolveVideoModalPrompt(videoScript)}
         onClose={closeVideoModal}

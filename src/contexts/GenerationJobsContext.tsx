@@ -15,6 +15,8 @@ import { generateVideoB64 } from "../services/videoGeneration";
 import {
   DEFAULT_IMAGE_COUNT,
   DEFAULT_IMAGE_SIZE,
+  getVideoSettingsFromConfig,
+  loadConfig,
 } from "../services/config";
 
 export type GenerationJobKind = "image" | "video";
@@ -213,18 +215,29 @@ export function GenerationJobsProvider({
       const startedAt = performance.now();
 
       try {
-        const videoB64 = await generateVideoB64({
-          prompt: values.prompt,
-          size: values.size,
-          numFrames: values.numFrames,
-          fps: values.fps,
-          numInferenceSteps: values.numInferenceSteps,
-          guidanceScale: values.guidanceScale,
-          guidanceScale2: values.guidanceScale2,
-          boundaryRatio: values.boundaryRatio,
-          flowShift: values.flowShift,
-          seed: values.seed,
-        });
+        const config = await loadConfig();
+        const settings = getVideoSettingsFromConfig(config);
+        const videoB64 = await generateVideoB64(
+          values.kuaizi
+            ? {
+                prompt: values.prompt,
+                settings,
+                kuaizi: values.kuaizi,
+              }
+            : {
+                prompt: values.prompt,
+                settings,
+                size: values.size,
+                numFrames: values.numFrames,
+                fps: values.fps,
+                numInferenceSteps: values.numInferenceSteps,
+                guidanceScale: values.guidanceScale,
+                guidanceScale2: values.guidanceScale2,
+                boundaryRatio: values.boundaryRatio,
+                flowShift: values.flowShift,
+                seed: values.seed,
+              },
+        );
 
         const generationDurationMs = Math.max(
           0,

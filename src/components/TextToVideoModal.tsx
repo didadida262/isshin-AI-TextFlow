@@ -5,6 +5,11 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
+  DEFAULT_KUAIZI_VIDEO_DURATION,
+  DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE,
+  DEFAULT_KUAIZI_VIDEO_MODE,
+  DEFAULT_KUAIZI_VIDEO_RATIO,
+  DEFAULT_KUAIZI_VIDEO_RESOLUTION,
   DEFAULT_VIDEO_BOUNDARY_RATIO,
   DEFAULT_VIDEO_FPS,
   DEFAULT_VIDEO_FLOW_SHIFT,
@@ -15,8 +20,14 @@ import {
   DEFAULT_VIDEO_SEED,
   DEFAULT_VIDEO_MODEL,
   DEFAULT_VIDEO_SIZE,
+  getDefaultKuaiziVideoParams,
+  getVideoSettingsFromConfig,
+  isKuaiziVideoApi,
   loadConfig,
+  type KuaiziVideoParams,
+  type VideoGenerationSettings,
 } from "../services/config";
+import type { AppConfig } from "../types";
 import { generateVideoB64 } from "../services/videoGeneration";
 import { parsePositiveFloat, parsePositiveInt } from "../utils/numericInput";
 import { PaintbrushLoading } from "./PaintbrushLoading";
@@ -36,17 +47,35 @@ export interface TextToVideoFormValues {
   boundaryRatio: number;
   flowShift: number;
   seed: number;
+  kuaizi?: KuaiziVideoParams;
   generationDurationMs: number;
 }
 
 type TextToVideoSubmitValues = Omit<TextToVideoFormValues, "generationDurationMs">;
 
+function buildKuaiziParamsFromForm(
+  mode: string,
+  resolution: string,
+  ratio: string,
+  duration: string,
+  generationType: string,
+): KuaiziVideoParams {
+  return {
+    mode,
+    resolution,
+    ratio,
+    duration: parsePositiveInt(duration, DEFAULT_KUAIZI_VIDEO_DURATION),
+    generationType,
+  };
+}
+
 function buildDefaultSubmitValues(
   name: string,
   prompt: string,
   videoModel: string,
+  config: AppConfig,
 ): TextToVideoSubmitValues {
-  return {
+  const base = {
     name: name.trim(),
     prompt: prompt.trim(),
     model: videoModel.trim() || DEFAULT_VIDEO_MODEL,
@@ -59,6 +88,92 @@ function buildDefaultSubmitValues(
     boundaryRatio: DEFAULT_VIDEO_BOUNDARY_RATIO,
     flowShift: DEFAULT_VIDEO_FLOW_SHIFT,
     seed: DEFAULT_VIDEO_SEED,
+  };
+
+  if (isKuaiziVideoApi(config.videoApiUrl)) {
+    const kuaizi = getDefaultKuaiziVideoParams();
+    return {
+      ...base,
+      model: kuaizi.mode,
+      size: `${kuaizi.ratio}@${kuaizi.resolution}`,
+      kuaizi,
+    };
+  }
+
+  return base;
+}
+
+function buildSubmitValuesFromForm(input: {
+  isKuaizi: boolean;
+  name: string;
+  prompt: string;
+  videoModel: string;
+  modelDefault: string;
+  size: string;
+  numFrames: string;
+  fps: string;
+  numInferenceSteps: string;
+  guidanceScale: string;
+  guidanceScale2: string;
+  boundaryRatio: string;
+  flowShift: string;
+  seed: string;
+  kuaiziMode: string;
+  kuaiziResolution: string;
+  kuaiziRatio: string;
+  kuaiziDuration: string;
+  kuaiziGenerationType: string;
+}): TextToVideoSubmitValues {
+  if (input.isKuaizi) {
+    const kuaizi = buildKuaiziParamsFromForm(
+      input.kuaiziMode,
+      input.kuaiziResolution,
+      input.kuaiziRatio,
+      input.kuaiziDuration,
+      input.kuaiziGenerationType,
+    );
+    return {
+      name: input.name.trim(),
+      prompt: input.prompt.trim(),
+      model: kuaizi.mode,
+      size: `${kuaizi.ratio}@${kuaizi.resolution}`,
+      numFrames: DEFAULT_VIDEO_NUM_FRAMES,
+      fps: DEFAULT_VIDEO_FPS,
+      numInferenceSteps: DEFAULT_VIDEO_INFERENCE_STEPS,
+      guidanceScale: DEFAULT_VIDEO_GUIDANCE_SCALE,
+      guidanceScale2: DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+      boundaryRatio: DEFAULT_VIDEO_BOUNDARY_RATIO,
+      flowShift: DEFAULT_VIDEO_FLOW_SHIFT,
+      seed: DEFAULT_VIDEO_SEED,
+      kuaizi,
+    };
+  }
+
+  return {
+    name: input.name.trim(),
+    prompt: input.prompt.trim(),
+    model: input.videoModel || input.modelDefault,
+    size: input.size,
+    numFrames: parsePositiveInt(input.numFrames, DEFAULT_VIDEO_NUM_FRAMES),
+    fps: parsePositiveInt(input.fps, DEFAULT_VIDEO_FPS),
+    numInferenceSteps: parsePositiveInt(
+      input.numInferenceSteps,
+      DEFAULT_VIDEO_INFERENCE_STEPS,
+    ),
+    guidanceScale: parsePositiveFloat(
+      input.guidanceScale,
+      DEFAULT_VIDEO_GUIDANCE_SCALE,
+    ),
+    guidanceScale2: parsePositiveFloat(
+      input.guidanceScale2,
+      DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+    ),
+    boundaryRatio: parsePositiveFloat(
+      input.boundaryRatio,
+      DEFAULT_VIDEO_BOUNDARY_RATIO,
+    ),
+    flowShift: parsePositiveFloat(input.flowShift, DEFAULT_VIDEO_FLOW_SHIFT),
+    seed: parsePositiveInt(input.seed, DEFAULT_VIDEO_SEED),
   };
 }
 
@@ -78,6 +193,9 @@ const spring = { type: "spring" as const, stiffness: 300, damping: 30 };
 const overlayExit = { duration: 0.12, ease: [0.4, 0, 0.2, 1] as const };
 
 const SIZE_OPTIONS = ["832x480", "1280x720", "1024x576"];
+const KUAIZI_MODE_OPTIONS = ["fast"];
+const KUAIZI_RESOLUTION_OPTIONS = ["480p", "720p", "1080p"];
+const KUAIZI_RATIO_OPTIONS = ["16:9", "9:16", "1:1", "4:3", "3:4"];
 
 const fieldClass =
   "box-border h-10 w-full rounded-lg border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-accent/50 disabled:opacity-50";
@@ -96,7 +214,11 @@ export function TextToVideoModal({
   initialPrompt = "",
 }: TextToVideoModalProps) {
   const m = useTranslationMessages().creation.textToVideoModal;
+  const settingsLabels = useTranslationMessages().settings;
   const errors = useTranslationMessages().errors;
+  const [videoSettings, setVideoSettings] = useState<VideoGenerationSettings | null>(
+    null,
+  );
   const [videoModel, setVideoModel] = useState(DEFAULT_VIDEO_MODEL);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -117,6 +239,17 @@ export function TextToVideoModal({
   );
   const [flowShift, setFlowShift] = useState(String(DEFAULT_VIDEO_FLOW_SHIFT));
   const [seed, setSeed] = useState(String(DEFAULT_VIDEO_SEED));
+  const [kuaiziMode, setKuaiziMode] = useState(DEFAULT_KUAIZI_VIDEO_MODE);
+  const [kuaiziResolution, setKuaiziResolution] = useState(
+    DEFAULT_KUAIZI_VIDEO_RESOLUTION,
+  );
+  const [kuaiziRatio, setKuaiziRatio] = useState(DEFAULT_KUAIZI_VIDEO_RATIO);
+  const [kuaiziDuration, setKuaiziDuration] = useState(
+    String(DEFAULT_KUAIZI_VIDEO_DURATION),
+  );
+  const [kuaiziGenerationType, setKuaiziGenerationType] = useState(
+    DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [backgroundJobId, setBackgroundJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -133,6 +266,9 @@ export function TextToVideoModal({
     [backgroundJobId, jobs],
   );
   const isBackgroundGenerating = backgroundJobId != null;
+  const isKuaizi = Boolean(
+    videoSettings && isKuaiziVideoApi(videoSettings.videoApiUrl),
+  );
 
   useEffect(() => {
     if (!open) {
@@ -141,6 +277,7 @@ export function TextToVideoModal({
     }
     abortRef.current = false;
     requestIdRef.current += 1;
+    const kuaiziDefaults = getDefaultKuaiziVideoParams();
     setName(initialName.trim());
     setPrompt(initialPrompt.trim());
     setSize(DEFAULT_VIDEO_SIZE);
@@ -152,6 +289,11 @@ export function TextToVideoModal({
     setBoundaryRatio(String(DEFAULT_VIDEO_BOUNDARY_RATIO));
     setFlowShift(String(DEFAULT_VIDEO_FLOW_SHIFT));
     setSeed(String(DEFAULT_VIDEO_SEED));
+    setKuaiziMode(kuaiziDefaults.mode);
+    setKuaiziResolution(kuaiziDefaults.resolution);
+    setKuaiziRatio(kuaiziDefaults.ratio);
+    setKuaiziDuration(String(kuaiziDefaults.duration));
+    setKuaiziGenerationType(kuaiziDefaults.generationType);
     setBackgroundJobId(null);
     setError("");
     setSubmitting(startImmediately);
@@ -159,6 +301,7 @@ export function TextToVideoModal({
     void loadConfig().then((config) => {
       const model = config.videoModel.trim() || DEFAULT_VIDEO_MODEL;
       setVideoModel(model);
+      setVideoSettings(getVideoSettingsFromConfig(config));
 
       if (
         !startImmediately ||
@@ -182,7 +325,7 @@ export function TextToVideoModal({
 
       autoStartedRef.current = true;
       const jobId = onBackgroundSubmit(
-        buildDefaultSubmitValues(trimmedName, trimmedPrompt, model),
+        buildDefaultSubmitValues(trimmedName, trimmedPrompt, model, config),
       );
       setBackgroundJobId(jobId);
       setSubmitting(true);
@@ -240,30 +383,30 @@ export function TextToVideoModal({
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
 
+    const submitValues = buildSubmitValuesFromForm({
+      isKuaizi,
+      name,
+      prompt,
+      videoModel,
+      modelDefault: m.modelDefault,
+      size,
+      numFrames,
+      fps,
+      numInferenceSteps,
+      guidanceScale,
+      guidanceScale2,
+      boundaryRatio,
+      flowShift,
+      seed,
+      kuaiziMode,
+      kuaiziResolution,
+      kuaiziRatio,
+      kuaiziDuration,
+      kuaiziGenerationType,
+    });
+
     if (allowBackground && onBackgroundSubmit) {
-      const jobId = onBackgroundSubmit({
-        name: name.trim(),
-        prompt: prompt.trim(),
-        model: videoModel || m.modelDefault,
-        size,
-        numFrames: parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES),
-        fps: parsePositiveInt(fps, DEFAULT_VIDEO_FPS),
-        numInferenceSteps: parsePositiveInt(
-          numInferenceSteps,
-          DEFAULT_VIDEO_INFERENCE_STEPS,
-        ),
-        guidanceScale: parsePositiveFloat(guidanceScale, DEFAULT_VIDEO_GUIDANCE_SCALE),
-        guidanceScale2: parsePositiveFloat(
-          guidanceScale2,
-          DEFAULT_VIDEO_GUIDANCE_SCALE_2,
-        ),
-        boundaryRatio: parsePositiveFloat(
-          boundaryRatio,
-          DEFAULT_VIDEO_BOUNDARY_RATIO,
-        ),
-        flowShift: parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT),
-        seed: parsePositiveInt(seed, DEFAULT_VIDEO_SEED),
-      });
+      const jobId = onBackgroundSubmit(submitValues);
       setBackgroundJobId(jobId);
       setSubmitting(true);
       setError("");
@@ -278,39 +421,27 @@ export function TextToVideoModal({
     setError("");
     const startedAt = performance.now();
     try {
-      const resolvedNumFrames = parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES);
-      const resolvedFps = parsePositiveInt(fps, DEFAULT_VIDEO_FPS);
-      const resolvedNumInferenceSteps = parsePositiveInt(
-        numInferenceSteps,
-        DEFAULT_VIDEO_INFERENCE_STEPS,
+      const videoB64 = await generateVideoB64(
+        isKuaizi
+          ? {
+              prompt: submitValues.prompt,
+              settings: videoSettings ?? undefined,
+              kuaizi: submitValues.kuaizi,
+            }
+          : {
+              prompt: submitValues.prompt,
+              settings: videoSettings ?? undefined,
+              size: submitValues.size,
+              numFrames: submitValues.numFrames,
+              fps: submitValues.fps,
+              numInferenceSteps: submitValues.numInferenceSteps,
+              guidanceScale: submitValues.guidanceScale,
+              guidanceScale2: submitValues.guidanceScale2,
+              boundaryRatio: submitValues.boundaryRatio,
+              flowShift: submitValues.flowShift,
+              seed: submitValues.seed,
+            },
       );
-      const resolvedGuidanceScale = parsePositiveFloat(
-        guidanceScale,
-        DEFAULT_VIDEO_GUIDANCE_SCALE,
-      );
-      const resolvedGuidanceScale2 = parsePositiveFloat(
-        guidanceScale2,
-        DEFAULT_VIDEO_GUIDANCE_SCALE_2,
-      );
-      const resolvedBoundaryRatio = parsePositiveFloat(
-        boundaryRatio,
-        DEFAULT_VIDEO_BOUNDARY_RATIO,
-      );
-      const resolvedFlowShift = parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT);
-      const resolvedSeed = parsePositiveInt(seed, DEFAULT_VIDEO_SEED);
-
-      const videoB64 = await generateVideoB64({
-        prompt,
-        size,
-        numFrames: resolvedNumFrames,
-        fps: resolvedFps,
-        numInferenceSteps: resolvedNumInferenceSteps,
-        guidanceScale: resolvedGuidanceScale,
-        guidanceScale2: resolvedGuidanceScale2,
-        boundaryRatio: resolvedBoundaryRatio,
-        flowShift: resolvedFlowShift,
-        seed: resolvedSeed,
-      });
       if (abortRef.current || requestId !== requestIdRef.current) return;
 
       const generationDurationMs = Math.max(
@@ -318,24 +449,7 @@ export function TextToVideoModal({
         Math.round(performance.now() - startedAt),
       );
 
-      await onSubmit(
-        {
-          name: name.trim(),
-          prompt: prompt.trim(),
-          model: videoModel || m.modelDefault,
-          size,
-          numFrames: resolvedNumFrames,
-          fps: resolvedFps,
-          numInferenceSteps: resolvedNumInferenceSteps,
-          guidanceScale: resolvedGuidanceScale,
-          guidanceScale2: resolvedGuidanceScale2,
-          boundaryRatio: resolvedBoundaryRatio,
-          flowShift: resolvedFlowShift,
-          seed: resolvedSeed,
-          generationDurationMs,
-        },
-        videoB64,
-      );
+      await onSubmit({ ...submitValues, generationDurationMs }, videoB64);
       if (abortRef.current || requestId !== requestIdRef.current) return;
       onClose();
     } catch (submitError) {
@@ -361,6 +475,12 @@ export function TextToVideoModal({
     fps,
     guidanceScale,
     guidanceScale2,
+    isKuaizi,
+    kuaiziDuration,
+    kuaiziGenerationType,
+    kuaiziMode,
+    kuaiziRatio,
+    kuaiziResolution,
     m.modelDefault,
     name,
     numFrames,
@@ -372,6 +492,7 @@ export function TextToVideoModal({
     seed,
     size,
     videoModel,
+    videoSettings,
   ]);
 
   return (
@@ -466,139 +587,230 @@ export function TextToVideoModal({
                         <span className="text-xs text-text-muted">{m.modelLabel}</span>
                         <input
                           readOnly
-                          value={videoModel || m.modelDefault}
+                          value={
+                            isKuaizi
+                              ? settingsLabels.kuaiziVideoModelNotUsed
+                              : videoModel || m.modelDefault
+                          }
                           className={readOnlyClass}
                         />
                       </label>
 
-                      <div className="block space-y-1.5">
-                        <span className="text-xs text-text-muted">{m.sizeLabel}</span>
-                        <Select
-                          value={size}
-                          options={sizeOptions}
-                          onChange={setSize}
-                          disabled={submitting}
-                        />
-                      </div>
+                      {isKuaizi ? (
+                        <>
+                          <div className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoModeLabel}
+                            </span>
+                            <Select
+                              value={kuaiziMode}
+                              options={KUAIZI_MODE_OPTIONS.map((option) => ({
+                                value: option,
+                                label: option,
+                              }))}
+                              onChange={setKuaiziMode}
+                              disabled={submitting}
+                            />
+                          </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="block space-y-1.5">
-                          <span className="text-xs text-text-muted">{m.numFramesLabel}</span>
-                          <input
-                            type="number"
-                            min={1}
-                            max={200}
-                            value={numFrames}
-                            onChange={(event) => setNumFrames(event.target.value)}
-                            disabled={submitting}
-                            className={fieldClass}
-                          />
-                        </label>
+                          <div className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoResolutionLabel}
+                            </span>
+                            <Select
+                              value={kuaiziResolution}
+                              options={KUAIZI_RESOLUTION_OPTIONS.map((option) => ({
+                                value: option,
+                                label: option,
+                              }))}
+                              onChange={setKuaiziResolution}
+                              disabled={submitting}
+                            />
+                          </div>
 
-                        <label className="block space-y-1.5">
-                          <span className="text-xs text-text-muted">{m.fpsLabel}</span>
-                          <input
-                            type="number"
-                            min={1}
-                            max={60}
-                            value={fps}
-                            onChange={(event) => setFps(event.target.value)}
-                            disabled={submitting}
-                            className={fieldClass}
-                          />
-                        </label>
-                      </div>
+                          <div className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoRatioLabel}
+                            </span>
+                            <Select
+                              value={kuaiziRatio}
+                              options={KUAIZI_RATIO_OPTIONS.map((option) => ({
+                                value: option,
+                                label: option,
+                              }))}
+                              onChange={setKuaiziRatio}
+                              disabled={submitting}
+                            />
+                          </div>
 
-                      <label className="block space-y-1.5">
-                        <span className="text-xs text-text-muted">
-                          {m.inferenceStepsLabel}
-                        </span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={numInferenceSteps}
-                          onChange={(event) => setNumInferenceSteps(event.target.value)}
-                          disabled={submitting}
-                          className={fieldClass}
-                        />
-                      </label>
+                          <label className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoDurationLabel}
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={30}
+                              value={kuaiziDuration}
+                              onChange={(event) => setKuaiziDuration(event.target.value)}
+                              disabled={submitting}
+                              className={fieldClass}
+                            />
+                          </label>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="block space-y-1.5">
-                          <span className="text-xs text-text-muted">
-                            {m.guidanceScaleLabel}
-                          </span>
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.1}
-                            value={guidanceScale}
-                            onChange={(event) => setGuidanceScale(event.target.value)}
-                            disabled={submitting}
-                            className={fieldClass}
-                          />
-                        </label>
+                          <label className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoGenerationTypeLabel}
+                            </span>
+                            <input
+                              readOnly
+                              value={kuaiziGenerationType}
+                              className={readOnlyClass}
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <>
+                          <div className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">{m.sizeLabel}</span>
+                            <Select
+                              value={size}
+                              options={sizeOptions}
+                              onChange={setSize}
+                              disabled={submitting}
+                            />
+                          </div>
 
-                        <label className="block space-y-1.5">
-                          <span className="text-xs text-text-muted">
-                            {m.guidanceScale2Label}
-                          </span>
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.1}
-                            value={guidanceScale2}
-                            onChange={(event) => setGuidanceScale2(event.target.value)}
-                            disabled={submitting}
-                            className={fieldClass}
-                          />
-                        </label>
-                      </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block space-y-1.5">
+                              <span className="text-xs text-text-muted">
+                                {m.numFramesLabel}
+                              </span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={200}
+                                value={numFrames}
+                                onChange={(event) => setNumFrames(event.target.value)}
+                                disabled={submitting}
+                                className={fieldClass}
+                              />
+                            </label>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <label className="block space-y-1.5">
-                          <span className="text-xs text-text-muted">
-                            {m.boundaryRatioLabel}
-                          </span>
-                          <input
-                            type="number"
-                            min={0}
-                            max={1}
-                            step={0.001}
-                            value={boundaryRatio}
-                            onChange={(event) => setBoundaryRatio(event.target.value)}
-                            disabled={submitting}
-                            className={fieldClass}
-                          />
-                        </label>
+                            <label className="block space-y-1.5">
+                              <span className="text-xs text-text-muted">{m.fpsLabel}</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={60}
+                                value={fps}
+                                onChange={(event) => setFps(event.target.value)}
+                                disabled={submitting}
+                                className={fieldClass}
+                              />
+                            </label>
+                          </div>
 
-                        <label className="block space-y-1.5">
-                          <span className="text-xs text-text-muted">{m.flowShiftLabel}</span>
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.1}
-                            value={flowShift}
-                            onChange={(event) => setFlowShift(event.target.value)}
-                            disabled={submitting}
-                            className={fieldClass}
-                          />
-                        </label>
-                      </div>
+                          <label className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {m.inferenceStepsLabel}
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={100}
+                              value={numInferenceSteps}
+                              onChange={(event) =>
+                                setNumInferenceSteps(event.target.value)
+                              }
+                              disabled={submitting}
+                              className={fieldClass}
+                            />
+                          </label>
 
-                      <label className="block space-y-1.5">
-                        <span className="text-xs text-text-muted">{m.seedLabel}</span>
-                        <input
-                          type="number"
-                          value={seed}
-                          onChange={(event) =>
-                            setSeed(event.target.value)
-                          }
-                          disabled={submitting}
-                          className={fieldClass}
-                        />
-                      </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block space-y-1.5">
+                              <span className="text-xs text-text-muted">
+                                {m.guidanceScaleLabel}
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.1}
+                                value={guidanceScale}
+                                onChange={(event) =>
+                                  setGuidanceScale(event.target.value)
+                                }
+                                disabled={submitting}
+                                className={fieldClass}
+                              />
+                            </label>
+
+                            <label className="block space-y-1.5">
+                              <span className="text-xs text-text-muted">
+                                {m.guidanceScale2Label}
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.1}
+                                value={guidanceScale2}
+                                onChange={(event) =>
+                                  setGuidanceScale2(event.target.value)
+                                }
+                                disabled={submitting}
+                                className={fieldClass}
+                              />
+                            </label>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block space-y-1.5">
+                              <span className="text-xs text-text-muted">
+                                {m.boundaryRatioLabel}
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1}
+                                step={0.001}
+                                value={boundaryRatio}
+                                onChange={(event) =>
+                                  setBoundaryRatio(event.target.value)
+                                }
+                                disabled={submitting}
+                                className={fieldClass}
+                              />
+                            </label>
+
+                            <label className="block space-y-1.5">
+                              <span className="text-xs text-text-muted">
+                                {m.flowShiftLabel}
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.1}
+                                value={flowShift}
+                                onChange={(event) => setFlowShift(event.target.value)}
+                                disabled={submitting}
+                                className={fieldClass}
+                              />
+                            </label>
+                          </div>
+
+                          <label className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">{m.seedLabel}</span>
+                            <input
+                              type="number"
+                              value={seed}
+                              onChange={(event) => setSeed(event.target.value)}
+                              disabled={submitting}
+                              className={fieldClass}
+                            />
+                          </label>
+                        </>
+                      )}
 
                       {error ? (
                         <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">
