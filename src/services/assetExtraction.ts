@@ -139,11 +139,13 @@ export interface ExtractAssetsFromScriptsOptions {
   config: AppConfig;
   model: string;
   scripts: ScriptRecord[];
+  /** Project visual manual id — skills are injected at extraction time. */
+  artStyleId?: string;
   onProgress?: (progress: ExtractAssetsProgress) => void;
   signal?: AbortSignal;
 }
 
-/** Extract character/scene drafts from scripts via LLM asset-extraction agent. */
+/** Extract character/scene/prop drafts from scripts via LLM asset-extraction agent. */
 export async function extractAssetsFromScripts(
   options: ExtractAssetsFromScriptsOptions,
 ): Promise<DraftAssetItem[]> {
@@ -176,8 +178,7 @@ function getImageSettings(config: AppConfig) {
 export async function batchGenerateDraftAssets(
   options: BatchGenerateAssetOptions,
 ): Promise<BatchGenerateAssetResult> {
-  const { projectId, artStyleId, config, items, onItemProgress, signal } =
-    options;
+  const { projectId, config, items, onItemProgress, signal } = options;
   const { imageModel, defaultSize, imageCount, imageSettings } =
     getImageSettings(config);
 
@@ -208,7 +209,6 @@ export async function batchGenerateDraftAssets(
       const imageB64 = await generateAssetImageB64WithAbort(
         {
           prompt: item.prompt,
-          artStyleId,
           assetType: item.assetType,
           size: defaultSize,
           model: imageModel,

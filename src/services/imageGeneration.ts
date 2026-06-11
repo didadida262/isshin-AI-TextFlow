@@ -7,7 +7,6 @@ import {
   loadConfig,
   type ImageGenerationSettings,
 } from "./config";
-import { buildAssetGenerationPrompt } from "./visualManualSkill";
 
 export interface GenerateImageInput {
   prompt: string;
@@ -38,16 +37,11 @@ export async function resolveImageGenerationSettings(
   };
 }
 
-/** Generate image for a project asset; prepends visual-manual skill when configured. */
+/** Generate image for a project asset using the stored prompt as-is. */
 export async function generateAssetImageB64(
   input: GenerateAssetImageInput,
 ): Promise<string> {
-  const prompt = await buildAssetGenerationPrompt(
-    input.prompt,
-    input.artStyleId,
-    input.assetType ?? "",
-  );
-  return generateImageB64({ ...input, prompt });
+  return generateImageB64(input);
 }
 
 export async function generateImageB64(
@@ -76,8 +70,11 @@ export async function generateImageB64(
 
 export const IMAGE_TEST_PROMPT = "一只可爱的卡通熊猫在吃竹子，3D风格";
 
-/** qwen-image 等接口对 prompt 长度有限制；场景合并后易超长。 */
-export const MAX_IMAGE_PROMPT_CHARS = 1500;
+/** Max prompt length for image APIs; matches asset-extraction output cap. */
+export const MAX_IMAGE_PROMPT_CHARS = 5000;
+
+/** Max prompt length produced by asset-extraction agent per target. */
+export const MAX_ASSET_EXTRACTION_PROMPT_CHARS = 5000;
 
 export function truncateImagePrompt(
   prompt: string,

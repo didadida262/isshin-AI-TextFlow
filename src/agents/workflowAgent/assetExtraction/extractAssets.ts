@@ -1,6 +1,10 @@
-import { ASSET_EXTRACTION_PROMPT } from "../../../prompts/workflowAgent/assetExtraction/prompt";
+import { buildAssetExtractionSystemPrompt } from "../../../prompts/workflowAgent/assetExtraction/prompt";
 import { chatCompletion } from "../../../services/chat";
-import { truncateImagePrompt } from "../../../services/imageGeneration";
+import {
+  MAX_ASSET_EXTRACTION_PROMPT_CHARS,
+  truncateImagePrompt,
+} from "../../../services/imageGeneration";
+import { loadVisualManualExtractionSkills } from "../../../services/visualManualSkill";
 import {
   SCRIPT_STATE_SUCCESS,
   type ScriptRecord,
@@ -16,7 +20,13 @@ export interface ExtractAssetsProgress {
 
 const MAX_SCRIPT_CHARS = 24_000;
 const MAX_ATTEMPTS = 3;
-const ASSET_EXTRACTION_MAX_TOKENS = 4096;
+const ASSET_EXTRACTION_MAX_TOKENS = 32_768;
+
+const ASSET_TYPE_SORT_ORDER: Record<ExtractedAssetType, number> = {
+  scene: 0,
+  character: 1,
+  prop: 2,
+};
 export const DEFAULT_ASSET_EXTRACTION_CONCURRENCY = 4;
 
 interface RawExtractedAsset {
@@ -38,6 +48,7 @@ function normalizeAssetType(value: unknown): ExtractedAssetType | null {
   const normalized = value.trim().toLowerCase();
   if (normalized === "character" || normalized === "角色") return "character";
   if (normalized === "scene" || normalized === "场景") return "scene";
+  if (normalized === "prop" || normalized === "道具") return "prop";
   return null;
 }
 
@@ -48,7 +59,7 @@ function buildUserMessage(script: ScriptRecord, content: string): string {
     "剧本正文：",
     content,
     "",
-    "请提取本集人物与场景资产，仅输出 JSON 数组。",
+    "请提取本集人物、场景与道具资产，结合系统提示中的视觉手册 Skill 为每个目标写出完整生图提示词（prompt 须纯中文，禁止英文），仅输出 JSON 数组。",
   ].join("\n");
 }
 
@@ -129,7 +140,7 @@ function parseAssetExtractionOutput(raw: string): ExtractedAsset[] {
     results.push({
       name,
       assetType,
-      prompt: truncateImagePrompt(prompt),
+      prompt: truncateImagePrompt(prompt, MAX_ASSET_EXTRACTION_PROMPT_CHARS),
       sourceEpisodes: [],
     });
   }
@@ -142,6 +153,7 @@ async function requestEpisodeAssets(
   model: string,
   script: ScriptRecord,
   scriptContent: string,
+  systemPrompt: string,
   signal?: AbortSignal,
 ): Promise<ExtractedAsset[]> {
   let lastError = "模型未返回有效资产 JSON";
@@ -161,7 +173,7 @@ async function requestEpisodeAssets(
         config,
         model,
         [
-          { role: "system", content: ASSET_EXTRACTION_PROMPT },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
             content: buildUserMessage(script, scriptContent) + retryHint,
@@ -195,12 +207,13 @@ async function extractAssetsFromEpisode(
   config: AppConfig,
   model: string,
   script: ScriptRecord,
+  systemPrompt: string,
   signal?: AbortSignal,
 ): Promise<ExtractedAsset[]> {
   const chunks = splitScriptContent(script.content.trim(), MAX_SCRIPT_CHARS);
   const perChunk = await Promise.all(
     chunks.map((chunk) =>
-      requestEpisodeAssets(config, model, script, chunk, signal),
+      requestEpisodeAssets(config, model, script, chunk, systemPrompt, signal),
     ),
   );
 
@@ -253,7 +266,7 @@ export function mergeExtractedAssetsAcrossEpisodes(
 
   return [...map.values()].sort((a, b) => {
     if (a.assetType !== b.assetType) {
-      return a.assetType === "scene" ? -1 : 1;
+      return ASSET_TYPE_SORT_ORDER[a.assetType] - ASSET_TYPE_SORT_ORDER[b.assetType];
     }
     return a.name.localeCompare(b.name, "zh-CN");
   });
@@ -263,12 +276,14 @@ export interface ExtractAssetsFromScriptsInput {
   config: AppConfig;
   model: string;
   scripts: ScriptRecord[];
+  /** Project visual manual id — skills are injected into extraction, not image gen. */
+  artStyleId?: string;
   onProgress?: (progress: ExtractAssetsProgress) => void;
   signal?: AbortSignal;
   concurrency?: number;
 }
 
-/** LLM-based extraction of character/scene assets from successful episode scripts. */
+/** LLM-based extraction of character/scene/prop assets from successful episode scripts. */
 export async function extractAssetsFromScriptsWithAgent(
   input: ExtractAssetsFromScriptsInput,
 ): Promise<ExtractedAsset[]> {
@@ -276,6 +291,7 @@ export async function extractAssetsFromScriptsWithAgent(
     config,
     model,
     scripts,
+    artStyleId,
     onProgress,
     signal,
     concurrency = DEFAULT_ASSET_EXTRACTION_CONCURRENCY,
@@ -295,6 +311,9 @@ export async function extractAssetsFromScriptsWithAgent(
 
   if (successful.length === 0) return [];
 
+  const skills = await loadVisualManualExtractionSkills(artStyleId);
+  const systemPrompt = buildAssetExtractionSystemPrompt(skills);
+
   const results: ExtractedAsset[] = [];
   let completed = 0;
   let nextIndex = 0;
@@ -309,6 +328,7 @@ export async function extractAssetsFromScriptsWithAgent(
         config,
         trimmedModel,
         script,
+        systemPrompt,
         signal,
       );
       results.push(...episodeAssets);

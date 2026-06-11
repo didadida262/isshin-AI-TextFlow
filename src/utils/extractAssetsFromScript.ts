@@ -1,4 +1,4 @@
-export type ExtractedAssetType = "character" | "scene";
+export type ExtractedAssetType = "character" | "scene" | "prop";
 
 export interface ExtractedAsset {
   name: string;
@@ -171,9 +171,15 @@ export function mergeExtractedAssets(items: ExtractedAsset[]): ExtractedAsset[] 
     }
   }
 
+  const typeOrder: Record<ExtractedAssetType, number> = {
+    scene: 0,
+    character: 1,
+    prop: 2,
+  };
+
   return [...map.values()].sort((a, b) => {
     if (a.assetType !== b.assetType) {
-      return a.assetType === "scene" ? -1 : 1;
+      return typeOrder[a.assetType] - typeOrder[b.assetType];
     }
     return a.name.localeCompare(b.name, "zh-CN");
   });

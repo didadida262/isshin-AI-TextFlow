@@ -423,11 +423,11 @@ export const en: TranslationSchema = {
       batchGenerateBackground:
         "Assets are generating in the background. You'll be notified when done.",
       draftHint:
-        "AI-extracted character and scene drafts. Click a row to edit name and prompt, then click Batch Generate Assets. You may close this dialog while generating; jobs continue in the background and notify you when done. Batch Extract is disabled while extracting or generating.",
+        "AI-extracted character, scene, and prop drafts (prompts already include visual-manual skills). Click a row to edit name and prompt, then click Batch Generate Assets. You may close this dialog while generating; jobs continue in the background and notify you when done. Batch Extract is disabled while extracting or generating.",
       noScriptsToExtract:
         "No successful scripts to extract from. Generate scripts first.",
       extractNoAssets:
-        "No characters or scenes found in scripts. Check the script format.",
+        "No characters, scenes, or props found in scripts. Check the script format.",
       extractSuccess: (count: number) =>
         `Extracted ${count} draft asset(s) from scripts. Review them, then click Batch Generate Assets.`,
       draftInvalid: "Every asset needs a name and prompt",
@@ -436,7 +436,7 @@ export const en: TranslationSchema = {
       regenerate: "Regenerate",
       generateAsset: "Generate Asset",
       emptyHint:
-        'Click "Batch Extract Assets" to pull characters and scenes from scripts, or "Generate Asset" to create one manually.',
+        'Click "Batch Extract Assets" to pull characters, scenes, and props from scripts, or "Generate Asset" to create one manually.',
       loading: "Loading assets…",
       colPreview: "Preview",
       colName: "Name",

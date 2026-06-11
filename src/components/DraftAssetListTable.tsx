@@ -140,7 +140,7 @@ export function DraftAssetListTable({
     selectedSelectableCount > 0 && !allSelectableSelected;
 
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <table className="w-full table-fixed border-collapse text-left text-xs sm:text-sm">
           <colgroup>
             <col className="w-10" />

@@ -30,6 +30,7 @@ import { AssetListTable, buildAssetTableRows } from "./AssetListTable";
 import { DeleteAssetConfirmModal } from "./DeleteAssetConfirmModal";
 import { EditAssetModal } from "./EditAssetModal";
 import { GenerateAssetModal } from "./GenerateAssetModal";
+import { PaintbrushLoading } from "./PaintbrushLoading";
 
 const PAGE_SIZE = 10;
 
@@ -383,6 +384,7 @@ export function GenerateAssetsStep({
         config,
         model,
         scripts,
+        artStyleId: project.artStyle,
         signal: controller.signal,
         onProgress: setExtractProgress,
       });
@@ -423,6 +425,7 @@ export function GenerateAssetsStep({
     s.extractNoAssets,
     s.extractSuccess,
     s.noScriptsToExtract,
+    project.artStyle,
     scripts,
     selectedModel,
     successfulScripts.length,
@@ -760,6 +763,23 @@ export function GenerateAssetsStep({
             onDownload={(asset) => void handleDownloadAsset(asset)}
             onDelete={(asset) => void handleDeleteAsset(asset)}
           />
+        ) : extracting ? (
+          <div
+            className="flex flex-1 items-center justify-center px-6"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <PaintbrushLoading
+              label={
+                extractProgress
+                  ? s.batchExtractingProgress(
+                      extractProgress.completed,
+                      extractProgress.total,
+                    )
+                  : s.batchExtracting
+              }
+            />
+          </div>
         ) : (
           <div className="flex flex-1 items-center justify-center px-6">
             <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">

@@ -43,6 +43,29 @@ export async function loadVisualManualSkillPrefix(
   return stripYamlFrontmatter(tab.content);
 }
 
+export interface VisualManualExtractionSkills {
+  character: string;
+  scene: string;
+  prop: string;
+}
+
+/** Load character/scene/prop skills for asset-extraction agent (not shown in UI). */
+export async function loadVisualManualExtractionSkills(
+  artStyleId: string | undefined,
+): Promise<VisualManualExtractionSkills> {
+  if (!artStyleId?.trim()) {
+    return { character: "", scene: "", prop: "" };
+  }
+
+  const [character, scene, prop] = await Promise.all([
+    loadVisualManualSkillPrefix(artStyleId, "character"),
+    loadVisualManualSkillPrefix(artStyleId, "scene"),
+    loadVisualManualSkillPrefix(artStyleId, "prop"),
+  ]);
+
+  return { character, scene, prop };
+}
+
 /** Prepend project visual-manual skill before the user prompt for image APIs. */
 export async function buildAssetGenerationPrompt(
   userPrompt: string,

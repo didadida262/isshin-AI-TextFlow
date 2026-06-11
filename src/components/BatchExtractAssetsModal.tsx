@@ -156,7 +156,7 @@ export function BatchExtractAssetsModal({
                 </p>
               ) : null}
 
-              <div className="min-h-0 flex-1 overflow-hidden bg-surface/20">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface/20">
                 <DraftAssetListTable
                   items={items}
                   labels={labels}
