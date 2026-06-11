@@ -201,6 +201,16 @@ function normalizeTimelineClips(clips: TimelineClipRecord[]): TimelineClipRecord
   return removeLeadingGap(next);
 }
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return String(error);
+}
+
 export function EditExportStep({
   projectId,
   projectName,
@@ -216,6 +226,8 @@ export function EditExportStep({
   const [isPlaying, setIsPlaying] = useState(false);
   const [durations, setDurations] = useState<Record<number, number>>({});
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const timelineScrollRef = useRef<HTMLDivElement>(null);
   const suppressTimelineClickRef = useRef(false);
   const libraryDragActiveRef = useRef(false);
@@ -641,6 +653,8 @@ export function EditExportStep({
   const handleExport = useCallback(async () => {
     if (exporting || videoTrackClips.length === 0) return;
     setExporting(true);
+    setExportError(null);
+    setExportNotice(null);
     onConfigError(null);
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -650,13 +664,15 @@ export function EditExportStep({
         `${projectName || "project"}-${timestamp}.mp4`,
       );
       if (output) {
+        setExportNotice(s.exportSuccess(output));
         onConfigError(null);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      onConfigError(
-        message === "TIMELINE_EMPTY" ? s.exportEmpty : message || s.exportFailed,
-      );
+      const message = extractErrorMessage(error);
+      const displayMessage =
+        message === "TIMELINE_EMPTY" ? s.exportEmpty : message || s.exportFailed;
+      setExportError(displayMessage);
+      onConfigError(displayMessage);
     } finally {
       setExporting(false);
     }
@@ -668,6 +684,7 @@ export function EditExportStep({
     s.exportDialogTitle,
     s.exportEmpty,
     s.exportFailed,
+    s.exportSuccess,
     videoTrackClips.length,
   ]);
 
@@ -714,6 +731,16 @@ export function EditExportStep({
           </button>
         </div>
       </div>
+
+      {exportError ? (
+        <p className="mt-3 shrink-0 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          {exportError}
+        </p>
+      ) : exportNotice ? (
+        <p className="mt-3 shrink-0 rounded-lg border border-accent/25 bg-accent/10 px-3 py-2 text-sm text-accent">
+          {exportNotice}
+        </p>
+      ) : null}
 
       <div className="mt-4 flex min-h-0 flex-1 gap-4 overflow-hidden">
         <aside className="flex w-56 shrink-0 flex-col overflow-hidden rounded-lg border border-white/10 bg-surface/20 sm:w-64">

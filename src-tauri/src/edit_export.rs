@@ -1,7 +1,13 @@
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output, Stdio};
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,28 +24,90 @@ pub struct ExportTimelineInput {
     pub output_path: String,
 }
 
-fn ensure_ffmpeg() -> Result<(), String> {
-    let output = Command::new("ffmpeg")
-        .arg("-version")
+fn configure_ffmpeg_command(command: &mut Command) {
+    command.stdin(Stdio::null());
+
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+fn run_command(command: &mut Command) -> Result<Output, String> {
+    configure_ffmpeg_command(command);
+    command
         .output()
-        .map_err(|_| {
-            "未检测到 ffmpeg，请先安装 ffmpeg 后再导出视频（macOS: brew install ffmpeg）".to_string()
-        })?;
-    if !output.status.success() {
-        return Err("ffmpeg 不可用，请检查安装".to_string());
+        .map_err(|error| format!("执行 ffmpeg 失败: {error}"))
+}
+
+fn resolve_ffmpeg_command() -> Result<PathBuf, String> {
+    let candidates: Vec<PathBuf> = vec![PathBuf::from("ffmpeg")];
+
+    #[cfg(windows)]
+    {
+        if let Ok(local_app_data) = std::env::var("LOCALAPDATA") {
+            candidates.push(
+                PathBuf::from(local_app_data)
+                    .join("Microsoft")
+                    .join("WinGet")
+                    .join("Links")
+                    .join("ffmpeg.exe"),
+            );
+        }
+
+        if let Ok(program_files) = std::env::var("ProgramFiles") {
+            candidates.push(
+                PathBuf::from(&program_files)
+                    .join("ffmpeg")
+                    .join("bin")
+                    .join("ffmpeg.exe"),
+            );
+        }
+
+        if let Ok(program_files_x86) = std::env::var("ProgramFiles(x86)") {
+            candidates.push(
+                PathBuf::from(&program_files_x86)
+                    .join("ffmpeg")
+                    .join("bin")
+                    .join("ffmpeg.exe"),
+            );
+        }
     }
-    Ok(())
+
+    for candidate in candidates {
+        let output = run_command(
+            Command::new(&candidate)
+                .arg("-version"),
+        );
+
+        match output {
+            Ok(output) if output.status.success() => return Ok(candidate),
+            _ => continue,
+        }
+    }
+
+    Err(
+        "未检测到 ffmpeg，请先安装 ffmpeg 后再导出视频（macOS: brew install ffmpeg；Windows: 安装后将 ffmpeg 加入系统 PATH，或放到 C:\\ffmpeg\\bin）"
+            .to_string(),
+    )
+}
+
+fn ensure_ffmpeg() -> Result<PathBuf, String> {
+    resolve_ffmpeg_command()
 }
 
 fn ms_to_seconds(ms: u64) -> String {
     format!("{:.3}", ms as f64 / 1000.0)
 }
 
-fn run_ffmpeg(args: &[&str]) -> Result<(), String> {
-    let output = Command::new("ffmpeg")
-        .args(args)
-        .output()
-        .map_err(|error| format!("执行 ffmpeg 失败: {error}"))?;
+fn concat_list_line(path: &Path) -> String {
+    let normalized = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .replace('\'', "'\\''");
+    format!("file '{normalized}'")
+}
+
+fn run_ffmpeg(ffmpeg: &Path, args: &[&str]) -> Result<(), String> {
+    let output = run_command(Command::new(ffmpeg).args(args))?;
 
     if output.status.success() {
         return Ok(());
@@ -73,7 +141,7 @@ pub fn export_timeline(input: ExportTimelineInput) -> Result<(), String> {
         }
     }
 
-    ensure_ffmpeg()?;
+    let ffmpeg = ensure_ffmpeg()?;
 
     let output = PathBuf::from(output_path);
     if let Some(parent) = output.parent() {
@@ -91,59 +159,86 @@ pub fn export_timeline(input: ExportTimelineInput) -> Result<(), String> {
 
         for (index, clip) in input.clips.iter().enumerate() {
             let segment_path = temp_dir.join(format!("segment_{index:03}.mp4"));
-            run_ffmpeg(&[
-                "-y",
-                "-ss",
-                &ms_to_seconds(clip.source_offset_ms),
-                "-i",
-                &clip.file_path,
-                "-t",
-                &ms_to_seconds(clip.duration_ms),
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                "-c:a",
-                "aac",
-                "-movflags",
-                "+faststart",
-                segment_path.to_string_lossy().as_ref(),
-            ])?;
+            run_ffmpeg(
+                &ffmpeg,
+                &[
+                    "-y",
+                    "-ss",
+                    &ms_to_seconds(clip.source_offset_ms),
+                    "-i",
+                    &clip.file_path,
+                    "-t",
+                    &ms_to_seconds(clip.duration_ms),
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "fast",
+                    "-crf",
+                    "23",
+                    "-c:a",
+                    "aac",
+                    "-movflags",
+                    "+faststart",
+                    segment_path.to_string_lossy().as_ref(),
+                ],
+            )?;
             segment_paths.push(segment_path);
         }
 
         if segment_paths.len() == 1 {
             fs::copy(&segment_paths[0], &output)
                 .map_err(|error| format!("写入导出文件失败: {error}"))?;
-            return Ok(());
+        } else {
+            let list_path = temp_dir.join("concat.txt");
+            let list_body = segment_paths
+                .iter()
+                .map(|path| concat_list_line(path))
+                .collect::<Vec<_>>()
+                .join("\n");
+            fs::write(&list_path, list_body)
+                .map_err(|error| format!("写入拼接列表失败: {error}"))?;
+
+            run_ffmpeg(
+                &ffmpeg,
+                &[
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    list_path.to_string_lossy().as_ref(),
+                    "-c",
+                    "copy",
+                    output.to_string_lossy().as_ref(),
+                ],
+            )?;
         }
 
-        let list_path = temp_dir.join("concat.txt");
-        let list_body = segment_paths
-            .iter()
-            .map(|path| format!("file '{}'", path.to_string_lossy().replace('\'', "'\\''")))
-            .collect::<Vec<_>>()
-            .join("\n");
-        fs::write(&list_path, list_body).map_err(|error| format!("写入拼接列表失败: {error}"))?;
+        if !output.is_file() {
+            return Err("导出文件未生成，请检查 ffmpeg 是否可用".to_string());
+        }
 
-        run_ffmpeg(&[
-            "-y",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            list_path.to_string_lossy().as_ref(),
-            "-c",
-            "copy",
-            output.to_string_lossy().as_ref(),
-        ])
+        Ok(())
     })();
 
     let _ = fs::remove_dir_all(&temp_dir);
     export_result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn concat_list_line_normalizes_windows_paths() {
+        let path = Path::new(r"C:\Users\foo\AppData\Local\Temp\segment_000.mp4");
+        assert_eq!(
+            concat_list_line(path),
+            "file 'C:/Users/foo/AppData/Local/Temp/segment_000.mp4'"
+        );
+    }
 }
 
 fn chrono_like_timestamp() -> u64 {

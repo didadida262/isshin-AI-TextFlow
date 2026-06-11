@@ -320,6 +320,7 @@ export type TranslationSchema = {
       exportDialogTitle: string;
       exportEmpty: string;
       exportFailed: string;
+      exportSuccess: (path: string) => string;
     };
     generateVideoStep: {
       emptyHint: string;
@@ -897,6 +898,7 @@ export const zh: TranslationSchema = {
       exportDialogTitle: "导出成片",
       exportEmpty: "时间线为空，请先添加视频片段",
       exportFailed: "导出失败，请确认已安装 ffmpeg",
+      exportSuccess: (path: string) => `导出成功：${path}`,
     },
     generateVideoStep: {
       emptyHint: "请先在「生成剧本」步骤完成逐集剧本，再在此根据剧本生成视频。",

@@ -356,6 +356,7 @@ export const en: TranslationSchema = {
       exportDialogTitle: "Export final video",
       exportEmpty: "Timeline is empty. Add clips first.",
       exportFailed: "Export failed. Make sure ffmpeg is installed.",
+      exportSuccess: (path: string) => `Exported to ${path}`,
     },
     generateVideoStep: {
       emptyHint:
