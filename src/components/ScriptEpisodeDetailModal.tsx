@@ -6,12 +6,18 @@ import {
   faCircleCheck,
   faCircleExclamation,
   faClock,
+  faSpinner,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import { ASSET_STATE_ERROR, type ProjectAssetRecord } from "../services/assets";
+import type { ProjectAssetRecord } from "../services/assets";
 import type { ScriptRecord } from "../services/script";
 import { SCRIPT_STATE_ERROR } from "../services/script";
+import {
+  getVideoStatusKind,
+  resolveVideoErrorMessage,
+  type LatestVideoJobInfo,
+} from "../utils/videoStatus";
 import { MarkdownContent } from "./MarkdownContent";
 import { ModalPortal } from "./ModalPortal";
 
@@ -19,41 +25,34 @@ interface ScriptEpisodeDetailModalVideoLabels {
   colVideo: string;
   colVideoStatus: string;
   colPrompt: string;
+  colErrorReason: string;
   noVideo: string;
   noPrompt: string;
   formatDuration: (ms: number) => string;
   statusSuccess: string;
   statusError: string;
   statusPending: string;
+  statusGenerating: string;
 }
 
-type VideoStatusKind = "success" | "error" | "pending";
-
-function getVideoStatusKind(
-  video: ProjectAssetRecord | null | undefined,
-): VideoStatusKind {
-  if (!video) return "pending";
-  if (video.assetState === ASSET_STATE_ERROR) return "error";
-  if (video.imagePath) return "success";
-  return "pending";
-}
-
-const videoStatusBadgeClass: Record<VideoStatusKind, string> = {
+const videoStatusBadgeClass = {
   success:
     "border-accent/35 bg-accent/10 text-accent shadow-[0_0_10px_rgba(0,255,102,0.15)]",
   error: "border-red-500/35 bg-red-500/10 text-red-400",
   pending: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-};
+  generating: "border-sky-400/35 bg-sky-400/10 text-sky-300",
+} as const;
 
 function VideoStatusBadge({
   kind,
   labels,
 }: {
-  kind: VideoStatusKind;
+  kind: ReturnType<typeof getVideoStatusKind>;
   labels: {
     statusSuccess: string;
     statusError: string;
     statusPending: string;
+    statusGenerating: string;
   };
 }) {
   const label =
@@ -61,19 +60,26 @@ function VideoStatusBadge({
       ? labels.statusError
       : kind === "success"
         ? labels.statusSuccess
-        : labels.statusPending;
+        : kind === "generating"
+          ? labels.statusGenerating
+          : labels.statusPending;
   const icon =
     kind === "error"
       ? faCircleExclamation
       : kind === "success"
         ? faCircleCheck
-        : faClock;
+        : kind === "generating"
+          ? faSpinner
+          : faClock;
 
   return (
     <span
       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium ${videoStatusBadgeClass[kind]}`}
     >
-      <FontAwesomeIcon icon={icon} className="text-base" />
+      <FontAwesomeIcon
+        icon={icon}
+        className={`text-base ${kind === "generating" ? "animate-spin" : ""}`}
+      />
       {label}
     </span>
   );
@@ -91,6 +97,7 @@ function resolveEpisodeVideoPrompt(
 interface ScriptEpisodeDetailModalProps {
   script: ScriptRecord | null;
   video?: ProjectAssetRecord | null;
+  videoJob?: LatestVideoJobInfo;
   videoLabels?: ScriptEpisodeDetailModalVideoLabels;
   onClose: () => void;
 }
@@ -172,6 +179,7 @@ function ScriptStatusBadge({
 export function ScriptEpisodeDetailModal({
   script,
   video,
+  videoJob,
   videoLabels,
   onClose,
 }: ScriptEpisodeDetailModalProps) {
@@ -180,6 +188,8 @@ export function ScriptEpisodeDetailModal({
   const promptText = script
     ? resolveEpisodeVideoPrompt(script, video)
     : "";
+  const videoStatusKind = getVideoStatusKind(video, videoJob?.status);
+  const videoErrorMessage = resolveVideoErrorMessage(video, videoJob);
 
   return (
     <ModalPortal>
@@ -240,10 +250,17 @@ export function ScriptEpisodeDetailModal({
                     <>
                       <DetailField label={videoLabels.colVideoStatus}>
                         <VideoStatusBadge
-                          kind={getVideoStatusKind(video)}
+                          kind={videoStatusKind}
                           labels={videoLabels}
                         />
                       </DetailField>
+                      {videoStatusKind === "error" && videoErrorMessage ? (
+                        <DetailField label={videoLabels.colErrorReason}>
+                          <p className="whitespace-pre-wrap break-words text-red-400">
+                            {videoErrorMessage}
+                          </p>
+                        </DetailField>
+                      ) : null}
                       <DetailField label={videoLabels.colPrompt}>
                         {promptText ? (
                           <p className="whitespace-pre-wrap break-words text-text-muted">

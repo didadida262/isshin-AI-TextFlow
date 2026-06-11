@@ -333,6 +333,7 @@ export type TranslationSchema = {
       colVideoStatus: string;
       colActions: string;
       colVideo: string;
+      colErrorReason: string;
       openActionsMenu: string;
       edit: string;
       generateVideo: string;
@@ -911,6 +912,7 @@ export const zh: TranslationSchema = {
       colVideoStatus: "视频状态",
       colActions: "操作",
       colVideo: "视频",
+      colErrorReason: "失败原因",
       openActionsMenu: "操作菜单",
       edit: "编辑",
       generateVideo: "生成视频",
@@ -943,11 +945,11 @@ export const zh: TranslationSchema = {
       generatingPrompt: "生成中…",
     },
     generateAssetsStep: {
-      batchExtract: "批量提取资产",
+      batchExtract: "自动提取目标",
       viewExtractedAssets: "自动生成资产",
-      batchExtracting: "AI 提取资产中…",
+      batchExtracting: "自动提取目标中…",
       batchExtractingProgress: (completed, total) =>
-        `AI 提取资产中 ${completed}/${total}…`,
+        `自动提取目标中 ${completed}/${total}…`,
       batchExtractModalTitle: "提取资产草稿",
       draftEditTitle: "编辑资产草稿",
       save: "保存",
@@ -962,7 +964,7 @@ export const zh: TranslationSchema = {
       batchGenerateBackground:
         "资产正在后台生成，完成后将通过通知提醒。",
       draftHint:
-        "已由 AI 从剧本提取人物、场景与道具草稿（提示词已融合视觉手册 Skill），点击行可编辑名称与提示词，确认后点击「批量生成资产」。生成过程中可关闭弹框，任务将在后台继续并在通知栏提醒。提取或生成过程中「批量提取资产」将暂时不可用。",
+        "已由 AI 从剧本提取人物、场景与道具草稿（提示词已融合视觉手册 Skill），点击行可编辑名称与提示词，确认后点击「批量生成资产」。生成过程中可关闭弹框，任务将在后台继续并在通知栏提醒。提取或生成过程中「自动提取目标」将暂时不可用。",
       noScriptsToExtract: "没有可提取的成功剧本，请先完成剧本生成",
       extractNoAssets: "未能从剧本中识别出人物、场景或道具，请检查剧本格式",
       extractSuccess: (count: number) =>
@@ -973,7 +975,7 @@ export const zh: TranslationSchema = {
       regenerate: "重新生成",
       generateAsset: "资产生成",
       emptyHint:
-        "点击「批量提取资产」从剧本中识别人物、场景与道具，或点击「资产生成」手动创建单条资产。",
+        "点击「自动提取目标」从剧本中识别人物、场景与道具，或点击「资产生成」手动创建单条资产。",
       loading: "加载资产列表…",
       colPreview: "预览",
       colName: "名称",

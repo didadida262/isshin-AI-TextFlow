@@ -706,7 +706,7 @@ export function GenerateAssetsStep({
               type="button"
               onClick={() => void handleBatchExtract()}
               disabled={!canBatchExtract}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-text-muted transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {extracting ? (
                 <>

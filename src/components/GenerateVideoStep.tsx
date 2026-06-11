@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  useGenerationJobs,
-  type GenerationJob,
-  type GenerationJobStatus,
-} from "../contexts/GenerationJobsContext";
+import { useGenerationJobs } from "../contexts/GenerationJobsContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCircleCheck,
@@ -13,10 +9,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { generateVideoPromptsWithAgent } from "../agents/workflowAgent/videoPromptGeneration";
 import { useTranslationMessages } from "../contexts/I18nContext";
-import {
-  ASSET_STATE_ERROR,
-  type ProjectAssetRecord,
-} from "../services/assets";
+import type { ProjectAssetRecord } from "../services/assets";
 import {
   SCRIPT_STATE_ERROR,
   SCRIPT_STATE_SUCCESS,
@@ -28,6 +21,10 @@ import {
   isVideoSettingsValid,
 } from "../services/config";
 import type { AppConfig, CreationProject } from "../types";
+import {
+  buildLatestVideoJobMap,
+  getVideoStatusKind,
+} from "../utils/videoStatus";
 import { ScriptEpisodeDetailModal } from "./ScriptEpisodeDetailModal";
 import { TextToVideoModal } from "./TextToVideoModal";
 import { VideoPromptEditModal } from "./VideoPromptEditModal";
@@ -43,25 +40,6 @@ interface GenerateVideoStepProps {
   onConfigError: (message: string | null) => void;
   onVideosUpdated?: () => void;
   onScriptsUpdated?: () => void;
-}
-
-function buildLatestVideoJobStatusMap(
-  jobs: GenerationJob[],
-  projectId: string,
-): Map<string, GenerationJobStatus> {
-  const map = new Map<string, GenerationJobStatus>();
-  const videoJobs = jobs
-    .filter((job) => job.kind === "video" && job.projectId === projectId)
-    .sort((a, b) => b.createdAt - a.createdAt);
-
-  for (const job of videoJobs) {
-    const key = job.scriptName ?? job.itemName;
-    if (!map.has(key)) {
-      map.set(key, job.status);
-    }
-  }
-
-  return map;
 }
 
 function buildLatestVideoMap(
@@ -142,33 +120,19 @@ function scriptStatusClass(script: ScriptRecord): string {
   return "text-text-dim";
 }
 
-type VideoStatusKind = "success" | "error" | "pending" | "generating";
-
-function getVideoStatusKind(
-  video: ProjectAssetRecord | undefined,
-  jobStatus?: GenerationJobStatus,
-): VideoStatusKind {
-  if (jobStatus === "running") return "generating";
-  if (jobStatus === "error") return "error";
-  if (!video) return "pending";
-  if (video.assetState === ASSET_STATE_ERROR) return "error";
-  if (video.imagePath) return "success";
-  return "pending";
-}
-
-const videoStatusBadgeClass: Record<VideoStatusKind, string> = {
+const videoStatusBadgeClass = {
   success:
     "border-accent/35 bg-accent/10 text-accent shadow-[0_0_10px_rgba(0,255,102,0.15)]",
   error: "border-red-500/35 bg-red-500/10 text-red-400",
   pending: "border-amber-400/30 bg-amber-400/10 text-amber-300",
   generating: "border-sky-400/35 bg-sky-400/10 text-sky-300",
-};
+} as const;
 
 function VideoStatusBadge({
   kind,
   labels,
 }: {
-  kind: VideoStatusKind;
+  kind: ReturnType<typeof getVideoStatusKind>;
   labels: {
     statusSuccess: string;
     statusError: string;
@@ -249,8 +213,8 @@ export function GenerateVideoStep({
   }, [initialVideos]);
 
   const videoMap = useMemo(() => buildLatestVideoMap(videos), [videos]);
-  const videoJobStatusMap = useMemo(
-    () => buildLatestVideoJobStatusMap(jobs, project.id),
+  const videoJobMap = useMemo(
+    () => buildLatestVideoJobMap(jobs, project.id),
     [jobs, project.id],
   );
 
@@ -356,6 +320,8 @@ export function GenerateVideoStep({
         config,
         model,
         scripts: localScripts,
+        directorManualId: project.directorManual,
+        artStyleId: project.artStyle,
         onProgress: setPromptProgress,
         onScriptPromptSaved: (saved) => {
           setLocalScripts((current) =>
@@ -388,6 +354,8 @@ export function GenerateVideoStep({
     localScripts,
     onConfigError,
     onScriptsUpdated,
+    project.artStyle,
+    project.directorManual,
     s.batchGeneratePromptsComplete,
     s.noScriptsToGeneratePrompts,
     selectedModel,
@@ -547,10 +515,10 @@ export function GenerateVideoStep({
               <tbody>
                 {sorted.map((script) => {
                   const video = videoMap.get(script.name);
-                  const videoJobStatus = videoJobStatusMap.get(script.name);
+                  const videoJob = videoJobMap.get(script.name);
                   const videoStatusKind = getVideoStatusKind(
                     video,
-                    videoJobStatus,
+                    videoJob?.status,
                   );
                   const isVideoGenerating = videoStatusKind === "generating";
                   const generateEnabled = canGenerateVideo(script);
@@ -671,6 +639,9 @@ export function GenerateVideoStep({
         script={detailScript}
         video={
           detailScript ? (videoMap.get(detailScript.name) ?? null) : undefined
+        }
+        videoJob={
+          detailScript ? videoJobMap.get(detailScript.name) : undefined
         }
         videoLabels={s}
         onClose={() => setDetailScript(null)}

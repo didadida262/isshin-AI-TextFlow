@@ -370,6 +370,7 @@ export const en: TranslationSchema = {
       colVideoStatus: "Video Status",
       colActions: "Actions",
       colVideo: "Video",
+      colErrorReason: "Failure reason",
       openActionsMenu: "Actions menu",
       edit: "Edit",
       generateVideo: "Generate Video",
@@ -405,11 +406,11 @@ export const en: TranslationSchema = {
       generatingPrompt: "Generating…",
     },
     generateAssetsStep: {
-      batchExtract: "Batch Extract Assets",
+      batchExtract: "Auto Extract Targets",
       viewExtractedAssets: "Auto-Generate Assets",
-      batchExtracting: "Extracting assets with AI…",
+      batchExtracting: "Auto extracting targets…",
       batchExtractingProgress: (completed, total) =>
-        `Extracting assets ${completed}/${total}…`,
+        `Auto extracting targets ${completed}/${total}…`,
       batchExtractModalTitle: "Extracted Asset Drafts",
       draftEditTitle: "Edit Asset Draft",
       save: "Save",
@@ -424,7 +425,7 @@ export const en: TranslationSchema = {
       batchGenerateBackground:
         "Assets are generating in the background. You'll be notified when done.",
       draftHint:
-        "AI-extracted character, scene, and prop drafts (prompts already include visual-manual skills). Click a row to edit name and prompt, then click Batch Generate Assets. You may close this dialog while generating; jobs continue in the background and notify you when done. Batch Extract is disabled while extracting or generating.",
+        "AI-extracted character, scene, and prop drafts (prompts already include visual-manual skills). Click a row to edit name and prompt, then click Batch Generate Assets. You may close this dialog while generating; jobs continue in the background and notify you when done. Auto Extract Targets is disabled while extracting or generating.",
       noScriptsToExtract:
         "No successful scripts to extract from. Generate scripts first.",
       extractNoAssets:
@@ -437,7 +438,7 @@ export const en: TranslationSchema = {
       regenerate: "Regenerate",
       generateAsset: "Generate Asset",
       emptyHint:
-        'Click "Batch Extract Assets" to pull characters, scenes, and props from scripts, or "Generate Asset" to create one manually.',
+        'Click "Auto Extract Targets" to pull characters, scenes, and props from scripts, or "Generate Asset" to create one manually.',
       loading: "Loading assets…",
       colPreview: "Preview",
       colName: "Name",

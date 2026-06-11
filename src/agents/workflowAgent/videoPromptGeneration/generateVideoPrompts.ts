@@ -1,5 +1,6 @@
-import { VIDEO_PROMPT_GENERATION_SYSTEM } from "../../../prompts/workflowAgent/videoPromptGeneration/prompt";
+import { buildVideoPromptGenerationSystem } from "../../../prompts/workflowAgent/videoPromptGeneration/prompt";
 import { chatCompletion } from "../../../services/chat";
+import { loadVideoPromptManualSkills } from "../../../services/videoPromptManualSkills";
 import {
   SCRIPT_STATE_SUCCESS,
   setScriptVideoPrompt,
@@ -77,6 +78,7 @@ async function requestEpisodePrompt(
   model: string,
   script: ScriptRecord,
   scriptContent: string,
+  systemPrompt: string,
   signal?: AbortSignal,
 ): Promise<string> {
   let lastError = "模型未返回有效提示词";
@@ -96,7 +98,7 @@ async function requestEpisodePrompt(
         config,
         model,
         [
-          { role: "system", content: VIDEO_PROMPT_GENERATION_SYSTEM },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
             content: buildUserMessage(script, scriptContent) + retryHint,
@@ -123,16 +125,24 @@ async function generatePromptForEpisode(
   config: AppConfig,
   model: string,
   script: ScriptRecord,
+  systemPrompt: string,
   signal?: AbortSignal,
 ): Promise<string> {
   const chunks = splitScriptContent(script.content.trim(), MAX_SCRIPT_CHARS);
   if (chunks.length === 1) {
-    return requestEpisodePrompt(config, model, script, chunks[0], signal);
+    return requestEpisodePrompt(
+      config,
+      model,
+      script,
+      chunks[0],
+      systemPrompt,
+      signal,
+    );
   }
 
   const partials = await Promise.all(
     chunks.map((chunk) =>
-      requestEpisodePrompt(config, model, script, chunk, signal),
+      requestEpisodePrompt(config, model, script, chunk, systemPrompt, signal),
     ),
   );
 
@@ -144,6 +154,7 @@ async function generatePromptForEpisode(
       "以下为长剧本分段生成的候选提示词，请合并为一条 5 秒竖屏合规短片提示词：",
       ...partials.map((p, i) => `【片段${i + 1}】\n${p}`),
     ].join("\n\n"),
+    systemPrompt,
     signal,
   );
 }
@@ -152,6 +163,10 @@ export interface GenerateVideoPromptsInput {
   config: AppConfig;
   model: string;
   scripts: ScriptRecord[];
+  /** Project director manual id (`CreationProject.directorManual`). */
+  directorManualId?: string;
+  /** Project visual manual id (`CreationProject.artStyle`). */
+  artStyleId?: string;
   onProgress?: (progress: GenerateVideoPromptsProgress) => void;
   onScriptPromptSaved?: (script: ScriptRecord, videoPrompt: string) => void;
   signal?: AbortSignal;
@@ -166,6 +181,8 @@ export async function generateVideoPromptsWithAgent(
     config,
     model,
     scripts,
+    directorManualId,
+    artStyleId,
     onProgress,
     onScriptPromptSaved,
     signal,
@@ -176,6 +193,12 @@ export async function generateVideoPromptsWithAgent(
   if (!trimmedModel) {
     throw new Error("MODEL_REQUIRED");
   }
+
+  const manualSkills = await loadVideoPromptManualSkills(
+    directorManualId,
+    artStyleId,
+  );
+  const systemPrompt = buildVideoPromptGenerationSystem(manualSkills);
 
   const successful = scripts
     .filter(
@@ -200,6 +223,7 @@ export async function generateVideoPromptsWithAgent(
         config,
         trimmedModel,
         script,
+        systemPrompt,
         signal,
       );
 
