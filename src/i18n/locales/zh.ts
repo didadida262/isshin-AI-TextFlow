@@ -849,9 +849,9 @@ export const zh: TranslationSchema = {
       statusPending: "待生成",
       generatingRowScript: "正在生成…",
       noContent: "—",
-      chatWelcome: "你好，我是剧本编剧 Agent。",
+      chatWelcome: "我是本项目的编剧，负责故事骨架、改编策略与逐集剧本。",
       chatWelcomeHint:
-        "我可以帮你依次完成故事骨架、改编策略和逐集剧本。点击下方快捷指令，或直接输入「开始生成剧本」。",
+        "有关故事结构、人物动机或改编取舍，可以直接问我；准备进入生成流程时，发送「开始生成剧本」或使用下方快捷指令。",
       chatSuggestGenerate: "开始生成剧本",
       chatSuggestGeneratePrompt: "开始生成剧本",
       chatAgentName: "编剧",

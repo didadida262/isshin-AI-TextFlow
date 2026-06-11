@@ -305,9 +305,10 @@ export const en: TranslationSchema = {
       statusPending: "Pending",
       generatingRowScript: "Generating…",
       noContent: "—",
-      chatWelcome: "Hi, I'm the scriptwriter agent.",
+      chatWelcome:
+        "I'm the lead scriptwriter on this project — story skeleton, adaptation strategy, and episode scripts.",
       chatWelcomeHint:
-        "I can build the story skeleton, adaptation strategy, and episode scripts. Use a quick action below or type “Start generating scripts”.",
+        "Ask about structure, character motivation, or adaptation choices. When you're ready to run the pipeline, say “Start generating scripts” or use the shortcut below.",
       chatSuggestGenerate: "Start generating scripts",
       chatSuggestGeneratePrompt: "Start generating scripts",
       chatAgentName: "Scriptwriter",
