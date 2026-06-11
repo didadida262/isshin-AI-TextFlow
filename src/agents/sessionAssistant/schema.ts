@@ -2,7 +2,11 @@
 
 export type AgentPhase = "idle" | "thought" | "action" | "observation" | "done";
 
-export type WorkflowNodeStatus = "completed" | "current" | "notStarted";
+export type WorkflowNodeStatus =
+  | "completed"
+  | "current"
+  | "available"
+  | "notStarted";
 
 export type AssistantQueryKind =
   | "project_list"

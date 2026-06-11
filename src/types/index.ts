@@ -37,7 +37,11 @@ export type ProjectWorkflowStepId =
   | "editExport";
 
 /** 流程节点状态（由后端计算） */
-export type WorkflowNodeStatus = "completed" | "current" | "notStarted";
+export type WorkflowNodeStatus =
+  | "completed"
+  | "current"
+  | "available"
+  | "notStarted";
 
 export interface ProjectWorkflowNode {
   id: ProjectWorkflowStepId;

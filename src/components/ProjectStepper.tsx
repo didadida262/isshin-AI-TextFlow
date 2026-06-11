@@ -19,7 +19,7 @@ interface ProjectStepperProps {
   onStepChange: (step: ProjectWorkflowStepId) => void;
 }
 
-type StepVisualState = "completed" | "current" | "notStarted";
+type StepVisualState = "completed" | "current" | "available" | "notStarted";
 
 function StepCircle({
   state,
@@ -54,6 +54,16 @@ function StepCircle({
         </span>
       )}
 
+      {state === "available" && (
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/25 bg-[#0a0a0a] text-[11px] font-medium text-text-muted transition ${
+            interactive ? "group-hover:border-white/40 group-hover:text-white" : ""
+          }`}
+        >
+          {index + 1}
+        </span>
+      )}
+
       {state === "notStarted" && (
         <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/10 bg-[#0a0a0a] text-[11px] font-medium text-text-dim">
           {index + 1}
@@ -65,21 +75,28 @@ function StepCircle({
 
 type SegmentVariant = "full" | "transition" | "pending";
 
-function getCurrentIndex(nodes: Pick<ProjectWorkflowNode, "status">[]): number {
-  const index = nodes.findIndex((node) => node.status === "current");
-  if (index === -1) {
-    return nodes.length - 1;
+function getProgressIndex(nodes: Pick<ProjectWorkflowNode, "status">[]): number {
+  let progress = 0;
+  for (let index = 0; index < nodes.length; index += 1) {
+    const status = nodes[index].status;
+    if (
+      status === "completed" ||
+      status === "current" ||
+      status === "available"
+    ) {
+      progress = index;
+    }
   }
-  return index;
+  return progress;
 }
 
 function getSegmentVariant(
   index: number,
   nodes: Pick<ProjectWorkflowNode, "status">[],
 ): SegmentVariant {
-  const currentIndex = getCurrentIndex(nodes);
-  if (index <= currentIndex) return "full";
-  if (index === currentIndex + 1) return "transition";
+  const progressIndex = getProgressIndex(nodes);
+  if (index <= progressIndex) return "full";
+  if (index === progressIndex + 1) return "transition";
   return "pending";
 }
 
@@ -108,6 +125,10 @@ function labelClass(state: StepVisualState, interactive: boolean): string {
       return interactive
         ? "text-accent/80 group-hover:text-accent"
         : "text-accent/80";
+    case "available":
+      return interactive
+        ? "text-text-muted group-hover:text-white"
+        : "text-text-muted";
     case "notStarted":
       return "text-text-dim";
   }
@@ -128,7 +149,7 @@ export function ProjectStepper({
         <div className="flex w-full min-w-[36rem] items-start">
           {steps.map((step, index) => {
             const isSelected = step.id === selectedStep;
-            const state = step.status;
+            const state = step.status as StepVisualState;
             const interactive = state !== "notStarted";
 
             return (

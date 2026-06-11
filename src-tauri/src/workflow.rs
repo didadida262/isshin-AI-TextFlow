@@ -27,6 +27,8 @@ const WORKFLOW_NODE_IDS: &[&str] = &[
 pub enum WorkflowNodeStatus {
     Completed,
     Current,
+    /// Unlocked and navigable, but not the active focus node.
+    Available,
     NotStarted,
 }
 
@@ -163,16 +165,29 @@ fn sync_current_node(conn: &Connection, project_id: &str) -> Result<(), String> 
         && is_node_completed(conn, project_id, NODE_GENERATE_VIDEO)?
     {
         set_project_current_node(conn, project_id, NODE_EDIT_EXPORT)?;
-    } else if (current == NODE_GENERATE_VIDEO || current == NODE_STORYBOARD)
-        && !is_node_completed(conn, project_id, NODE_GENERATE_ASSETS)?
-    {
-        set_project_current_node(conn, project_id, NODE_GENERATE_ASSETS)?;
     } else if current == NODE_EDIT_EXPORT
         && !is_node_completed(conn, project_id, NODE_GENERATE_VIDEO)?
     {
         set_project_current_node(conn, project_id, NODE_GENERATE_VIDEO)?;
     }
     Ok(())
+}
+
+fn node_index(node_id: &str) -> Option<usize> {
+    WORKFLOW_NODE_IDS.iter().position(|id| *id == node_id)
+}
+
+/// Whether a node is unlocked for navigation (parallel branches allowed after script).
+fn is_node_available(node_id: &str, completions: &[bool]) -> bool {
+    let idx = |id: &str| node_index(id).unwrap_or(0);
+    match node_id {
+        NODE_EXTRACT_EVENTS => true,
+        NODE_AI_SCRIPT => completions[idx(NODE_EXTRACT_EVENTS)],
+        NODE_GENERATE_ASSETS | NODE_GENERATE_VIDEO => completions[idx(NODE_AI_SCRIPT)],
+        NODE_STORYBOARD => false,
+        NODE_EDIT_EXPORT => completions[idx(NODE_GENERATE_VIDEO)],
+        _ => false,
+    }
 }
 
 fn compute_node_statuses(
@@ -206,6 +221,8 @@ fn compute_node_statuses(
                 WorkflowNodeStatus::Current
             } else if completions[index] {
                 WorkflowNodeStatus::Completed
+            } else if is_node_available(node_id, &completions) {
+                WorkflowNodeStatus::Available
             } else {
                 WorkflowNodeStatus::NotStarted
             }
@@ -393,6 +410,36 @@ mod tests {
         let nodes = build_workflow_nodes(&conn, "p1").unwrap();
         assert_eq!(nodes[4].status, WorkflowNodeStatus::Completed);
         assert_eq!(nodes[5].status, WorkflowNodeStatus::Current);
+    }
+
+    #[test]
+    fn unlocks_assets_and_video_after_script_complete() {
+        let conn = test_conn();
+        let imported_at = 1_i64;
+        conn.execute(
+            "INSERT INTO novel_chapters (
+                project_id, chapter_index, reel, chapter, chapter_data,
+                event_state, event, error_reason, created_at
+            ) VALUES ('p1', 1, '正文卷', '第一章', 'content', 1, 'event', NULL, ?1)",
+            rusqlite::params![imported_at],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO scripts (
+                project_id, episode_index, name, content, script_state, error_reason, updated_at
+            ) VALUES ('p1', 1, 'EP01', 'script', 1, NULL, 1)",
+            [],
+        )
+        .unwrap();
+
+        maybe_advance_after_extract(&conn, "p1").unwrap();
+        maybe_advance_after_script(&conn, "p1").unwrap();
+
+        let nodes = build_workflow_nodes(&conn, "p1").unwrap();
+        assert_eq!(nodes[1].status, WorkflowNodeStatus::Completed);
+        assert_eq!(nodes[2].status, WorkflowNodeStatus::Current);
+        assert_eq!(nodes[4].status, WorkflowNodeStatus::Available);
+        assert_eq!(nodes[5].status, WorkflowNodeStatus::NotStarted);
     }
 
     #[test]
