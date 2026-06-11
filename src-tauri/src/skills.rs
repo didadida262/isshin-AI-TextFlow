@@ -12,8 +12,8 @@ pub struct SkillManualItem {
     pub cover_path: Option<String>,
 }
 
-fn skills_root(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    Ok(paths::get()?.skills_dir.clone())
+fn view_manuals_root(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(paths::get()?.view_manuals_dir.clone())
 }
 
 fn director_manuals_root(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -99,8 +99,7 @@ fn find_cover_image(skill_dir: &Path) -> Option<String> {
     files.first()?.to_str().map(str::to_string)
 }
 
-fn list_skill_dir(app: &tauri::AppHandle, category: &str) -> Result<Vec<SkillManualItem>, String> {
-    let dir = skills_root(app)?.join(category);
+fn list_skill_dir(app: &tauri::AppHandle, dir: PathBuf) -> Result<Vec<SkillManualItem>, String> {
     if !dir.is_dir() {
         return Ok(Vec::new());
     }
@@ -293,7 +292,7 @@ fn list_skill_images(skill_dir: &Path) -> Vec<String> {
 
 fn get_skill_detail(
     app: &tauri::AppHandle,
-    category: &str,
+    base_dir: PathBuf,
     id: &str,
     tabs: &[TabDef],
 ) -> Result<SkillDetail, String> {
@@ -301,7 +300,7 @@ fn get_skill_detail(
         return Err("无效的手册 ID".to_string());
     }
 
-    let skill_dir = skills_root(app)?.join(category).join(id);
+    let skill_dir = base_dir.join(id);
     if !skill_dir.is_dir() {
         return Err(format!("手册不存在: {id}"));
     }
@@ -334,22 +333,27 @@ fn get_skill_detail(
 
 #[tauri::command]
 pub fn get_art_skill_detail(app: tauri::AppHandle, id: String) -> Result<SkillDetail, String> {
-    get_skill_detail(&app, "art_skills", &id, ART_TABS)
+    get_skill_detail(&app, view_manuals_root(&app)?, &id, ART_TABS)
 }
 
 #[tauri::command]
 pub fn get_story_skill_detail(app: tauri::AppHandle, id: String) -> Result<SkillDetail, String> {
-    get_skill_detail(&app, "story_skills", &id, STORY_TABS)
+    get_skill_detail(
+        &app,
+        view_manuals_root(&app)?.join("story_skills"),
+        &id,
+        STORY_TABS,
+    )
 }
 
 #[tauri::command]
 pub fn list_art_skills(app: tauri::AppHandle) -> Result<Vec<SkillManualItem>, String> {
-    list_skill_dir(&app, "art_skills")
+    list_skill_dir(&app, view_manuals_root(&app)?)
 }
 
 #[tauri::command]
 pub fn list_story_skills(app: tauri::AppHandle) -> Result<Vec<SkillManualItem>, String> {
-    list_skill_dir(&app, "story_skills")
+    list_skill_dir(&app, view_manuals_root(&app)?.join("story_skills"))
 }
 
 #[tauri::command]
