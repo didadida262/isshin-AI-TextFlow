@@ -34,8 +34,8 @@ use novel::{
 };
 use projects::{create_project, delete_project, list_projects, update_project};
 use skills::{
-    get_art_skill_detail, get_director_manual, get_story_skill_detail, list_art_skills,
-    list_director_manuals, list_story_skills,
+    get_art_skill_detail, get_director_manual, get_director_manual_detail,
+    get_story_skill_detail, list_art_skills, list_director_manuals, list_story_skills,
 };
 use script::{
     get_script_work_data, list_scripts, set_script_video_prompt, set_script_work_data,
@@ -86,6 +86,7 @@ pub fn run() {
             get_art_skill_detail,
             get_story_skill_detail,
             get_director_manual,
+            get_director_manual_detail,
             llm_chat_completion,
             llm_log_outbound,
             llm_log_inbound,

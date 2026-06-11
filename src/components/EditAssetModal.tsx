@@ -9,7 +9,7 @@ import {
   DEFAULT_IMAGE_SIZE,
   DEFAULT_NUM_INFERENCE_STEPS,
 } from "../services/config";
-import { generateImageB64 } from "../services/imageGeneration";
+import { generateAssetImageB64 } from "../services/imageGeneration";
 import type { ProjectAssetRecord } from "../services/assets";
 import type { AppConfig } from "../types";
 import { PaintbrushLoading } from "./PaintbrushLoading";
@@ -18,6 +18,7 @@ import { Select } from "./Select";
 
 interface EditAssetModalProps {
   asset: ProjectAssetRecord | null;
+  artStyleId?: string;
   config: AppConfig;
   onClose: () => void;
   onSubmit: (assetId: number, name: string, assetType: string) => Promise<void>;
@@ -45,6 +46,7 @@ const textareaClass =
 
 export function EditAssetModal({
   asset,
+  artStyleId,
   config,
   onClose,
   onSubmit,
@@ -136,8 +138,10 @@ export function EditAssetModal({
     setError("");
     const startedAt = performance.now();
     try {
-      const imageB64 = await generateImageB64({
+      const imageB64 = await generateAssetImageB64({
         prompt: trimmedPrompt,
+        artStyleId,
+        assetType,
         size: asset.size || imageSettings.defaultSize,
         model: asset.model || imageSettings.imageModel,
         n: imageSettings.imageCount,
@@ -179,6 +183,7 @@ export function EditAssetModal({
       setRegenerating(false);
     }
   }, [
+    artStyleId,
     asset,
     assetType,
     canRegenerate,

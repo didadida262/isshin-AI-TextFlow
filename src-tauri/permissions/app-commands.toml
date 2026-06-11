@@ -56,7 +56,7 @@ commands.allow = ["list_director_manuals"]
 [[permission]]
 identifier = "allow-get-director-manual"
 description = "Allows loading director manual content"
-commands.allow = ["get_director_manual"]
+commands.allow = ["get_director_manual", "get_director_manual_detail"]
 
 [[permission]]
 identifier = "allow-novel"

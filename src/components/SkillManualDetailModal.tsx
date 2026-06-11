@@ -5,7 +5,7 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   loadArtSkillDetail,
-  loadStorySkillDetail,
+  loadDirectorManualDetail,
   type SkillDetail,
 } from "../services/skills";
 import { MarkdownContent } from "./MarkdownContent";
@@ -47,7 +47,7 @@ export function SkillManualDetailModal({
     const load =
       variant === "visual"
         ? loadArtSkillDetail(skillId)
-        : loadStorySkillDetail(skillId);
+        : loadDirectorManualDetail(skillId);
 
     void load.then((data) => {
       if (cancelled) return;

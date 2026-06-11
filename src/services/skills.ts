@@ -99,17 +99,27 @@ export async function loadStorySkillDetail(id: string): Promise<SkillDetail | nu
   }
 }
 
-export interface DirectorManualItem {
-  id: string;
-  name: string;
-}
-
-export async function loadDirectorManuals(): Promise<DirectorManualItem[]> {
+export async function loadDirectorManuals(): Promise<SkillManualItem[]> {
   try {
-    return await invoke<DirectorManualItem[]>("list_director_manuals");
+    const items = await invoke<RawSkillManualItem[]>("list_director_manuals");
+    return items.map(mapSkillItem);
   } catch (error) {
     console.error("[skills] loadDirectorManuals failed:", error);
     return [];
+  }
+}
+
+export async function loadDirectorManualDetail(
+  id: string,
+): Promise<SkillDetail | null> {
+  try {
+    const detail = await invoke<RawSkillDetail>("get_director_manual_detail", {
+      id,
+    });
+    return mapSkillDetail(detail);
+  } catch (error) {
+    console.error("[skills] loadDirectorManualDetail failed:", error);
+    return null;
   }
 }
 

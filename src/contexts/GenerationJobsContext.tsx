@@ -10,7 +10,7 @@ import type { GenerateAssetFormValues } from "../components/GenerateAssetModal";
 import type { TextToVideoFormValues } from "../components/TextToVideoModal";
 import { createProjectAsset, type ProjectAssetRecord } from "../services/assets";
 import type { AppConfig } from "../types";
-import { generateImageB64 } from "../services/imageGeneration";
+import { generateAssetImageB64 } from "../services/imageGeneration";
 import { generateVideoB64 } from "../services/videoGeneration";
 import {
   DEFAULT_IMAGE_COUNT,
@@ -51,6 +51,8 @@ export interface ImageJobCompleteResult {
 interface StartImageJobInput {
   projectId: string;
   projectName: string;
+  /** Visual manual id from project creation (`CreationProject.artStyle`). */
+  artStyleId?: string;
   values: Omit<GenerateAssetFormValues, "generationDurationMs">;
   config: AppConfig;
   onWorkflowChange?: () => void;
@@ -145,15 +147,17 @@ export function GenerationJobsProvider({
 
   const runImageJob = useCallback(
     async (jobId: string, input: StartImageJobInput) => {
-      const { projectId, values, config, onWorkflowChange, onComplete } =
+      const { projectId, artStyleId, values, config, onWorkflowChange, onComplete } =
         input;
       const { imageModel, defaultSize, imageCount, imageSettings } =
         getImageSettings(config);
       const startedAt = performance.now();
 
       try {
-        const imageB64 = await generateImageB64({
+        const imageB64 = await generateAssetImageB64({
           prompt: values.prompt,
+          artStyleId,
+          assetType: values.assetType,
           size: values.size || defaultSize,
           model: values.model || imageModel,
           n: values.n ?? imageCount,

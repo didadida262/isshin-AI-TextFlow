@@ -10,7 +10,7 @@ import {
   DEFAULT_NUM_INFERENCE_STEPS,
 } from "../services/config";
 import { getPromptRefineSettingsFromConfig } from "../services/config";
-import { generateImageB64 } from "../services/imageGeneration";
+import { generateAssetImageB64 } from "../services/imageGeneration";
 import { expandPrompt } from "../services/promptRefine";
 import type { AppConfig } from "../types";
 import { parsePositiveInt } from "../utils/numericInput";
@@ -37,6 +37,8 @@ type GenerateAssetSubmitValues = Omit<
 interface GenerateAssetModalProps {
   open: boolean;
   config: AppConfig;
+  /** Visual manual id from project creation (`CreationProject.artStyle`). */
+  artStyleId?: string;
   onClose: () => void;
   onSubmit?: (values: GenerateAssetFormValues, imageB64: string) => Promise<void>;
   allowBackground?: boolean;
@@ -57,6 +59,7 @@ const readOnlyClass =
 export function GenerateAssetModal({
   open,
   config,
+  artStyleId,
   onClose,
   onSubmit,
   allowBackground = false,
@@ -246,8 +249,10 @@ export function GenerateAssetModal({
         DEFAULT_NUM_INFERENCE_STEPS,
       );
 
-      const imageB64 = await generateImageB64({
+      const imageB64 = await generateAssetImageB64({
         prompt,
+        artStyleId,
+        assetType,
         size,
         model: imageModel,
         n: imageCount,
@@ -289,6 +294,7 @@ export function GenerateAssetModal({
     }
   }, [
     allowBackground,
+    artStyleId,
     assetType,
     canSubmit,
     errors.imageConfigRequired,
@@ -386,22 +392,15 @@ export function GenerateAssetModal({
                       type="button"
                       onClick={() => void handleExpandPrompt()}
                       disabled={!canExpandPrompt}
-                      aria-hidden={!showExpandPromptButton}
-                      tabIndex={showExpandPromptButton ? 0 : -1}
-                      className={`inline-flex min-w-[5.75rem] shrink-0 items-center justify-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs text-accent transition hover:border-accent/50 hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-70 ${
-                        showExpandPromptButton
+                      aria-hidden={!showExpandPromptButton || expandingPrompt}
+                      tabIndex={showExpandPromptButton && !expandingPrompt ? 0 : -1}
+                      className={`inline-flex min-w-[5.75rem] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs text-accent transition hover:border-accent/50 hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        showExpandPromptButton && !expandingPrompt
                           ? ""
                           : "pointer-events-none invisible"
                       }`}
                     >
-                      {expandingPrompt ? (
-                        <>
-                          <FontAwesomeIcon icon={faSpinner} spin />
-                          {m.expandingPrompt}
-                        </>
-                      ) : (
-                        m.expandPrompt
-                      )}
+                      {m.expandPrompt}
                     </button>
                   </div>
                   <div className="relative">

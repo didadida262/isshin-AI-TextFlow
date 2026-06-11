@@ -596,6 +596,7 @@ export function GenerateAssetsStep({
       startImageJob({
         projectId: project.id,
         projectName: project.name,
+        artStyleId: project.artStyle,
         config,
         values: buildDraftImageJobValues(item, config),
         onComplete: (result) => handleDraftJobComplete(item.id, result),
@@ -807,12 +808,14 @@ export function GenerateAssetsStep({
       <GenerateAssetModal
         open={generateModalOpen}
         config={config}
+        artStyleId={project.artStyle}
         allowBackground
         onClose={() => setGenerateModalOpen(false)}
         onBackgroundSubmit={(values) =>
           startImageJob({
             projectId: project.id,
             projectName: project.name,
+            artStyleId: project.artStyle,
             values,
             config,
             onWorkflowChange,
@@ -832,6 +835,7 @@ export function GenerateAssetsStep({
 
       <EditAssetModal
         asset={editAsset}
+        artStyleId={project.artStyle}
         config={config}
         onClose={() => setEditAsset(null)}
         onSubmit={handleUpdateAsset}

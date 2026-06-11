@@ -7,6 +7,7 @@ import {
   loadConfig,
   type ImageGenerationSettings,
 } from "./config";
+import { buildAssetGenerationPrompt } from "./visualManualSkill";
 
 export interface GenerateImageInput {
   prompt: string;
@@ -15,6 +16,12 @@ export interface GenerateImageInput {
   n?: number;
   numInferenceSteps?: number;
   settings?: ImageGenerationSettings;
+}
+
+export interface GenerateAssetImageInput extends GenerateImageInput {
+  /** Project visual manual id (`CreationProject.artStyle`). */
+  artStyleId?: string;
+  assetType?: string;
 }
 
 export async function resolveImageGenerationSettings(
@@ -29,6 +36,18 @@ export async function resolveImageGenerationSettings(
     imageDefaultSize: config.imageDefaultSize,
     imageCount: config.imageCount,
   };
+}
+
+/** Generate image for a project asset; prepends visual-manual skill when configured. */
+export async function generateAssetImageB64(
+  input: GenerateAssetImageInput,
+): Promise<string> {
+  const prompt = await buildAssetGenerationPrompt(
+    input.prompt,
+    input.artStyleId,
+    input.assetType ?? "",
+  );
+  return generateImageB64({ ...input, prompt });
 }
 
 export async function generateImageB64(

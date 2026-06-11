@@ -20,12 +20,8 @@ fn director_manuals_root(_app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(paths::get()?.director_manuals_dir.clone())
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DirectorManualItem {
-    pub id: String,
-    pub name: String,
-}
+/// Director manuals enabled in project creation (folder ids under `directorManuals/`).
+const ENABLED_DIRECTOR_MANUAL_IDS: &[&str] = &["Mystery_thriller", "Urban_workplace_drama"];
 
 fn parse_md_title(content: &str) -> String {
     for line in content.lines() {
@@ -357,46 +353,23 @@ pub fn list_story_skills(app: tauri::AppHandle) -> Result<Vec<SkillManualItem>, 
 }
 
 #[tauri::command]
-pub fn list_director_manuals(app: tauri::AppHandle) -> Result<Vec<DirectorManualItem>, String> {
-    let dir = director_manuals_root(&app)?;
-    if !dir.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let mut files: Vec<_> = fs::read_dir(&dir)
-        .map_err(|e| e.to_string())?
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| {
-            entry.path().is_file()
-                && entry
-                    .path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-        })
-        .collect();
-
-    files.sort_by_key(|entry| entry.file_name());
-
-    let items = files
+pub fn list_director_manuals(app: tauri::AppHandle) -> Result<Vec<SkillManualItem>, String> {
+    let items = list_skill_dir(&app, director_manuals_root(&app)?)?;
+    Ok(items
         .into_iter()
-        .filter_map(|entry| {
-            let path = entry.path();
-            let stem = entry
-                .path()
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .map(str::to_string)?;
-            let content = read_md_file(&path);
-            let name = parse_md_title(&content);
-            Some(DirectorManualItem {
-                id: stem.clone(),
-                name: if name.is_empty() { stem } else { name },
-            })
-        })
-        .collect();
+        .filter(|item| ENABLED_DIRECTOR_MANUAL_IDS.contains(&item.id.as_str()))
+        .collect())
+}
 
-    Ok(items)
+#[tauri::command]
+pub fn get_director_manual_detail(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<SkillDetail, String> {
+    if !ENABLED_DIRECTOR_MANUAL_IDS.contains(&id.as_str()) {
+        return Err(format!("导演手册不存在: {id}"));
+    }
+    get_skill_detail(&app, director_manuals_root(&app)?, &id, STORY_TABS)
 }
 
 #[tauri::command]
@@ -405,10 +378,17 @@ pub fn get_director_manual(app: tauri::AppHandle, id: String) -> Result<String, 
         return Err("无效的导演手册 ID".to_string());
     }
 
-    let path = director_manuals_root(&app)?.join(format!("{}.md", id));
-    if !path.is_file() {
-        return Err(format!("导演手册不存在: {id}"));
+    let detail = get_director_manual_detail(app, id)?;
+    let parts = detail
+        .tabs
+        .into_iter()
+        .filter(|tab| !tab.content.trim().is_empty())
+        .map(|tab| format!("## {}\n\n{}", tab.label, tab.content.trim()))
+        .collect::<Vec<_>>();
+
+    if parts.is_empty() {
+        return Err("导演手册内容为空".to_string());
     }
 
-    Ok(read_md_file(&path))
+    Ok(parts.join("\n\n"))
 }

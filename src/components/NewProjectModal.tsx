@@ -6,7 +6,6 @@ import { useTranslationMessages } from "../contexts/I18nContext";
 import {
   loadArtSkills,
   loadDirectorManuals,
-  type DirectorManualItem,
   type SkillManualItem,
 } from "../services/skills";
 import { projectToDraft } from "../services/projects";
@@ -83,7 +82,7 @@ export function NewProjectModal({
   const i18n = useTranslationMessages();
   const m = i18n.creation.modal;
   const [artSkills, setArtSkills] = useState<SkillManualItem[]>([]);
-  const [directorManuals, setDirectorManuals] = useState<DirectorManualItem[]>([]);
+  const [directorManuals, setDirectorManuals] = useState<SkillManualItem[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [draft, setDraft] = useState<NewProjectDraft>(() =>
@@ -110,7 +109,18 @@ export function NewProjectModal({
         setSkillsLoading(false);
 
         if (mode === "edit" && editingProject) {
-          setDraft(projectToDraft(editingProject));
+          const fromProject = projectToDraft(editingProject);
+          setDraft({
+            ...fromProject,
+            artStyle: art.some((item) => item.id === fromProject.artStyle)
+              ? fromProject.artStyle
+              : (art[0]?.id ?? ""),
+            directorManual: manuals.some(
+              (item) => item.id === fromProject.directorManual,
+            )
+              ? fromProject.directorManual
+              : (manuals[0]?.id ?? ""),
+          });
         } else {
           setDraft(
             createDefaultDraft(models, {
@@ -139,11 +149,6 @@ export function NewProjectModal({
   const aspectRatioOptions = ASPECT_RATIOS.map((ratio) => ({
     value: ratio,
     label: ratio,
-  }));
-
-  const directorManualOptions = directorManuals.map((item) => ({
-    value: item.id,
-    label: item.name,
   }));
 
   const handleConfirm = async () => {
@@ -254,20 +259,6 @@ export function NewProjectModal({
                       />
                     </div>
 
-                    <div className="block space-y-2">
-                      <span className="text-sm text-text-muted">
-                        {m.directorManual}
-                      </span>
-                      <Select
-                        value={draft.directorManual}
-                        options={directorManualOptions}
-                        onChange={(directorManual) =>
-                          setDraft((d) => ({ ...d, directorManual }))
-                        }
-                        disabled={skillsLoading || directorManualOptions.length === 0}
-                      />
-                    </div>
-
                     <label className="block space-y-2">
                       <span className="text-sm text-text-muted">{m.intro}</span>
                       <textarea
@@ -283,7 +274,18 @@ export function NewProjectModal({
                   </div>
                 </div>
 
-                <aside className="flex min-h-0 w-[420px] shrink-0 flex-col gap-5 border-l border-white/5 bg-[#0f0f0f] p-5">
+                <aside className="flex min-h-0 w-[420px] shrink-0 flex-col gap-4 border-l border-white/5 bg-[#0f0f0f] p-5">
+                  <SkillManualSection
+                    title={m.directorManual}
+                    items={directorManuals}
+                    loading={skillsLoading}
+                    selectedId={draft.directorManual}
+                    onSelect={(directorManual) =>
+                      setDraft((d) => ({ ...d, directorManual }))
+                    }
+                    variant="director"
+                    compact
+                  />
                   <SkillManualSection
                     title={m.visualManual}
                     items={artSkills}

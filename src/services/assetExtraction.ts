@@ -5,7 +5,7 @@ import {
   DEFAULT_IMAGE_SIZE,
   DEFAULT_NUM_INFERENCE_STEPS,
 } from "./config";
-import { generateImageB64 } from "./imageGeneration";
+import { generateAssetImageB64 } from "./imageGeneration";
 import { createProjectAsset } from "./assets";
 import type { ProjectAssetRecord } from "./assets";
 import {
@@ -30,6 +30,7 @@ export interface DraftAssetItem {
 
 export interface BatchGenerateAssetOptions {
   projectId: string;
+  artStyleId?: string;
   config: AppConfig;
   items: DraftAssetItem[];
   onItemProgress?: (itemId: string, patch: Partial<DraftAssetItem>) => void;
@@ -74,15 +75,15 @@ function waitForAbort(signal: AbortSignal): Promise<never> {
   });
 }
 
-async function generateImageB64WithAbort(
-  input: Parameters<typeof generateImageB64>[0],
+async function generateAssetImageB64WithAbort(
+  input: Parameters<typeof generateAssetImageB64>[0],
   signal?: AbortSignal,
 ): Promise<string> {
   throwIfAborted(signal);
   if (!signal) {
-    return generateImageB64(input);
+    return generateAssetImageB64(input);
   }
-  return Promise.race([generateImageB64(input), waitForAbort(signal)]);
+  return Promise.race([generateAssetImageB64(input), waitForAbort(signal)]);
 }
 
 export function resetGeneratingDraftItems(
@@ -175,7 +176,8 @@ function getImageSettings(config: AppConfig) {
 export async function batchGenerateDraftAssets(
   options: BatchGenerateAssetOptions,
 ): Promise<BatchGenerateAssetResult> {
-  const { projectId, config, items, onItemProgress, signal } = options;
+  const { projectId, artStyleId, config, items, onItemProgress, signal } =
+    options;
   const { imageModel, defaultSize, imageCount, imageSettings } =
     getImageSettings(config);
 
@@ -203,9 +205,11 @@ export async function batchGenerateDraftAssets(
 
     const startedAt = performance.now();
     try {
-      const imageB64 = await generateImageB64WithAbort(
+      const imageB64 = await generateAssetImageB64WithAbort(
         {
           prompt: item.prompt,
+          artStyleId,
+          assetType: item.assetType,
           size: defaultSize,
           model: imageModel,
           n: imageCount,
