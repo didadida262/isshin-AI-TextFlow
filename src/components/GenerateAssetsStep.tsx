@@ -30,7 +30,6 @@ import { AssetListTable, buildAssetTableRows } from "./AssetListTable";
 import { DeleteAssetConfirmModal } from "./DeleteAssetConfirmModal";
 import { EditAssetModal } from "./EditAssetModal";
 import { GenerateAssetModal } from "./GenerateAssetModal";
-import { PaintbrushLoading } from "./PaintbrushLoading";
 
 const PAGE_SIZE = 10;
 
@@ -769,16 +768,15 @@ export function GenerateAssetsStep({
             aria-live="polite"
             aria-busy="true"
           >
-            <PaintbrushLoading
-              label={
-                extractProgress
-                  ? s.batchExtractingProgress(
-                      extractProgress.completed,
-                      extractProgress.total,
-                    )
-                  : s.batchExtracting
-              }
-            />
+            <p className="inline-flex items-center gap-2 text-sm text-text-muted">
+              <FontAwesomeIcon icon={faSpinner} spin className="text-xs" />
+              {extractProgress
+                ? s.batchExtractingProgress(
+                    extractProgress.completed,
+                    extractProgress.total,
+                  )
+                : s.batchExtracting}
+            </p>
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center px-6">
