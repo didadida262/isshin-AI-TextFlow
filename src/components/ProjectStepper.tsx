@@ -44,20 +44,10 @@ function StepCircle({
         </span>
       )}
 
-      {state === "current" && (
+      {(state === "current" || state === "available") && (
         <span
           className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-[11px] font-semibold text-white ring-2 ring-cyan-300/40 transition [animation:step-glow_2.4s_ease-in-out_infinite] ${
             interactive ? "group-hover:ring-cyan-200/60" : ""
-          }`}
-        >
-          {index + 1}
-        </span>
-      )}
-
-      {state === "available" && (
-        <span
-          className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/25 bg-[#0a0a0a] text-[11px] font-medium text-text-muted transition ${
-            interactive ? "group-hover:border-white/40 group-hover:text-white" : ""
           }`}
         >
           {index + 1}
@@ -120,15 +110,12 @@ function SegmentLine({ variant }: { variant: SegmentVariant }) {
 function labelClass(state: StepVisualState, interactive: boolean): string {
   switch (state) {
     case "current":
+    case "available":
       return "font-medium text-white";
     case "completed":
       return interactive
         ? "text-accent/80 group-hover:text-accent"
         : "text-accent/80";
-    case "available":
-      return interactive
-        ? "text-text-muted group-hover:text-white"
-        : "text-text-muted";
     case "notStarted":
       return "text-text-dim";
   }

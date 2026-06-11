@@ -301,6 +301,15 @@ export function GenerateVideoStep({
     [sorted],
   );
 
+  const scriptsNeedingPrompts = useMemo(
+    () =>
+      successfulScripts.filter((script) => {
+        const video = videoMap.get(script.name);
+        return !resolveEpisodeVideoPrompt(script, video);
+      }),
+    [successfulScripts, videoMap],
+  );
+
   const validatePromptConfig = useCallback((): string | null => {
     if (!config.baseUrl.trim() || !config.apiKey.trim()) {
       return s.configRequired;
@@ -469,7 +478,7 @@ export function GenerateVideoStep({
   );
 
   const canBatchGeneratePrompts =
-    !batchGenerating && successfulScripts.length > 0;
+    !batchGenerating && scriptsNeedingPrompts.length > 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -539,8 +548,11 @@ export function GenerateVideoStep({
                 {sorted.map((script) => {
                   const video = videoMap.get(script.name);
                   const videoJobStatus = videoJobStatusMap.get(script.name);
-                  const isVideoGenerating = videoJobStatus === "running";
-                  const hasVideo = Boolean(video?.imagePath);
+                  const videoStatusKind = getVideoStatusKind(
+                    video,
+                    videoJobStatus,
+                  );
+                  const isVideoGenerating = videoStatusKind === "generating";
                   const generateEnabled = canGenerateVideo(script);
                   const hasPrompt = Boolean(
                     resolveEpisodeVideoPrompt(script, video),
@@ -594,10 +606,7 @@ export function GenerateVideoStep({
                           : s.noContent}
                       </td>
                       <td className="px-3 py-2.5">
-                        <VideoStatusBadge
-                          kind={getVideoStatusKind(video, videoJobStatus)}
-                          labels={s}
-                        />
+                        <VideoStatusBadge kind={videoStatusKind} labels={s} />
                       </td>
                       <td
                         className="w-14 px-2 py-2.5"
@@ -608,7 +617,10 @@ export function GenerateVideoStep({
                             openMenuLabel={s.openActionsMenu}
                             editLabel={s.edit}
                             generateLabel={
-                              hasVideo ? s.regenerateVideo : s.generateVideo
+                              videoStatusKind === "success" ||
+                              videoStatusKind === "error"
+                                ? s.regenerateVideo
+                                : s.generateVideo
                             }
                             editDisabled={!generateEnabled}
                             generateDisabled={!generateVideoEnabled}
