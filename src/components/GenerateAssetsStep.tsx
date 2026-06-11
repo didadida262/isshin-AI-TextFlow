@@ -132,6 +132,7 @@ export function GenerateAssetsStep({
     () =>
       draftAssets.filter(
         (item) =>
+          item.status === "pending" ||
           item.status === "generating" ||
           item.status === "error" ||
           (item.status === "success" && item.savedAsset),
@@ -642,6 +643,7 @@ export function GenerateAssetsStep({
     openActionsMenu: s.openActionsMenu,
     statusSuccess: s.statusSuccess,
     statusError: s.statusError,
+    statusPending: s.statusPending,
     statusGenerating: s.statusGenerating,
     typeCharacter: s.typeCharacter,
     typeScene: s.typeScene,

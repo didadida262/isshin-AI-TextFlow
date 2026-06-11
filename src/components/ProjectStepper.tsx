@@ -24,26 +24,38 @@ type StepVisualState = "completed" | "current" | "notStarted";
 function StepCircle({
   state,
   index,
+  interactive,
 }: {
   state: StepVisualState;
   index: number;
+  interactive: boolean;
 }) {
   return (
     <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black">
       {state === "completed" && (
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-black shadow-[0_0_10px_rgba(0,255,102,0.4)] transition group-hover:shadow-[0_0_14px_rgba(0,255,102,0.55)]">
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-full bg-accent text-black shadow-[0_0_10px_rgba(0,255,102,0.4)] transition ${
+            interactive
+              ? "group-hover:shadow-[0_0_14px_rgba(0,255,102,0.55)]"
+              : ""
+          }`}
+        >
           <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
         </span>
       )}
 
       {state === "current" && (
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-[11px] font-semibold text-white ring-2 ring-cyan-300/40 transition group-hover:ring-cyan-200/60 [animation:step-glow_2.4s_ease-in-out_infinite]">
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-[11px] font-semibold text-white ring-2 ring-cyan-300/40 transition [animation:step-glow_2.4s_ease-in-out_infinite] ${
+            interactive ? "group-hover:ring-cyan-200/60" : ""
+          }`}
+        >
           {index + 1}
         </span>
       )}
 
       {state === "notStarted" && (
-        <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/10 bg-[#0a0a0a] text-[11px] font-medium text-text-dim transition group-hover:border-white/25 group-hover:text-text-muted">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/10 bg-[#0a0a0a] text-[11px] font-medium text-text-dim">
           {index + 1}
         </span>
       )}
@@ -88,14 +100,16 @@ function SegmentLine({ variant }: { variant: SegmentVariant }) {
   );
 }
 
-function labelClass(state: StepVisualState): string {
+function labelClass(state: StepVisualState, interactive: boolean): string {
   switch (state) {
     case "current":
       return "font-medium text-white";
     case "completed":
-      return "text-accent/80 group-hover:text-accent";
+      return interactive
+        ? "text-accent/80 group-hover:text-accent"
+        : "text-accent/80";
     case "notStarted":
-      return "text-text-dim group-hover:text-text-muted";
+      return "text-text-dim";
   }
 }
 
@@ -115,6 +129,7 @@ export function ProjectStepper({
           {steps.map((step, index) => {
             const isSelected = step.id === selectedStep;
             const state = step.status;
+            const interactive = state !== "notStarted";
 
             return (
               <Fragment key={step.id}>
@@ -123,13 +138,21 @@ export function ProjectStepper({
                 )}
                 <button
                   type="button"
+                  disabled={!interactive}
                   onClick={() => onStepChange(step.id)}
                   aria-current={isSelected ? "step" : undefined}
-                  className="group flex w-[4.75rem] shrink-0 flex-col items-center outline-none sm:w-[5.5rem]"
+                  aria-disabled={!interactive}
+                  className={`flex w-[4.75rem] shrink-0 flex-col items-center outline-none sm:w-[5.5rem] ${
+                    interactive ? "group cursor-pointer" : "cursor-not-allowed"
+                  }`}
                 >
-                  <StepCircle state={state} index={index} />
+                  <StepCircle
+                    state={state}
+                    index={index}
+                    interactive={interactive}
+                  />
                   <span
-                    className={`mt-2 max-w-[5.5rem] px-0.5 text-center text-[10px] leading-tight transition sm:max-w-none sm:text-[11px] ${labelClass(state)}`}
+                    className={`mt-2 max-w-[5.5rem] px-0.5 text-center text-[10px] leading-tight transition sm:max-w-none sm:text-[11px] ${labelClass(state, interactive)}`}
                   >
                     {step.label}
                   </span>

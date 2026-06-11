@@ -62,7 +62,11 @@ export function buildAssetTableRows(
       continue;
     }
 
-    if (draft.status === "generating" || draft.status === "error") {
+    if (
+      draft.status === "pending" ||
+      draft.status === "generating" ||
+      draft.status === "error"
+    ) {
       rows.push({ kind: "draft", draft });
     }
   }
@@ -87,6 +91,7 @@ interface AssetListTableLabels {
   openActionsMenu: string;
   statusSuccess: string;
   statusError: string;
+  statusPending: string;
   statusGenerating: string;
   typeCharacter: string;
   typeScene: string;
@@ -141,10 +146,18 @@ function LoadingStatusCell({ label }: { label: string }) {
   );
 }
 
-function DraftPreviewPlaceholder() {
+function DraftPreviewPlaceholder({ generating }: { generating: boolean }) {
+  if (generating) {
+    return (
+      <span className="inline-flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-accent/25 bg-accent/5">
+        <FontAwesomeIcon icon={faSpinner} spin className="text-sm text-accent" />
+      </span>
+    );
+  }
+
   return (
-    <span className="inline-flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-accent/25 bg-accent/5">
-      <FontAwesomeIcon icon={faSpinner} spin className="text-sm text-accent" />
+    <span className="inline-flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-amber-400/20 bg-amber-400/5 text-[10px] text-amber-300/70">
+      —
     </span>
   );
 }
@@ -212,7 +225,9 @@ export function AssetListTable({
                   className="border-b border-white/5 align-middle"
                 >
                   <td className="px-3 py-2.5">
-                    <DraftPreviewPlaceholder />
+                    <DraftPreviewPlaceholder
+                      generating={draft.status === "generating"}
+                    />
                   </td>
                   <td className="max-w-0 px-3 py-2.5 text-white">
                     <p className="truncate">{draft.name}</p>
@@ -238,8 +253,10 @@ export function AssetListTable({
                       >
                         {draft.errorReason ?? labels.statusError}
                       </p>
-                    ) : (
+                    ) : draft.status === "generating" ? (
                       <LoadingStatusCell label={labels.statusGenerating} />
+                    ) : (
+                      <span className="text-amber-300">{labels.statusPending}</span>
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-text-dim">—</td>

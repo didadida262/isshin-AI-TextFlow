@@ -23,28 +23,52 @@ export function buildXmlRetryHint(tagName: string, attempt: number): string {
   );
 }
 
-const SKELETON_MARKERS =
-  /(?:^|\n)(?:##\s*故事核|#\s*故事骨架|\*\*故事核\*\*)/m;
-const STRATEGY_MARKERS =
-  /(?:^|\n)(?:##\s*改编基调|#\s*改编策略|\*\*改编基调\*\*)/m;
-
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Match `## 标题`、`## 标题：`、`**标题**` 等常见模型输出格式。 */
+/** Plain line heading: title alone on one line (some models omit `##`). */
+function buildPlainLineHeadingPattern(title: string): string {
+  const escaped = escapeRegExp(title);
+  return `${escaped}\\s*(?:[：:])?\\s*\\n`;
+}
+
+function buildMarkerPattern(
+  firstSectionTitle: string,
+  docTitle?: string,
+): RegExp {
+  const escaped = escapeRegExp(firstSectionTitle);
+  const parts = [
+    `#+\\s*${escaped}`,
+    docTitle ? `#\\s*${escapeRegExp(docTitle)}` : null,
+    `\\*\\*${escaped}\\*\\*`,
+    buildPlainLineHeadingPattern(firstSectionTitle),
+  ].filter((part): part is string => part != null);
+  return new RegExp(`(?:^|\\n)(?:${parts.join("|")})`, "m");
+}
+
+const SKELETON_MARKERS = buildMarkerPattern("故事核", "故事骨架");
+const STRATEGY_MARKERS = buildMarkerPattern("改编基调", "改编策略");
+
+/** Match `## 标题`、`## 标题：`、`**标题**`、或独占一行的纯文本标题。 */
 function buildSectionHeadingPattern(
   title: string,
   aliases: string[] = [],
 ): RegExp {
   const titles = [title, ...aliases];
-  const alternatives = titles
+  const markdownHeadings = titles
     .map((item) => {
       const escaped = escapeRegExp(item);
       return `(?:#+\\s*${escaped}|\\*\\*${escaped}\\*\\*)`;
     })
     .join("|");
-  return new RegExp(`(?:^|\\n)(?:${alternatives})(?:\\s*[：:]|\\s|$)`, "m");
+  const plainLines = titles
+    .map((item) => buildPlainLineHeadingPattern(item))
+    .join("|");
+  return new RegExp(
+    `(?:^|\\n)(?:(?:${markdownHeadings})(?:\\s*[：:]|\\s|$)|(?:${plainLines}))`,
+    "m",
+  );
 }
 
 function stripXmlDecorations(text: string): string {

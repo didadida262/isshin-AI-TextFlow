@@ -74,7 +74,7 @@ export function GenerateAssetModal({
       ? config.imageCount
       : DEFAULT_IMAGE_COUNT;
   const [name, setName] = useState("");
-  const [assetType, setAssetType] = useState("scene");
+  const [assetType, setAssetType] = useState("character");
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState(defaultSize);
   const [numInferenceSteps, setNumInferenceSteps] = useState(
@@ -102,7 +102,7 @@ export function GenerateAssetModal({
     abortRef.current = false;
     requestIdRef.current += 1;
     setName("");
-    setAssetType("scene");
+    setAssetType("character");
     setPrompt("");
     setSize(defaultSize);
     setNumInferenceSteps(String(DEFAULT_NUM_INFERENCE_STEPS));

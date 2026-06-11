@@ -405,7 +405,7 @@ export const en: TranslationSchema = {
     },
     generateAssetsStep: {
       batchExtract: "Batch Extract Assets",
-      viewExtractedAssets: "View Extracted Assets",
+      viewExtractedAssets: "Auto-Generate Assets",
       batchExtracting: "Extracting assets with AI…",
       batchExtractingProgress: (completed, total) =>
         `Extracting assets ${completed}/${total}…`,

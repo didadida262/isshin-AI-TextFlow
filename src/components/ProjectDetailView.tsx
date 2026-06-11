@@ -202,6 +202,9 @@ export function ProjectDetailView({
     (stepId: ProjectWorkflowStepId) => {
       if (stepId === selectedStep) return;
 
+      const targetNode = workflowNodesRaw.find((node) => node.id === stepId);
+      if (targetNode?.status === "notStarted") return;
+
       const prevIndex = VISIBLE_STEP_ORDER.indexOf(selectedStep);
       const nextIndex = VISIBLE_STEP_ORDER.indexOf(stepId);
       setStepDirection(nextIndex >= prevIndex ? 1 : -1);
@@ -211,7 +214,7 @@ export function ProjectDetailView({
       invalidateWorkflowCache(project.id, stepId);
       void loadNodeDetail(stepId);
     },
-    [loadNodeDetail, project.id, selectedStep],
+    [loadNodeDetail, project.id, selectedStep, workflowNodesRaw],
   );
 
   useEffect(() => {

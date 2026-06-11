@@ -944,7 +944,7 @@ export const zh: TranslationSchema = {
     },
     generateAssetsStep: {
       batchExtract: "批量提取资产",
-      viewExtractedAssets: "查看自动提取资产",
+      viewExtractedAssets: "自动生成资产",
       batchExtracting: "AI 提取资产中…",
       batchExtractingProgress: (completed, total) =>
         `AI 提取资产中 ${completed}/${total}…`,
