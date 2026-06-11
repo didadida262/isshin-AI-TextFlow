@@ -46,7 +46,9 @@ Thumbs.db
 /src-tauri/target/
 /src-tauri/Cargo.lock
 
-# SQLite database (generated at runtime)
+# Runtime data (generated locally — do not commit)
+data/assets/**
+!data/assets/.gitkeep
 data/sqlite/*.db
 data/sqlite/*.db-*
 

@@ -9,7 +9,7 @@ pub struct AppPaths {
     pub assets_dir: PathBuf,
     /// Legacy visual / story skill bundles (`data/skills_old`).
     pub skills_dir: PathBuf,
-    /// Director manual prompts (`data/skills`).
+    /// Director manual prompts (`src/prompts/directorManuals`).
     pub director_manuals_dir: PathBuf,
 }
 
@@ -33,10 +33,9 @@ fn resolve(handle: &AppHandle) -> Result<AppPaths, String> {
         let sqlite_dir = data.join("sqlite");
         let assets_dir = data.join("assets");
         let skills_dir = data.join("skills_old");
-        let director_manuals_dir = data.join("skills");
+        let director_manuals_dir = resolve_dev_director_manuals_dir()?;
         std::fs::create_dir_all(&sqlite_dir).map_err(|e| e.to_string())?;
         std::fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
-        std::fs::create_dir_all(&director_manuals_dir).map_err(|e| e.to_string())?;
         if !skills_dir.is_dir() {
             return Err(format!("未找到 skills_old 目录: {}", skills_dir.display()));
         }
@@ -79,7 +78,7 @@ fn find_dev_data_root() -> Option<PathBuf> {
 
     for start in starts {
         if let Some(data) = walk_up_for_data_dir(start) {
-            if data.join("skills").is_dir() {
+            if data.join("skills_old").is_dir() {
                 return Some(data);
             }
         }
@@ -98,6 +97,43 @@ fn walk_up_for_data_dir(mut start: PathBuf) -> Option<PathBuf> {
         }
     }
     None
+}
+
+fn walk_up_for_repo_root(mut start: PathBuf) -> Option<PathBuf> {
+    for _ in 0..12 {
+        if start.join("src-tauri").join("Cargo.toml").is_file()
+            && start.join("package.json").is_file()
+        {
+            return start.canonicalize().ok().or(Some(start));
+        }
+        if !start.pop() {
+            break;
+        }
+    }
+    None
+}
+
+fn resolve_dev_director_manuals_dir() -> Result<PathBuf, String> {
+    let mut starts = Vec::new();
+    if let Ok(cwd) = std::env::current_dir() {
+        starts.push(cwd);
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            starts.push(parent.to_path_buf());
+        }
+    }
+
+    for start in starts {
+        if let Some(repo) = walk_up_for_repo_root(start) {
+            let dir = repo.join("src").join("prompts").join("directorManuals");
+            if dir.is_dir() {
+                return Ok(dir);
+            }
+        }
+    }
+
+    Err("未找到导演手册目录 src/prompts/directorManuals".to_string())
 }
 
 fn resolve_bundled_skills(handle: &AppHandle) -> Result<PathBuf, String> {
@@ -121,16 +157,17 @@ fn resolve_bundled_skills(handle: &AppHandle) -> Result<PathBuf, String> {
 fn resolve_bundled_director_manuals(handle: &AppHandle) -> Result<PathBuf, String> {
     let resource = handle.path().resource_dir().map_err(|e| e.to_string())?;
     for candidate in [
-        resource.join("_up_").join("data").join("skills"),
-        resource.join("data").join("skills"),
-        resource.join("skills"),
+        resource.join("_up_").join("src").join("prompts").join("directorManuals"),
+        resource.join("src").join("prompts").join("directorManuals"),
+        resource.join("directorManuals"),
     ] {
         if candidate.is_dir() {
             return Ok(candidate);
         }
     }
 
-    let fallback = resource.join("_up_").join("data").join("skills");
-    std::fs::create_dir_all(&fallback).map_err(|e| e.to_string())?;
-    Ok(fallback)
+    Err(format!(
+        "未找到内置导演手册资源（resource_dir: {}）",
+        resource.display()
+    ))
 }
