@@ -13,7 +13,7 @@ mod script;
 mod skills;
 mod workflow;
 
-use edit_export::export_timeline;
+use edit_export::{export_timeline, extract_audio_waveform};
 use assistant_context::query_assistant_context;
 use image::generate_image;
 use video::{generate_image_to_video, generate_video};
@@ -114,6 +114,7 @@ pub fn run() {
             generate_video,
             generate_image_to_video,
             export_timeline,
+            extract_audio_waveform,
             get_database_overview,
             export_database,
             export_database_to_file,

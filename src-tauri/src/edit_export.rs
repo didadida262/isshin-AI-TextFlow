@@ -38,39 +38,48 @@ fn run_command(command: &mut Command) -> Result<Output, String> {
         .map_err(|error| format!("执行 ffmpeg 失败: {error}"))
 }
 
-fn resolve_ffmpeg_command() -> Result<PathBuf, String> {
-    let candidates: Vec<PathBuf> = vec![PathBuf::from("ffmpeg")];
+#[cfg(windows)]
+fn ffmpeg_candidates() -> Vec<PathBuf> {
+    let mut candidates = vec![PathBuf::from("ffmpeg")];
 
-    #[cfg(windows)]
-    {
-        if let Ok(local_app_data) = std::env::var("LOCALAPDATA") {
-            candidates.push(
-                PathBuf::from(local_app_data)
-                    .join("Microsoft")
-                    .join("WinGet")
-                    .join("Links")
-                    .join("ffmpeg.exe"),
-            );
-        }
-
-        if let Ok(program_files) = std::env::var("ProgramFiles") {
-            candidates.push(
-                PathBuf::from(&program_files)
-                    .join("ffmpeg")
-                    .join("bin")
-                    .join("ffmpeg.exe"),
-            );
-        }
-
-        if let Ok(program_files_x86) = std::env::var("ProgramFiles(x86)") {
-            candidates.push(
-                PathBuf::from(&program_files_x86)
-                    .join("ffmpeg")
-                    .join("bin")
-                    .join("ffmpeg.exe"),
-            );
-        }
+    if let Ok(local_app_data) = std::env::var("LOCALAPDATA") {
+        candidates.push(
+            PathBuf::from(local_app_data)
+                .join("Microsoft")
+                .join("WinGet")
+                .join("Links")
+                .join("ffmpeg.exe"),
+        );
     }
+
+    if let Ok(program_files) = std::env::var("ProgramFiles") {
+        candidates.push(
+            PathBuf::from(&program_files)
+                .join("ffmpeg")
+                .join("bin")
+                .join("ffmpeg.exe"),
+        );
+    }
+
+    if let Ok(program_files_x86) = std::env::var("ProgramFiles(x86)") {
+        candidates.push(
+            PathBuf::from(&program_files_x86)
+                .join("ffmpeg")
+                .join("bin")
+                .join("ffmpeg.exe"),
+        );
+    }
+
+    candidates
+}
+
+#[cfg(not(windows))]
+fn ffmpeg_candidates() -> Vec<PathBuf> {
+    vec![PathBuf::from("ffmpeg")]
+}
+
+fn resolve_ffmpeg_command() -> Result<PathBuf, String> {
+    let candidates = ffmpeg_candidates();
 
     for candidate in candidates {
         let output = run_command(
@@ -119,6 +128,81 @@ fn run_ffmpeg(ffmpeg: &Path, args: &[&str]) -> Result<(), String> {
     } else {
         stderr.lines().rev().take(4).collect::<Vec<_>>().join("\n")
     })
+}
+
+fn run_ffmpeg_capture_stdout(ffmpeg: &Path, args: &[&str]) -> Result<Vec<u8>, String> {
+    let output = run_command(Command::new(ffmpeg).args(args))?;
+
+    if output.status.success() {
+        return Ok(output.stdout);
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(if stderr.trim().is_empty() {
+        "ffmpeg 处理失败".to_string()
+    } else {
+        stderr.lines().rev().take(4).collect::<Vec<_>>().join("\n")
+    })
+}
+
+const WAVEFORM_PEAKS_PER_SECOND: usize = 40;
+const WAVEFORM_SAMPLE_RATE: u32 = 8_000;
+
+fn peaks_from_pcm_f32le(bytes: &[u8]) -> Vec<f32> {
+    let samples: Vec<f32> = bytes
+        .chunks_exact(4)
+        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+        .collect();
+
+    if samples.is_empty() {
+        return Vec::new();
+    }
+
+    let samples_per_peak =
+        (WAVEFORM_SAMPLE_RATE as usize / WAVEFORM_PEAKS_PER_SECOND).max(1);
+    let mut peaks = Vec::with_capacity(samples.len() / samples_per_peak + 1);
+
+    for chunk in samples.chunks(samples_per_peak) {
+        let peak = chunk
+            .iter()
+            .copied()
+            .map(f32::abs)
+            .fold(0.0_f32, f32::max);
+        peaks.push(peak);
+    }
+
+    peaks
+}
+
+#[tauri::command]
+pub fn extract_audio_waveform(file_path: String) -> Result<Vec<f32>, String> {
+    let trimmed = file_path.trim();
+    if trimmed.is_empty() {
+        return Err("视频路径不能为空".to_string());
+    }
+    if !Path::new(trimmed).is_file() {
+        return Err(format!("视频文件不存在: {trimmed}"));
+    }
+
+    let ffmpeg = ensure_ffmpeg()?;
+    let sample_rate = WAVEFORM_SAMPLE_RATE.to_string();
+    let pcm = run_ffmpeg_capture_stdout(
+        &ffmpeg,
+        &[
+            "-i",
+            trimmed,
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            &sample_rate,
+            "-f",
+            "f32le",
+            "pipe:1",
+        ],
+    )?;
+
+    Ok(peaks_from_pcm_f32le(&pcm))
 }
 
 #[tauri::command]

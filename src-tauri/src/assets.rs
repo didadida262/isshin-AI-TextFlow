@@ -346,13 +346,14 @@ fn sync_workflow_after_assets_change(
         return Ok(());
     }
 
-    if !videos_complete && current == "editExport" {
-        conn.execute(
-            "UPDATE projects SET current_workflow_node = 'generateVideo', updated_at = ?2 WHERE id = ?1",
-            params![project_id, now],
-        )
-        .map_err(|e| e.to_string())?;
-    }
+    // 暂时放开「剪辑导出」：不因视频未完成而回退到 generateVideo（恢复门槛时取消注释）
+    // if !videos_complete && current == "editExport" {
+    //     conn.execute(
+    //         "UPDATE projects SET current_workflow_node = 'generateVideo', updated_at = ?2 WHERE id = ?1",
+    //         params![project_id, now],
+    //     )
+    //     .map_err(|e| e.to_string())?;
+    // }
 
     Ok(())
 }

@@ -13,6 +13,9 @@ pub const NODE_STORYBOARD: &str = "storyboard";
 pub const NODE_GENERATE_VIDEO: &str = "generateVideo";
 pub const NODE_EDIT_EXPORT: &str = "editExport";
 
+/// 暂时放开：true = 剧本完成后即可进入「剪辑导出」；恢复时改为 false。
+pub(crate) const EDIT_EXPORT_UNLOCK_AFTER_SCRIPT: bool = true;
+
 const WORKFLOW_NODE_IDS: &[&str] = &[
     NODE_EXTRACT_EVENTS,
     NODE_AI_SCRIPT,
@@ -165,7 +168,8 @@ fn sync_current_node(conn: &Connection, project_id: &str) -> Result<(), String> 
         && is_node_completed(conn, project_id, NODE_GENERATE_VIDEO)?
     {
         set_project_current_node(conn, project_id, NODE_EDIT_EXPORT)?;
-    } else if current == NODE_EDIT_EXPORT
+    } else if !EDIT_EXPORT_UNLOCK_AFTER_SCRIPT
+        && current == NODE_EDIT_EXPORT
         && !is_node_completed(conn, project_id, NODE_GENERATE_VIDEO)?
     {
         set_project_current_node(conn, project_id, NODE_GENERATE_VIDEO)?;
@@ -185,7 +189,13 @@ fn is_node_available(node_id: &str, completions: &[bool]) -> bool {
         NODE_AI_SCRIPT => completions[idx(NODE_EXTRACT_EVENTS)],
         NODE_GENERATE_ASSETS | NODE_GENERATE_VIDEO => completions[idx(NODE_AI_SCRIPT)],
         NODE_STORYBOARD => false,
-        NODE_EDIT_EXPORT => completions[idx(NODE_GENERATE_VIDEO)],
+        NODE_EDIT_EXPORT => {
+            if EDIT_EXPORT_UNLOCK_AFTER_SCRIPT {
+                completions[idx(NODE_AI_SCRIPT)]
+            } else {
+                completions[idx(NODE_GENERATE_VIDEO)]
+            }
+        }
         _ => false,
     }
 }
@@ -439,7 +449,7 @@ mod tests {
         assert_eq!(nodes[1].status, WorkflowNodeStatus::Completed);
         assert_eq!(nodes[2].status, WorkflowNodeStatus::Current);
         assert_eq!(nodes[4].status, WorkflowNodeStatus::Available);
-        assert_eq!(nodes[5].status, WorkflowNodeStatus::NotStarted);
+        assert_eq!(nodes[5].status, WorkflowNodeStatus::Available);
     }
 
     #[test]

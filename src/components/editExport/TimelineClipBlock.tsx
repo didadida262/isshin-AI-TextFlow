@@ -2,20 +2,20 @@ import { useCallback, useRef, useState, type MouseEvent as ReactMouseEvent } fro
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import type { TimelineClipRecord } from "../../services/editExportTimeline";
+import { AudioWaveformBars } from "./AudioWaveformBars";
+import { msToWidth, widthToMs } from "./timelineLayout";
+
+function snapMs(ms: number): number {
+  return Math.round(ms / 100) * 100;
+}
+
+export { msToWidth, widthToMs, PIXELS_PER_SECOND } from "./timelineLayout";
 
 const MIN_CLIP_DURATION_MS = 500;
 const TRIM_EDGE_PX = 10;
 const DRAG_THRESHOLD_PX = 3;
-
-export const PIXELS_PER_SECOND = 40;
-
-export function msToWidth(ms: number): number {
-  return (ms / 1000) * PIXELS_PER_SECOND;
-}
-
-export function widthToMs(width: number): number {
-  return Math.max(0, (width / PIXELS_PER_SECOND) * 1000);
-}
+const CLIP_LAYOUT_TRANSITION =
+  "transition-[left,width,transform,box-shadow] duration-200 ease-out";
 
 interface TimelineClipBlockProps {
   clip: TimelineClipRecord;
@@ -31,6 +31,8 @@ interface TimelineClipBlockProps {
   ) => void;
   onRemove: (groupId: string) => void;
   onDragEnd?: (moved: boolean) => void;
+  onDragStart?: () => void;
+  disableLayoutTransition?: boolean;
 }
 
 type DragMode = "move" | "trim-left" | "trim-right";
@@ -44,6 +46,8 @@ export function TimelineClipBlock({
   onTrim,
   onRemove,
   onDragEnd,
+  onDragStart,
+  disableLayoutTransition = false,
 }: TimelineClipBlockProps) {
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{
@@ -51,6 +55,7 @@ export function TimelineClipBlock({
     groupId: string;
     sourceDurationMs: number;
     originX: number;
+    lastClientX: number;
     startMs: number;
     sourceOffsetMs: number;
     durationMs: number;
@@ -75,15 +80,22 @@ export function TimelineClipBlock({
         drag.moved = true;
       }
 
-      const deltaMs = widthToMs(clientX - drag.originX);
+      const deltaMs = widthToMs(clientX - drag.lastClientX);
       if (drag.mode === "move") {
-        onMove(drag.groupId, Math.max(0, drag.startMs + deltaMs));
+        const nextStartMs = snapMs(Math.max(0, drag.startMs + deltaMs));
+        onMove(drag.groupId, nextStartMs);
+        drag.lastClientX = clientX;
+        drag.startMs = nextStartMs;
         return;
       }
 
+      const absoluteDeltaMs = widthToMs(clientX - drag.originX);
       if (drag.mode === "trim-left") {
         const maxDelta = drag.durationMs - MIN_CLIP_DURATION_MS;
-        const applied = Math.min(maxDelta, Math.max(-drag.sourceOffsetMs, deltaMs));
+        const applied = Math.min(
+          maxDelta,
+          Math.max(-drag.sourceOffsetMs, absoluteDeltaMs),
+        );
         onTrim(drag.groupId, {
           startMs: drag.startMs + applied,
           sourceOffsetMs: drag.sourceOffsetMs + applied,
@@ -96,7 +108,7 @@ export function TimelineClipBlock({
         drag.sourceDurationMs - drag.sourceOffsetMs - MIN_CLIP_DURATION_MS;
       const applied = Math.min(
         maxDelta,
-        Math.max(-(drag.durationMs - MIN_CLIP_DURATION_MS), deltaMs),
+        Math.max(-(drag.durationMs - MIN_CLIP_DURATION_MS), absoluteDeltaMs),
       );
       onTrim(drag.groupId, {
         durationMs: drag.durationMs + applied,
@@ -125,11 +137,15 @@ export function TimelineClipBlock({
         groupId: clip.groupId,
         sourceDurationMs: clip.sourceDurationMs,
         originX: event.clientX,
+        lastClientX: event.clientX,
         startMs: clip.startMs,
         sourceOffsetMs: clip.sourceOffsetMs,
         durationMs: clip.durationMs,
         moved: false,
       };
+      if (mode === "move") {
+        onDragStart?.();
+      }
       setIsDragging(true);
 
       const onMouseMove = (moveEvent: MouseEvent) => {
@@ -146,7 +162,7 @@ export function TimelineClipBlock({
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mouseup", onMouseUp);
     },
-    [applyDrag, clip, finishDrag],
+    [applyDrag, clip, finishDrag, onDragStart],
   );
 
   const isVideo = variant === "video";
@@ -154,15 +170,21 @@ export function TimelineClipBlock({
   return (
     <div
       data-timeline-clip
-      className={`absolute top-2 flex h-10 select-none items-center overflow-hidden rounded border px-2 ${
+      className={`pointer-events-auto absolute top-2 flex h-10 select-none items-center overflow-hidden rounded border px-2 ${
         isVideo
           ? "cursor-grab border-sky-400/40 bg-sky-500/20 active:cursor-grabbing"
           : "cursor-grab border-emerald-400/30 bg-emerald-500/15 active:cursor-grabbing"
-      } ${isDragging ? "cursor-grabbing" : ""}`}
+      } ${
+        isDragging
+          ? "z-[100] scale-[1.02] cursor-grabbing shadow-lg shadow-black/50"
+          : ""
+      } ${isDragging || disableLayoutTransition ? "" : CLIP_LAYOUT_TRANSITION} ${
+        isDragging ? "" : "hover:brightness-110"
+      }`}
       style={{
         left: msToWidth(clip.startMs),
         width: Math.max(msToWidth(clip.durationMs), 24),
-        zIndex: isDragging ? 50 : zIndex,
+        zIndex: isDragging ? 100 : zIndex,
       }}
       onMouseDown={startDrag}
       onClick={(event) => event.stopPropagation()}
@@ -187,17 +209,12 @@ export function TimelineClipBlock({
           </button>
         </>
       ) : (
-        <div className="pointer-events-none relative z-0 flex h-full w-full items-end gap-px px-1 pb-1">
-          {Array.from({ length: 16 }).map((_, index) => (
-            <span
-              key={index}
-              className="w-1 rounded-sm bg-emerald-300/50"
-              style={{
-                height: `${28 + ((index * 13) % 60)}%`,
-              }}
-            />
-          ))}
-        </div>
+        <AudioWaveformBars
+          src={clip.src}
+          sourcePath={clip.sourcePath}
+          sourceOffsetMs={clip.sourceOffsetMs}
+          durationMs={clip.durationMs}
+        />
       )}
       <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-2 bg-white/10" />
     </div>
