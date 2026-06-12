@@ -224,19 +224,25 @@ export function GenerationJobsProvider({
                 settings,
                 kuaizi: values.kuaizi,
               }
-            : {
-                prompt: values.prompt,
-                settings,
-                size: values.size,
-                numFrames: values.numFrames,
-                fps: values.fps,
-                numInferenceSteps: values.numInferenceSteps,
-                guidanceScale: values.guidanceScale,
-                guidanceScale2: values.guidanceScale2,
-                boundaryRatio: values.boundaryRatio,
-                flowShift: values.flowShift,
-                seed: values.seed,
-              },
+            : values.seedance
+              ? {
+                  prompt: values.prompt,
+                  settings,
+                  seedance: values.seedance,
+                }
+              : {
+                  prompt: values.prompt,
+                  settings,
+                  size: values.size,
+                  numFrames: values.numFrames,
+                  fps: values.fps,
+                  numInferenceSteps: values.numInferenceSteps,
+                  guidanceScale: values.guidanceScale,
+                  guidanceScale2: values.guidanceScale2,
+                  boundaryRatio: values.boundaryRatio,
+                  flowShift: values.flowShift,
+                  seed: values.seed,
+                },
         );
 
         const generationDurationMs = Math.max(

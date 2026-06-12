@@ -25,6 +25,7 @@ const DEFAULT_SEED: i64 = 42;
 
 const KUAIZI_DEFAULT_CREATE_URL: &str =
     "https://aiopenapi.kuaizi.cn/ai-open-platform-api/v1/lz/video/task/create";
+const KUAIZI_COMPATIBLE_VIDEO_TASK_PATH: &str = "/lz/video/task";
 const KUAIZI_DEFAULT_MODE: &str = "fast";
 const KUAIZI_DEFAULT_RESOLUTION: &str = "720p";
 const KUAIZI_DEFAULT_RATIO: &str = "16:9";
@@ -36,6 +37,70 @@ const KUAIZI_MAX_POLL_FAILURES: u32 = 5;
 const KUAIZI_CREATE_TIMEOUT_SECS: u64 = 120;
 const KUAIZI_STATUS_TIMEOUT_SECS: u64 = 60;
 const KUAIZI_DOWNLOAD_TIMEOUT_SECS: u64 = 300;
+
+const CME_CLOUD_DEFAULT_BASE_URL: &str = "https://zhenze-huhehaote.cmecloud.cn/api/v3";
+const CME_CLOUD_DEFAULT_MODEL: &str = "doubao-seedance-2.0";
+const CME_CLOUD_CREATE_PATH: &str = "/contents/generations/tasks";
+const CME_CLOUD_POLL_INTERVAL_SECS: u64 = 8;
+const CME_CLOUD_POLL_TIMEOUT_SECS: u64 = 600;
+const CME_CLOUD_MAX_POLL_FAILURES: u32 = 5;
+const CME_CLOUD_CREATE_TIMEOUT_SECS: u64 = 120;
+const CME_CLOUD_STATUS_TIMEOUT_SECS: u64 = 60;
+const CME_CLOUD_DOWNLOAD_TIMEOUT_SECS: u64 = 300;
+
+const LOG_TEXT_LIMIT: usize = 500;
+
+fn truncate_for_log(text: &str, max: usize) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= max {
+        return text.to_string();
+    }
+    chars.into_iter().take(max).collect::<String>() + "…"
+}
+
+fn mask_secret(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return "(empty)".to_string();
+    }
+    if trimmed.len() <= 8 {
+        return "***".to_string();
+    }
+    format!("{}...{}", &trimmed[..4], &trimmed[trimmed.len() - 4..])
+}
+
+fn log_video_send(action: &str, method: &str, url: &str, api_key: &str, body: &str) {
+    println!(
+        "[Video] 发送 → {action} {method} {url} ApiKey={} body={}",
+        mask_secret(api_key),
+        truncate_for_log(body, LOG_TEXT_LIMIT)
+    );
+}
+
+fn log_video_recv(action: &str, status: reqwest::StatusCode, body: &str) {
+    println!(
+        "[Video] 接收 ← {action} HTTP {} {}",
+        status.as_u16(),
+        truncate_for_log(body, LOG_TEXT_LIMIT)
+    );
+}
+
+fn log_video_binary_recv(
+    action: &str,
+    status: reqwest::StatusCode,
+    content_type: &str,
+    bytes: usize,
+) {
+    println!(
+        "[Video] 接收 ← {action} HTTP {} content-type={} bytes={bytes}",
+        status.as_u16(),
+        if content_type.is_empty() {
+            "(none)"
+        } else {
+            content_type
+        }
+    );
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,6 +122,7 @@ pub struct GenerateVideoInput {
     pub ratio: Option<String>,
     pub duration: Option<u32>,
     pub generation_type: Option<String>,
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -80,6 +146,22 @@ struct KuaiziStatusRequest<'a> {
     task_id: &'a str,
 }
 
+#[derive(Debug, Serialize)]
+struct CmeCloudContentPart {
+    #[serde(rename = "type")]
+    content_type: String,
+    text: String,
+}
+
+#[derive(Debug, Serialize)]
+struct CmeCloudCreateRequest {
+    model: String,
+    content: Vec<CmeCloudContentPart>,
+    ratio: String,
+    duration: u32,
+    resolution: String,
+}
+
 fn map_request_error(error: &reqwest::Error, url: &str) -> String {
     if error.is_connect() || error.is_timeout() {
         return format!(
@@ -98,12 +180,29 @@ fn map_kuaizi_request_error(error: &reqwest::Error, url: &str, action: &str) -> 
     format!("筷子{action}失败: {error}")
 }
 
+fn map_cmecloud_request_error(error: &reqwest::Error, url: &str, action: &str) -> String {
+    if error.is_connect() || error.is_timeout() {
+        return format!(
+            "无法连接移动云视频服务（{url}），请检查网络与 API Key 是否正确。{action}"
+        );
+    }
+    format!("移动云{action}失败: {error}")
+}
+
 fn build_kuaizi_client(timeout_secs: u64) -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(30))
         .timeout(Duration::from_secs(timeout_secs))
         .build()
         .map_err(|error| format!("初始化筷子 HTTP 客户端失败: {error}"))
+}
+
+fn build_cmecloud_client(timeout_secs: u64) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(timeout_secs))
+        .build()
+        .map_err(|error| format!("初始化移动云 HTTP 客户端失败: {error}"))
 }
 
 fn format_f64(value: f64) -> String {
@@ -115,11 +214,18 @@ fn format_f64(value: f64) -> String {
     }
 }
 
+fn is_kuaizi_compatible_video_host(url: &str) -> bool {
+    url.contains("kuaizi.cn")
+        || url.contains(&format!("{KUAIZI_COMPATIBLE_VIDEO_TASK_PATH}/"))
+}
+
+fn is_cmecloud_video_api(url: &str) -> bool {
+    url.trim().contains("cmecloud.cn")
+}
+
 fn is_kuaizi_video_api(url: &str) -> bool {
     let trimmed = url.trim();
-    trimmed.starts_with("https://aiopenapi.kuaizi.cn")
-        || trimmed.contains("kuaizi.cn")
-        || trimmed.contains("/lz/video/task/")
+    trimmed.starts_with("https://aiopenapi.kuaizi.cn") || is_kuaizi_compatible_video_host(trimmed)
 }
 
 fn resolve_kuaizi_text_field<'a>(value: Option<&'a str>, fallback: &'a str) -> &'a str {
@@ -143,14 +249,51 @@ fn normalize_kuaizi_create_url(url: &str) -> String {
     if trimmed.contains("kuaizi.cn") {
         let base = trimmed.trim_end_matches('/');
         if base.ends_with("/ai-open-platform-api") {
-            return format!("{base}/v1/lz/video/task/create");
+            return format!("{base}/v1{KUAIZI_COMPATIBLE_VIDEO_TASK_PATH}/create");
         }
-        if base.ends_with("/v1/lz/video/task") {
+        if base.ends_with(KUAIZI_COMPATIBLE_VIDEO_TASK_PATH) {
             return format!("{base}/create");
         }
-        return format!("{base}/ai-open-platform-api/v1/lz/video/task/create");
+        return format!("{base}/ai-open-platform-api/v1{KUAIZI_COMPATIBLE_VIDEO_TASK_PATH}/create");
     }
     trimmed.to_string()
+}
+
+fn normalize_cmecloud_base_url(url: &str) -> String {
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return CME_CLOUD_DEFAULT_BASE_URL.to_string();
+    }
+    let mut base = trimmed.trim_end_matches('/').to_string();
+    if base.contains("/contents/generations/tasks") {
+        base = base
+            .split("/contents/generations/tasks")
+            .next()
+            .unwrap_or(base.as_str())
+            .trim_end_matches('/')
+            .to_string();
+    }
+    if base.ends_with("/api/v3") {
+        return base;
+    }
+    if base.contains("cmecloud.cn") && !base.contains("/api/v3") {
+        return format!("{base}/api/v3");
+    }
+    base
+}
+
+fn cmecloud_create_url(base_url: &str) -> String {
+    format!(
+        "{}{CME_CLOUD_CREATE_PATH}",
+        normalize_cmecloud_base_url(base_url).trim_end_matches('/')
+    )
+}
+
+fn cmecloud_status_url(base_url: &str, task_id: &str) -> String {
+    format!(
+        "{}{CME_CLOUD_CREATE_PATH}/{task_id}",
+        normalize_cmecloud_base_url(base_url).trim_end_matches('/')
+    )
 }
 
 fn kuaizi_status_url(create_url: &str) -> String {
@@ -161,15 +304,27 @@ async fn read_response_json(
     response: reqwest::Response,
     action: &str,
 ) -> Result<(reqwest::StatusCode, serde_json::Value), String> {
+    read_labeled_response_json(response, action, "筷子").await
+}
+
+async fn read_labeled_response_json(
+    response: reqwest::Response,
+    action: &str,
+    provider: &str,
+) -> Result<(reqwest::StatusCode, serde_json::Value), String> {
     let status = response.status();
     let bytes = response
         .bytes()
         .await
-        .map_err(|error| format!("读取筷子{action}响应失败: {error}"))?;
+        .map_err(|error| format!("读取{provider}{action}响应失败: {error}"))?;
     let text = String::from_utf8_lossy(&bytes);
+    log_video_recv(action, status, &text);
     serde_json::from_str(&text).map_err(|error| {
         let preview: String = text.chars().take(240).collect();
-        format!("解析筷子{action}响应失败: {error}（HTTP {}）: {preview}", status.as_u16())
+        format!(
+            "解析{provider}{action}响应失败: {error}（HTTP {}）: {preview}",
+            status.as_u16()
+        )
     }).map(|json| (status, json))
 }
 
@@ -369,7 +524,7 @@ async fn download_kuaizi_video(
     client: &reqwest::Client,
     video_url: &str,
 ) -> Result<GenerateVideoResult, String> {
-    println!("[Video/Kuaizi] 下载视频 → {video_url}");
+    log_video_send("下载视频", "GET", video_url, "", "(none)");
     let video_response = client
         .get(video_url)
         .send()
@@ -377,6 +532,12 @@ async fn download_kuaizi_video(
         .map_err(|error| format!("下载筷子视频失败: {error}"))?;
 
     let download_status = video_response.status();
+    let content_type = video_response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .to_string();
     let bytes = video_response
         .bytes()
         .await
@@ -384,6 +545,7 @@ async fn download_kuaizi_video(
 
     if !download_status.is_success() {
         let text = String::from_utf8_lossy(&bytes);
+        log_video_recv("下载视频", download_status, &text);
         return Err(format!(
             "下载筷子视频失败（HTTP {}）: {text}",
             download_status.as_u16()
@@ -394,7 +556,8 @@ async fn download_kuaizi_video(
         return Err("筷子视频下载地址未返回视频数据".to_string());
     }
 
-    println!("[Video/Kuaizi] 完成 ← bytes={}", bytes.len());
+    log_video_binary_recv("下载视频", download_status, &content_type, bytes.len());
+    println!("[Video] 文生视频完成 provider=kuaizi video_bytes={}", bytes.len());
     Ok(GenerateVideoResult {
         video_b64: base64::engine::general_purpose::STANDARD.encode(bytes),
     })
@@ -425,14 +588,9 @@ async fn generate_video_kuaizi(
         generation_type: generation_type.to_string(),
     };
 
-    println!(
-        "[Video/Kuaizi] 创建任务 → {create_url} mode={} resolution={} ratio={} duration={} generation_type={}",
-        request_body.mode,
-        request_body.resolution,
-        request_body.ratio,
-        request_body.duration,
-        request_body.generation_type
-    );
+    let request_json = serde_json::to_string(&request_body)
+        .unwrap_or_else(|_| format!("{request_body:?}"));
+    log_video_send("创建任务", "POST", &create_url, api_key, &request_json);
 
     let create_response = create_client
         .post(&create_url)
@@ -460,7 +618,7 @@ async fn generate_video_kuaizi(
         format!("筷子 API 未返回 task_id: {}", create_json)
     })?;
 
-    println!("[Video/Kuaizi] 任务已创建 task_id={task_id}，开始轮询 {status_url}");
+    println!("[Video] 任务已创建 task_id={task_id}，开始轮询 {status_url}");
 
     let started_at = Instant::now();
     let mut poll_failures = 0u32;
@@ -477,6 +635,10 @@ async fn generate_video_kuaizi(
         let status_request = KuaiziStatusRequest {
             task_id: task_id.as_str(),
         };
+        let status_request_json = serde_json::to_string(&status_request)
+            .unwrap_or_else(|_| format!("task_id={task_id}"));
+        log_video_send("查询任务", "POST", &status_url, api_key, &status_request_json);
+
         let status_response = match status_client
             .post(&status_url)
             .header("Content-Type", "application/json")
@@ -492,7 +654,7 @@ async fn generate_video_kuaizi(
             Err(error) if error.is_connect() || error.is_timeout() => {
                 poll_failures += 1;
                 println!(
-                    "[Video/Kuaizi] 状态查询暂时失败 ({poll_failures}/{KUAIZI_MAX_POLL_FAILURES}): {error}"
+                    "[Video] 状态查询暂时失败 ({poll_failures}/{KUAIZI_MAX_POLL_FAILURES}): {error}"
                 );
                 if poll_failures >= KUAIZI_MAX_POLL_FAILURES {
                     return Err(map_kuaizi_request_error(
@@ -525,7 +687,7 @@ async fn generate_video_kuaizi(
         let status = parse_kuaizi_status(&status_json)
             .map(|value| normalize_kuaizi_status(&value))
             .unwrap_or_else(|| "unknown".to_string());
-        println!("[Video/Kuaizi] 查询任务 task_id={task_id} status={status}");
+        println!("[Video] 任务状态 task_id={task_id} status={status}");
 
         if is_kuaizi_terminal_failure(&status) {
             return Err(parse_kuaizi_error_message(&status_json, http_status.as_u16()));
@@ -542,7 +704,206 @@ async fn generate_video_kuaizi(
         }
 
         if !is_kuaizi_running_status(&status) {
-            println!("[Video/Kuaizi] 未识别状态 {status}，继续轮询");
+            println!("[Video] 未识别状态 {status}，继续轮询");
+        }
+    }
+}
+
+async fn download_cmecloud_video(
+    client: &reqwest::Client,
+    video_url: &str,
+) -> Result<GenerateVideoResult, String> {
+    log_video_send("下载视频", "GET", video_url, "", "(none)");
+    let video_response = client
+        .get(video_url)
+        .send()
+        .await
+        .map_err(|error| format!("下载移动云视频失败: {error}"))?;
+
+    let download_status = video_response.status();
+    let content_type = video_response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    let bytes = video_response
+        .bytes()
+        .await
+        .map_err(|error| format!("读取移动云视频数据失败: {error}"))?;
+
+    if !download_status.is_success() {
+        let text = String::from_utf8_lossy(&bytes);
+        log_video_recv("下载视频", download_status, &text);
+        return Err(format!(
+            "下载移动云视频失败（HTTP {}）: {text}",
+            download_status.as_u16()
+        ));
+    }
+
+    if bytes.is_empty() {
+        return Err("移动云视频下载地址未返回视频数据".to_string());
+    }
+
+    log_video_binary_recv("下载视频", download_status, &content_type, bytes.len());
+    println!(
+        "[Video] 文生视频完成 provider=cmecloud video_bytes={}",
+        bytes.len()
+    );
+    Ok(GenerateVideoResult {
+        video_b64: base64::engine::general_purpose::STANDARD.encode(bytes),
+    })
+}
+
+async fn generate_video_cmecloud(
+    prompt: &str,
+    base_url: &str,
+    api_key: &str,
+    model: &str,
+    resolution: &str,
+    ratio: &str,
+    duration: u32,
+) -> Result<GenerateVideoResult, String> {
+    let create_url = cmecloud_create_url(base_url);
+    let create_client = build_cmecloud_client(CME_CLOUD_CREATE_TIMEOUT_SECS)?;
+    let status_client = build_cmecloud_client(CME_CLOUD_STATUS_TIMEOUT_SECS)?;
+    let download_client = build_cmecloud_client(CME_CLOUD_DOWNLOAD_TIMEOUT_SECS)?;
+
+    let request_body = CmeCloudCreateRequest {
+        model: model.to_string(),
+        content: vec![CmeCloudContentPart {
+            content_type: "text".to_string(),
+            text: prompt.to_string(),
+        }],
+        ratio: ratio.to_string(),
+        duration: duration.max(1),
+        resolution: resolution.to_string(),
+    };
+
+    let request_json = serde_json::to_string(&request_body)
+        .unwrap_or_else(|_| format!("{request_body:?}"));
+    log_video_send("创建任务", "POST", &create_url, api_key, &request_json);
+
+    let create_response = create_client
+        .post(&create_url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key.trim()))
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|error| {
+            map_cmecloud_request_error(
+                &error,
+                &create_url,
+                "创建任务（POST /contents/generations/tasks）",
+            )
+        })?;
+
+    let (create_status, create_json) =
+        read_labeled_response_json(create_response, "创建任务", "移动云").await?;
+
+    if !is_kuaizi_api_success(&create_json, create_status) {
+        return Err(parse_kuaizi_error_message(
+            &create_json,
+            create_status.as_u16(),
+        ));
+    }
+
+    let task_id = parse_kuaizi_task_id(&create_json).ok_or_else(|| {
+        format!("移动云 API 未返回 task id: {create_json}")
+    })?;
+
+    println!("[Video] 任务已创建 task_id={task_id}，开始轮询");
+
+    let started_at = Instant::now();
+    let mut poll_failures = 0u32;
+    loop {
+        if started_at.elapsed() >= Duration::from_secs(CME_CLOUD_POLL_TIMEOUT_SECS) {
+            return Err(format!(
+                "移动云视频生成超时（超过 {} 秒），task_id={task_id}",
+                CME_CLOUD_POLL_TIMEOUT_SECS
+            ));
+        }
+
+        sleep(Duration::from_secs(CME_CLOUD_POLL_INTERVAL_SECS)).await;
+
+        let status_url = cmecloud_status_url(base_url, &task_id);
+        log_video_send(
+            "查询任务",
+            "GET",
+            &status_url,
+            api_key,
+            &format!("{{\"task_id\":\"{task_id}\"}}"),
+        );
+
+        let status_response = match status_client
+            .get(&status_url)
+            .header("Authorization", format!("Bearer {}", api_key.trim()))
+            .send()
+            .await
+        {
+            Ok(response) => {
+                poll_failures = 0;
+                response
+            }
+            Err(error) if error.is_connect() || error.is_timeout() => {
+                poll_failures += 1;
+                println!(
+                    "[Video] 状态查询暂时失败 ({poll_failures}/{CME_CLOUD_MAX_POLL_FAILURES}): {error}"
+                );
+                if poll_failures >= CME_CLOUD_MAX_POLL_FAILURES {
+                    return Err(map_cmecloud_request_error(
+                        &error,
+                        &status_url,
+                        "查询任务状态（GET /contents/generations/tasks/{id}）",
+                    ));
+                }
+                continue;
+            }
+            Err(error) => {
+                return Err(map_cmecloud_request_error(
+                    &error,
+                    &status_url,
+                    "查询任务状态（GET /contents/generations/tasks/{id}）",
+                ));
+            }
+        };
+
+        let (http_status, status_json) =
+            read_labeled_response_json(status_response, "任务状态", "移动云").await?;
+
+        if !is_kuaizi_api_success(&status_json, http_status) {
+            return Err(parse_kuaizi_error_message(
+                &status_json,
+                http_status.as_u16(),
+            ));
+        }
+
+        let status = parse_kuaizi_status(&status_json)
+            .map(|value| normalize_kuaizi_status(&value))
+            .unwrap_or_else(|| "unknown".to_string());
+        println!("[Video] 任务状态 task_id={task_id} status={status}");
+
+        if is_kuaizi_terminal_failure(&status) {
+            return Err(parse_kuaizi_error_message(
+                &status_json,
+                http_status.as_u16(),
+            ));
+        }
+
+        if is_kuaizi_terminal_success(&status) {
+            let video_url =
+                parse_kuaizi_video_url(&status_json).filter(|url| !url.trim().is_empty());
+            return match video_url {
+                Some(url) => download_cmecloud_video(&download_client, &url).await,
+                None => Err(format!(
+                    "移动云任务已完成（status={status}）但未返回 video_url: {status_json}"
+                )),
+            };
+        }
+
+        if !is_kuaizi_running_status(&status) {
+            println!("[Video] 未识别状态 {status}，继续轮询");
         }
     }
 }
@@ -562,9 +923,15 @@ async fn generate_video_wan_sync(
     flow_shift: f64,
     seed: i64,
 ) -> Result<GenerateVideoResult, String> {
-    println!(
-        "[Video/Wan] 发送 → {url} size={size} frames={num_frames} fps={fps} steps={num_inference_steps}"
+    let request_summary = format!(
+        "prompt={} size={size} num_frames={num_frames} fps={fps} num_inference_steps={num_inference_steps} guidance_scale={} guidance_scale_2={} boundary_ratio={} flow_shift={} seed={seed}",
+        truncate_for_log(prompt, LOG_TEXT_LIMIT),
+        format_f64(guidance_scale),
+        format_f64(guidance_scale_2),
+        format_f64(boundary_ratio),
+        format_f64(flow_shift),
     );
+    log_video_send("同步生成", "POST", url, api_key, &request_summary);
 
     let form = Form::new()
         .text("prompt", prompt.to_string())
@@ -598,12 +965,15 @@ async fn generate_video_wan_sync(
         .await
         .map_err(|error| format!("读取视频服务响应失败: {error}"))?;
 
-    println!(
-        "[Video/Wan] 接收 ← HTTP {} content-type={} bytes={}",
-        status.as_u16(),
-        content_type,
-        bytes.len()
-    );
+    if content_type.starts_with("video/")
+        || content_type.starts_with("application/octet-stream")
+        || (!content_type.contains("json") && !content_type.contains("text"))
+    {
+        log_video_binary_recv("同步生成", status, &content_type, bytes.len());
+    } else {
+        let text = String::from_utf8_lossy(&bytes);
+        log_video_recv("同步生成", status, &text);
+    }
 
     if !status.is_success() {
         let text = String::from_utf8_lossy(&bytes);
@@ -614,6 +984,7 @@ async fn generate_video_wan_sync(
         return Err("视频服务未返回视频数据".to_string());
     }
 
+    println!("[Video] 文生视频完成 provider=wan video_bytes={}", bytes.len());
     Ok(GenerateVideoResult {
         video_b64: base64::engine::general_purpose::STANDARD.encode(bytes),
     })
@@ -659,7 +1030,55 @@ pub async fn generate_video(input: GenerateVideoInput) -> Result<GenerateVideoRe
     let flow_shift = input.flow_shift.unwrap_or(DEFAULT_FLOW_SHIFT);
     let seed = input.seed.unwrap_or(DEFAULT_SEED);
 
+    let provider = if is_cmecloud_video_api(&url) {
+        "cmecloud"
+    } else if is_kuaizi_video_api(&url) {
+        "kuaizi"
+    } else {
+        "wan"
+    };
+    println!(
+        "[Video] 文生视频开始 provider={provider} url={url} prompt={} ApiKey={}",
+        truncate_for_log(prompt, LOG_TEXT_LIMIT),
+        mask_secret(&api_key)
+    );
+
     let client = reqwest::Client::new();
+
+    if is_cmecloud_video_api(&url) {
+        let model = input
+            .model
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| CME_CLOUD_DEFAULT_MODEL.to_string());
+        let (resolution, ratio, duration) = if input.resolution.is_some()
+            || input.ratio.is_some()
+            || input.duration.is_some()
+        {
+            (
+                resolve_kuaizi_text_field(
+                    input.resolution.as_deref(),
+                    KUAIZI_DEFAULT_RESOLUTION,
+                )
+                .to_string(),
+                resolve_kuaizi_text_field(input.ratio.as_deref(), KUAIZI_DEFAULT_RATIO)
+                    .to_string(),
+                input.duration.unwrap_or(KUAIZI_DEFAULT_DURATION).max(1),
+            )
+        } else {
+            map_size_to_kuaizi_params(&size, num_frames, fps)
+        };
+
+        return generate_video_cmecloud(
+            prompt,
+            &url,
+            &api_key,
+            model.trim(),
+            &resolution,
+            &ratio,
+            duration,
+        )
+        .await;
+    }
 
     if is_kuaizi_video_api(&url) {
         let (resolution, ratio, duration) = if input.resolution.is_some()
@@ -902,6 +1321,39 @@ mod tests {
     fn detects_kuaizi_provider() {
         assert!(is_kuaizi_video_api(KUAIZI_DEFAULT_CREATE_URL));
         assert!(!is_kuaizi_video_api(DEFAULT_VIDEO_API_URL));
+        assert!(!is_kuaizi_video_api(CME_CLOUD_DEFAULT_BASE_URL));
+    }
+
+    #[test]
+    fn detects_cmecloud_provider() {
+        assert!(is_cmecloud_video_api(CME_CLOUD_DEFAULT_BASE_URL));
+        assert!(is_cmecloud_video_api(
+            "https://zhenze-huhehaote.cmecloud.cn/api/v3"
+        ));
+        assert!(!is_cmecloud_video_api(KUAIZI_DEFAULT_CREATE_URL));
+    }
+
+    #[test]
+    fn normalizes_cmecloud_base_url() {
+        assert_eq!(
+            normalize_cmecloud_base_url("https://zhenze-huhehaote.cmecloud.cn/api/v3"),
+            CME_CLOUD_DEFAULT_BASE_URL
+        );
+        assert_eq!(
+            normalize_cmecloud_base_url("https://zhenze-huhehaote.cmecloud.cn"),
+            CME_CLOUD_DEFAULT_BASE_URL
+        );
+        assert_eq!(
+            cmecloud_create_url("https://zhenze-huhehaote.cmecloud.cn/api/v3"),
+            "https://zhenze-huhehaote.cmecloud.cn/api/v3/contents/generations/tasks"
+        );
+        assert_eq!(
+            cmecloud_status_url(
+                "https://zhenze-huhehaote.cmecloud.cn/api/v3",
+                "task-123"
+            ),
+            "https://zhenze-huhehaote.cmecloud.cn/api/v3/contents/generations/tasks/task-123"
+        );
     }
 
     #[test]

@@ -17,6 +17,7 @@ import {
   DEFAULT_KUAIZI_VIDEO_MODE,
   DEFAULT_KUAIZI_VIDEO_RATIO,
   DEFAULT_KUAIZI_VIDEO_RESOLUTION,
+  DEFAULT_CME_CLOUD_VIDEO_MODEL,
   DEFAULT_VIDEO_BOUNDARY_RATIO,
   DEFAULT_VIDEO_FPS,
   DEFAULT_VIDEO_FLOW_SHIFT,
@@ -27,6 +28,7 @@ import {
   DEFAULT_VIDEO_SEED,
   DEFAULT_VIDEO_SIZE,
   getDefaultKuaiziVideoParams,
+  isCmeCloudVideoApi,
   isKuaiziVideoApi,
   type VideoGenerationSettings,
 } from "../../services/config";
@@ -112,6 +114,7 @@ export function VideoTestResultModal({
   const requestIdRef = useRef(0);
 
   const isKuaizi = Boolean(settings && isKuaiziVideoApi(settings.videoApiUrl));
+  const isCmeCloud = Boolean(settings && isCmeCloudVideoApi(settings.videoApiUrl));
 
   useEffect(() => {
     if (!open) return;
@@ -189,31 +192,44 @@ export function VideoTestResultModal({
               generationType: kuaiziGenerationType,
             },
           }
-        : {
-            prompt,
-            size,
-            numFrames: parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES),
-            fps: parsePositiveInt(fps, DEFAULT_VIDEO_FPS),
-            numInferenceSteps: parsePositiveInt(
-              numInferenceSteps,
-              DEFAULT_VIDEO_INFERENCE_STEPS,
-            ),
-            guidanceScale: parsePositiveFloat(
-              guidanceScale,
-              DEFAULT_VIDEO_GUIDANCE_SCALE,
-            ),
-            guidanceScale2: parsePositiveFloat(
-              guidanceScale2,
-              DEFAULT_VIDEO_GUIDANCE_SCALE_2,
-            ),
-            boundaryRatio: parsePositiveFloat(
-              boundaryRatio,
-              DEFAULT_VIDEO_BOUNDARY_RATIO,
-            ),
-            flowShift: parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT),
-            seed: parsePositiveInt(seed, DEFAULT_VIDEO_SEED),
-            settings,
-          },
+        : isCmeCloud
+          ? {
+              prompt,
+              settings,
+              seedance: {
+                resolution: kuaiziResolution,
+                ratio: kuaiziRatio,
+                duration: parsePositiveInt(
+                  kuaiziDuration,
+                  DEFAULT_KUAIZI_VIDEO_DURATION,
+                ),
+              },
+            }
+          : {
+              prompt,
+              size,
+              numFrames: parsePositiveInt(numFrames, DEFAULT_VIDEO_NUM_FRAMES),
+              fps: parsePositiveInt(fps, DEFAULT_VIDEO_FPS),
+              numInferenceSteps: parsePositiveInt(
+                numInferenceSteps,
+                DEFAULT_VIDEO_INFERENCE_STEPS,
+              ),
+              guidanceScale: parsePositiveFloat(
+                guidanceScale,
+                DEFAULT_VIDEO_GUIDANCE_SCALE,
+              ),
+              guidanceScale2: parsePositiveFloat(
+                guidanceScale2,
+                DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+              ),
+              boundaryRatio: parsePositiveFloat(
+                boundaryRatio,
+                DEFAULT_VIDEO_BOUNDARY_RATIO,
+              ),
+              flowShift: parsePositiveFloat(flowShift, DEFAULT_VIDEO_FLOW_SHIFT),
+              seed: parsePositiveInt(seed, DEFAULT_VIDEO_SEED),
+              settings,
+            },
     )
       .then((b64) => {
         if (requestId !== requestIdRef.current) return;
@@ -242,6 +258,7 @@ export function VideoTestResultModal({
     guidanceScale,
     guidanceScale2,
     isKuaizi,
+    isCmeCloud,
     kuaiziDuration,
     kuaiziGenerationType,
     kuaiziMode,
@@ -344,7 +361,11 @@ export function VideoTestResultModal({
                             setTestVideoModel(event.target.value);
                             onVideoModelChange?.(event.target.value);
                           }}
-                          placeholder="wan2.2-t2v-5b"
+                          placeholder={
+                            isCmeCloud
+                              ? DEFAULT_CME_CLOUD_VIDEO_MODEL
+                              : "wan2.2-t2v-5b"
+                          }
                           className={fieldClass}
                         />
                       </label>
@@ -416,6 +437,50 @@ export function VideoTestResultModal({
                             readOnly
                             value={kuaiziGenerationType}
                             className={readOnlyClass}
+                          />
+                        </label>
+                      </>
+                    ) : isCmeCloud ? (
+                      <>
+                        <div className="block space-y-1.5">
+                          <span className="text-xs text-text-muted">
+                            {i18n.kuaiziVideoResolutionLabel}
+                          </span>
+                          <Select
+                            value={kuaiziResolution}
+                            options={KUAIZI_RESOLUTION_OPTIONS.map((option) => ({
+                              value: option,
+                              label: option,
+                            }))}
+                            onChange={setKuaiziResolution}
+                          />
+                        </div>
+
+                        <div className="block space-y-1.5">
+                          <span className="text-xs text-text-muted">
+                            {i18n.kuaiziVideoRatioLabel}
+                          </span>
+                          <Select
+                            value={kuaiziRatio}
+                            options={KUAIZI_RATIO_OPTIONS.map((option) => ({
+                              value: option,
+                              label: option,
+                            }))}
+                            onChange={setKuaiziRatio}
+                          />
+                        </div>
+
+                        <label className="block space-y-1.5">
+                          <span className="text-xs text-text-muted">
+                            {i18n.kuaiziVideoDurationLabel}
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={kuaiziDuration}
+                            onChange={(event) => setKuaiziDuration(event.target.value)}
+                            className={fieldClass}
                           />
                         </label>
                       </>

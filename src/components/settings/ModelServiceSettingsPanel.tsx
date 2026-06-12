@@ -20,9 +20,11 @@ import {
   getPromptRefineSettingsFromConfig,
   getVideoSettingsFromConfig,
   isImageToVideoSettingsValid,
+  isCmeCloudVideoApi,
   isKuaiziVideoApi,
   isPromptRefineSettingsValid,
   isVideoSettingsValid,
+  CME_CLOUD_VIDEO_API_URL,
   KUAIZI_VIDEO_API_URL,
 } from "../../services/config";
 import { ImageTestResultModal } from "./ImageTestResultModal";
@@ -499,7 +501,9 @@ export function ModelServiceSettingsPanel({
             placeholder={
               isKuaiziVideoApi(draft.videoApiUrl)
                 ? KUAIZI_VIDEO_API_URL
-                : "http://27.159.92.210:8081/v1/videos/sync"
+                : isCmeCloudVideoApi(draft.videoApiUrl)
+                  ? CME_CLOUD_VIDEO_API_URL
+                  : "http://27.159.92.210:8081/v1/videos/sync"
             }
             className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent/50"
           />

@@ -18,16 +18,55 @@ export const KUAIZI_VIDEO_STATUS_URL =
 
 export const KUAIZI_VIDEO_API_ORIGIN = "https://aiopenapi.kuaizi.cn";
 
+/** 移动云 MAAS 网关（火山方舟 Seedance 协议）。 */
+export const CME_CLOUD_VIDEO_API_ORIGIN =
+  "https://zhenze-huhehaote.cmecloud.cn";
+
+export const CME_CLOUD_VIDEO_API_URL = `${CME_CLOUD_VIDEO_API_ORIGIN}/api/v3`;
+
+export const DEFAULT_CME_CLOUD_VIDEO_MODEL = "doubao-seedance-2.0";
+
+const KUAIZI_COMPATIBLE_VIDEO_TASK_PATH = "/lz/video/task";
+
+function isKuaiziCompatibleVideoHost(url: string): boolean {
+  return (
+    url.includes("kuaizi.cn") ||
+    url.includes(`${KUAIZI_COMPATIBLE_VIDEO_TASK_PATH}/`)
+  );
+}
+
+export function isCmeCloudVideoApi(url: string): boolean {
+  return url.trim().includes("cmecloud.cn");
+}
+
 export function isKuaiziVideoApi(url: string): boolean {
   const trimmed = url.trim();
   return (
     trimmed.startsWith(KUAIZI_VIDEO_API_ORIGIN) ||
-    trimmed.includes("kuaizi.cn") ||
-    trimmed.includes("/lz/video/task/")
+    isKuaiziCompatibleVideoHost(trimmed)
   );
 }
 
-/** 将域名、status 地址等规范为筷子创建任务接口。 */
+/** 将域名等规范为移动云 MAAS base URL（不含具体 path）。 */
+export function normalizeCmeCloudVideoBaseUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return CME_CLOUD_VIDEO_API_URL;
+
+  let base = trimmed.replace(/\/+$/, "");
+  if (base.includes("/contents/generations/tasks")) {
+    base = base.split("/contents/generations/tasks")[0] ?? base;
+    base = base.replace(/\/+$/, "");
+  }
+  if (base.endsWith("/api/v3")) {
+    return base;
+  }
+  if (base.includes("cmecloud.cn") && !base.includes("/api/v3")) {
+    return `${base}/api/v3`;
+  }
+  return base;
+}
+
+/** 将域名、status 地址等规范为筷子兼容创建任务接口。 */
 export function normalizeKuaiziVideoCreateUrl(url: string): string {
   const trimmed = url.trim();
   if (!trimmed) return KUAIZI_VIDEO_API_URL;
@@ -35,16 +74,21 @@ export function normalizeKuaiziVideoCreateUrl(url: string): string {
   if (trimmed.includes("/task/status")) {
     return trimmed.replace("/task/status", "/task/create");
   }
-  if (!trimmed.includes("kuaizi.cn")) return trimmed;
 
   const base = trimmed.replace(/\/+$/, "");
-  if (base.endsWith("/ai-open-platform-api")) {
-    return `${base}/v1/lz/video/task/create`;
+  const taskPath = KUAIZI_COMPATIBLE_VIDEO_TASK_PATH;
+
+  if (trimmed.includes("kuaizi.cn")) {
+    if (base.endsWith("/ai-open-platform-api")) {
+      return `${base}/v1${taskPath}/create`;
+    }
+    if (base.endsWith(taskPath)) {
+      return `${base}/create`;
+    }
+    return `${base}/ai-open-platform-api/v1${taskPath}/create`;
   }
-  if (base.endsWith("/v1/lz/video/task")) {
-    return `${base}/create`;
-  }
-  return `${base}/ai-open-platform-api/v1/lz/video/task/create`;
+
+  return trimmed;
 }
 
 export const DEFAULT_KUAIZI_VIDEO_MODE = "fast";
@@ -68,6 +112,20 @@ export function getDefaultKuaiziVideoParams(): KuaiziVideoParams {
     ratio: DEFAULT_KUAIZI_VIDEO_RATIO,
     duration: DEFAULT_KUAIZI_VIDEO_DURATION,
     generationType: DEFAULT_KUAIZI_VIDEO_GENERATION_TYPE,
+  };
+}
+
+export interface SeedanceVideoParams {
+  resolution: string;
+  ratio: string;
+  duration: number;
+}
+
+export function getDefaultSeedanceVideoParams(): SeedanceVideoParams {
+  return {
+    resolution: DEFAULT_KUAIZI_VIDEO_RESOLUTION,
+    ratio: DEFAULT_KUAIZI_VIDEO_RATIO,
+    duration: DEFAULT_KUAIZI_VIDEO_DURATION,
   };
 }
 

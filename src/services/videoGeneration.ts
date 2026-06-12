@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { AppConfig } from "../types";
 import {
+  DEFAULT_CME_CLOUD_VIDEO_MODEL,
   DEFAULT_VIDEO_API_URL,
   DEFAULT_VIDEO_BOUNDARY_RATIO,
   DEFAULT_VIDEO_FPS,
@@ -13,12 +14,16 @@ import {
   DEFAULT_VIDEO_SEED,
   DEFAULT_VIDEO_SIZE,
   getDefaultKuaiziVideoParams,
+  getDefaultSeedanceVideoParams,
   getVideoSettingsFromConfig,
+  isCmeCloudVideoApi,
   isKuaiziVideoApi,
   isVideoSettingsValid,
   loadConfig,
+  normalizeCmeCloudVideoBaseUrl,
   normalizeKuaiziVideoCreateUrl,
   type KuaiziVideoParams,
+  type SeedanceVideoParams,
   type VideoGenerationSettings,
 } from "./config";
 
@@ -71,6 +76,7 @@ export interface GenerateVideoInput {
   flowShift?: number;
   seed?: number;
   kuaizi?: KuaiziVideoParams;
+  seedance?: SeedanceVideoParams;
   settings?: VideoGenerationSettings;
 }
 
@@ -89,6 +95,7 @@ export async function testVideoConnection(
   settings?: VideoGenerationSettings,
   prompt: string = VIDEO_TEST_PROMPT,
   kuaizi?: KuaiziVideoParams,
+  seedance?: SeedanceVideoParams,
 ): Promise<string> {
   const resolvedSettings = await resolveVideoGenerationSettings(settings);
   if (!isVideoSettingsValid(resolvedSettings)) {
@@ -106,6 +113,9 @@ export async function testVideoConnection(
     kuaizi: isKuaiziVideoApi(resolvedSettings.videoApiUrl)
       ? (kuaizi ?? getDefaultKuaiziVideoParams())
       : undefined,
+    seedance: isCmeCloudVideoApi(resolvedSettings.videoApiUrl)
+      ? (seedance ?? getDefaultSeedanceVideoParams())
+      : undefined,
   });
 }
 
@@ -118,24 +128,40 @@ export async function generateVideoB64(
   }
 
   const useKuaizi = isKuaiziVideoApi(settings.videoApiUrl);
+  const useCmeCloud = isCmeCloudVideoApi(settings.videoApiUrl);
   const kuaiziParams = useKuaizi
     ? (input.kuaizi ?? getDefaultKuaiziVideoParams())
     : undefined;
+  const seedanceParams = useCmeCloud
+    ? (input.seedance ?? getDefaultSeedanceVideoParams())
+    : undefined;
   const apiUrl = useKuaizi
     ? normalizeKuaiziVideoCreateUrl(settings.videoApiUrl)
-    : settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL;
+    : useCmeCloud
+      ? normalizeCmeCloudVideoBaseUrl(settings.videoApiUrl)
+      : settings.videoApiUrl.trim() || DEFAULT_VIDEO_API_URL;
 
-  const result = await invoke<{ videoB64: string }>("generate_video", {
-    input: useKuaizi
+  const invokeInput = useKuaizi
+    ? {
+        prompt: input.prompt.trim(),
+        apiUrl,
+        apiKey: settings.videoApiKey.trim(),
+        mode: kuaiziParams?.mode,
+        resolution: kuaiziParams?.resolution,
+        ratio: kuaiziParams?.ratio,
+        duration: kuaiziParams?.duration,
+        generationType: kuaiziParams?.generationType,
+      }
+    : useCmeCloud
       ? {
           prompt: input.prompt.trim(),
           apiUrl,
           apiKey: settings.videoApiKey.trim(),
-          mode: kuaiziParams?.mode,
-          resolution: kuaiziParams?.resolution,
-          ratio: kuaiziParams?.ratio,
-          duration: kuaiziParams?.duration,
-          generationType: kuaiziParams?.generationType,
+          model:
+            settings.videoModel.trim() || DEFAULT_CME_CLOUD_VIDEO_MODEL,
+          resolution: seedanceParams?.resolution,
+          ratio: seedanceParams?.ratio,
+          duration: seedanceParams?.duration,
         }
       : {
           prompt: input.prompt.trim(),
@@ -152,7 +178,23 @@ export async function generateVideoB64(
           boundaryRatio: input.boundaryRatio ?? DEFAULT_VIDEO_BOUNDARY_RATIO,
           flowShift: input.flowShift ?? DEFAULT_VIDEO_FLOW_SHIFT,
           seed: input.seed ?? DEFAULT_VIDEO_SEED,
-        },
+        };
+
+  console.log("[Video] 调用 generate_video", {
+    provider: useKuaizi ? "kuaizi" : useCmeCloud ? "cmecloud" : "wan",
+    apiUrl,
+    input: {
+      ...invokeInput,
+      apiKey: invokeInput.apiKey ? "***" : "",
+    },
+  });
+
+  const result = await invoke<{ videoB64: string }>("generate_video", {
+    input: invokeInput,
+  });
+
+  console.log("[Video] generate_video 完成", {
+    videoB64Length: result.videoB64.length,
   });
 
   return result.videoB64;

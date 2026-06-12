@@ -11,6 +11,7 @@ import {
   DEFAULT_KUAIZI_VIDEO_RATIO,
   DEFAULT_KUAIZI_VIDEO_RESOLUTION,
   DEFAULT_VIDEO_BOUNDARY_RATIO,
+  DEFAULT_CME_CLOUD_VIDEO_MODEL,
   DEFAULT_VIDEO_FPS,
   DEFAULT_VIDEO_FLOW_SHIFT,
   DEFAULT_VIDEO_GUIDANCE_SCALE,
@@ -21,10 +22,13 @@ import {
   DEFAULT_VIDEO_MODEL,
   DEFAULT_VIDEO_SIZE,
   getDefaultKuaiziVideoParams,
+  getDefaultSeedanceVideoParams,
   getVideoSettingsFromConfig,
+  isCmeCloudVideoApi,
   isKuaiziVideoApi,
   loadConfig,
   type KuaiziVideoParams,
+  type SeedanceVideoParams,
   type VideoGenerationSettings,
 } from "../services/config";
 import type { AppConfig } from "../types";
@@ -48,6 +52,7 @@ export interface TextToVideoFormValues {
   flowShift: number;
   seed: number;
   kuaizi?: KuaiziVideoParams;
+  seedance?: SeedanceVideoParams;
   generationDurationMs: number;
 }
 
@@ -100,11 +105,22 @@ function buildDefaultSubmitValues(
     };
   }
 
+  if (isCmeCloudVideoApi(config.videoApiUrl)) {
+    const seedance = getDefaultSeedanceVideoParams();
+    return {
+      ...base,
+      model: videoModel.trim() || DEFAULT_CME_CLOUD_VIDEO_MODEL,
+      size: `${seedance.ratio}@${seedance.resolution}`,
+      seedance,
+    };
+  }
+
   return base;
 }
 
 function buildSubmitValuesFromForm(input: {
   isKuaizi: boolean;
+  isCmeCloud: boolean;
   name: string;
   prompt: string;
   videoModel: string;
@@ -146,6 +162,29 @@ function buildSubmitValuesFromForm(input: {
       flowShift: DEFAULT_VIDEO_FLOW_SHIFT,
       seed: DEFAULT_VIDEO_SEED,
       kuaizi,
+    };
+  }
+
+  if (input.isCmeCloud) {
+    const seedance: SeedanceVideoParams = {
+      resolution: input.kuaiziResolution,
+      ratio: input.kuaiziRatio,
+      duration: parsePositiveInt(input.kuaiziDuration, DEFAULT_KUAIZI_VIDEO_DURATION),
+    };
+    return {
+      name: input.name.trim(),
+      prompt: input.prompt.trim(),
+      model: input.videoModel || DEFAULT_CME_CLOUD_VIDEO_MODEL,
+      size: `${seedance.ratio}@${seedance.resolution}`,
+      numFrames: DEFAULT_VIDEO_NUM_FRAMES,
+      fps: DEFAULT_VIDEO_FPS,
+      numInferenceSteps: DEFAULT_VIDEO_INFERENCE_STEPS,
+      guidanceScale: DEFAULT_VIDEO_GUIDANCE_SCALE,
+      guidanceScale2: DEFAULT_VIDEO_GUIDANCE_SCALE_2,
+      boundaryRatio: DEFAULT_VIDEO_BOUNDARY_RATIO,
+      flowShift: DEFAULT_VIDEO_FLOW_SHIFT,
+      seed: DEFAULT_VIDEO_SEED,
+      seedance,
     };
   }
 
@@ -269,6 +308,9 @@ export function TextToVideoModal({
   const isKuaizi = Boolean(
     videoSettings && isKuaiziVideoApi(videoSettings.videoApiUrl),
   );
+  const isCmeCloud = Boolean(
+    videoSettings && isCmeCloudVideoApi(videoSettings.videoApiUrl),
+  );
 
   useEffect(() => {
     if (!open) {
@@ -388,6 +430,7 @@ export function TextToVideoModal({
 
     const submitValues = buildSubmitValuesFromForm({
       isKuaizi,
+      isCmeCloud,
       name,
       prompt,
       videoModel,
@@ -423,25 +466,31 @@ export function TextToVideoModal({
     const startedAt = performance.now();
     try {
       const videoB64 = await generateVideoB64(
-        isKuaizi
+        submitValues.kuaizi
           ? {
               prompt: submitValues.prompt,
               settings: videoSettings ?? undefined,
               kuaizi: submitValues.kuaizi,
             }
-          : {
-              prompt: submitValues.prompt,
-              settings: videoSettings ?? undefined,
-              size: submitValues.size,
-              numFrames: submitValues.numFrames,
-              fps: submitValues.fps,
-              numInferenceSteps: submitValues.numInferenceSteps,
-              guidanceScale: submitValues.guidanceScale,
-              guidanceScale2: submitValues.guidanceScale2,
-              boundaryRatio: submitValues.boundaryRatio,
-              flowShift: submitValues.flowShift,
-              seed: submitValues.seed,
-            },
+          : submitValues.seedance
+            ? {
+                prompt: submitValues.prompt,
+                settings: videoSettings ?? undefined,
+                seedance: submitValues.seedance,
+              }
+            : {
+                prompt: submitValues.prompt,
+                settings: videoSettings ?? undefined,
+                size: submitValues.size,
+                numFrames: submitValues.numFrames,
+                fps: submitValues.fps,
+                numInferenceSteps: submitValues.numInferenceSteps,
+                guidanceScale: submitValues.guidanceScale,
+                guidanceScale2: submitValues.guidanceScale2,
+                boundaryRatio: submitValues.boundaryRatio,
+                flowShift: submitValues.flowShift,
+                seed: submitValues.seed,
+              },
       );
       if (abortRef.current || requestId !== requestIdRef.current) return;
 
@@ -477,6 +526,7 @@ export function TextToVideoModal({
     guidanceScale,
     guidanceScale2,
     isKuaizi,
+    isCmeCloud,
     kuaiziDuration,
     kuaiziGenerationType,
     kuaiziMode,
@@ -590,7 +640,11 @@ export function TextToVideoModal({
                           <input
                             value={videoModel}
                             onChange={(event) => setVideoModel(event.target.value)}
-                            placeholder="wan2.2-t2v-5b"
+                            placeholder={
+                              isCmeCloud
+                                ? DEFAULT_CME_CLOUD_VIDEO_MODEL
+                                : "wan2.2-t2v-5b"
+                            }
                             disabled={submitting}
                             className={fieldClass}
                           />
@@ -667,6 +721,53 @@ export function TextToVideoModal({
                               readOnly
                               value={kuaiziGenerationType}
                               className={readOnlyClass}
+                            />
+                          </label>
+                        </>
+                      ) : isCmeCloud ? (
+                        <>
+                          <div className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoResolutionLabel}
+                            </span>
+                            <Select
+                              value={kuaiziResolution}
+                              options={KUAIZI_RESOLUTION_OPTIONS.map((option) => ({
+                                value: option,
+                                label: option,
+                              }))}
+                              onChange={setKuaiziResolution}
+                              disabled={submitting}
+                            />
+                          </div>
+
+                          <div className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoRatioLabel}
+                            </span>
+                            <Select
+                              value={kuaiziRatio}
+                              options={KUAIZI_RATIO_OPTIONS.map((option) => ({
+                                value: option,
+                                label: option,
+                              }))}
+                              onChange={setKuaiziRatio}
+                              disabled={submitting}
+                            />
+                          </div>
+
+                          <label className="block space-y-1.5">
+                            <span className="text-xs text-text-muted">
+                              {settingsLabels.kuaiziVideoDurationLabel}
+                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={30}
+                              value={kuaiziDuration}
+                              onChange={(event) => setKuaiziDuration(event.target.value)}
+                              disabled={submitting}
+                              className={fieldClass}
                             />
                           </label>
                         </>
